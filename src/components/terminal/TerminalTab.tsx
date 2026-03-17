@@ -39,23 +39,17 @@ export const TerminalTab = React.memo(function TerminalTab({
     <div
       onClick={() => onSelect(session.id)}
       className={`group flex items-center gap-1.5 px-2 py-1 rounded text-xs cursor-pointer ${
-        isActive
-          ? 'bg-secondary text-foreground'
-          : 'text-muted-foreground hover:bg-accent'
+        isActive ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-accent'
       }`}
     >
       {/* Status indicator */}
-      <span
-        className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusColors[session.status]}`}
-      />
+      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusColors[session.status]}`} />
 
       {/* Session name */}
       <span className="truncate max-w-[150px]">{displayName}</span>
 
       {/* Port indicator */}
-      {port && (
-        <span className="text-yellow-400 text-[10px] flex-shrink-0">:{port}</span>
-      )}
+      {port && <span className="text-yellow-400 text-[10px] flex-shrink-0">:{port}</span>}
 
       {/* Close button */}
       <Button

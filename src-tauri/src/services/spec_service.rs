@@ -27,8 +27,9 @@ pub fn create_spec(
     // Build default fields from schema definition
     let fields = build_default_fields(schema_def);
 
-    // Build body with section headings from schema
-    let body = build_body_from_schema(schema_def);
+    // Build body: try template engine first, fall back to section headings
+    let body = build_body_from_template(project_dir, schema_name, title, &fields)
+        .unwrap_or_else(|| build_body_from_schema(schema_def));
 
     let spec = Spec {
         id: id.clone(),
@@ -215,6 +216,9 @@ pub fn init_project(project_dir: &Path, conn: &Connection, preset: &str) -> Resu
         // Write built-in schemas
         crate::services::schema_service::write_built_in_schemas(project_dir)?;
 
+        // Write built-in templates
+        crate::services::template_engine::write_built_in_templates(project_dir)?;
+
         // Write default workflow YAML
         write_default_workflow(project_dir)?;
 
@@ -335,6 +339,52 @@ fn build_default_fields(schema: &SchemaDefinition) -> HashMap<String, serde_yaml
         }
     }
     fields
+}
+
+/// Build a body by rendering a Tera template (custom or built-in) with spec context.
+/// Returns `None` if no template is available for the schema.
+fn build_body_from_template(
+    project_dir: &Path,
+    schema_name: &str,
+    title: &str,
+    fields: &HashMap<String, serde_yaml::Value>,
+) -> Option<String> {
+    use crate::services::template_engine;
+
+    let template_content = template_engine::load_template(project_dir, schema_name)?;
+
+    // Convert serde_yaml field values to strings for the template context
+    let string_fields: HashMap<String, String> = fields
+        .iter()
+        .map(|(k, v)| {
+            let s = match v {
+                serde_yaml::Value::String(s) => s.clone(),
+                serde_yaml::Value::Number(n) => n.to_string(),
+                serde_yaml::Value::Bool(b) => b.to_string(),
+                _ => String::new(),
+            };
+            (k.clone(), s)
+        })
+        .collect();
+
+    let ctx = template_engine::TemplateContext {
+        title: title.to_string(),
+        schema_name: schema_name.to_string(),
+        fields: string_fields,
+        date: chrono::Utc::now().format("%Y-%m-%d").to_string(),
+    };
+
+    match template_engine::render_template(&template_content, &ctx) {
+        Ok(rendered) => Some(rendered),
+        Err(e) => {
+            log::warn!(
+                "Failed to render template for schema '{}': {}. Falling back to section headings.",
+                schema_name,
+                e
+            );
+            None
+        }
+    }
 }
 
 /// Build a markdown body with `## Heading` sections from a schema definition.
@@ -593,6 +643,11 @@ mod tests {
 
         // Default workflow written
         assert!(base.join("workflows").join("default.yaml").exists());
+
+        // Built-in templates written
+        assert!(base.join("templates").join("spec.md").exists());
+        assert!(base.join("templates").join("change-request.md").exists());
+        assert!(base.join("templates").join("task.md").exists());
 
         // Schemas synced to SQLite
         let schema_rows =

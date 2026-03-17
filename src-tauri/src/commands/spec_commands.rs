@@ -183,6 +183,13 @@ pub async fn init_specforge_project(
     Ok(())
 }
 
+/// Check whether `.specforge/` directory exists for the given project.
+#[tauri::command]
+pub async fn check_specforge_exists(project_dir: String) -> Result<bool, String> {
+    let path = std::path::Path::new(&project_dir).join(".specforge");
+    Ok(path.exists())
+}
+
 /// Sync specs from `.specforge/specs/` directory into SQLite index.
 /// Returns the number of specs synced.
 #[tauri::command]

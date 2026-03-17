@@ -1218,7 +1218,11 @@ export function WebhookSettingsDialog({
                         <Button
                           variant="outline"
                           onClick={handleCopyUrl}
-                          title={incomingSecret ? 'Copy curl command with signature' : 'Copy curl command'}
+                          title={
+                            incomingSecret
+                              ? 'Copy curl command with signature'
+                              : 'Copy curl command'
+                          }
                           className={cn(
                             'px-3 border-border',
                             'transition-all duration-150',

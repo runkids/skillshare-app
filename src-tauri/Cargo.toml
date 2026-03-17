@@ -73,6 +73,7 @@ sha1 = "0.10"
 notify = "7"
 notify-debouncer-mini = "0.5"
 dotenvy = "0.15.7"
+tera = "1"
 
 # Secure token storage
 aes-gcm = "0.10"

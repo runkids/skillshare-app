@@ -277,7 +277,6 @@ export function WorkflowToolbar({
                 </span>
               </DropdownItem>
             )}
-
           </Dropdown>
         )}
 

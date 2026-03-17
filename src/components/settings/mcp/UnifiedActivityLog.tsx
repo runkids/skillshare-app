@@ -223,11 +223,7 @@ const ActivityRow: React.FC<ActivityRowProps> = ({ entry, onStop }) => {
   const typeConfig = TYPE_CONFIG[entry.type];
 
   const hasDetails =
-    entry.toolArguments ||
-    entry.details ||
-    entry.result ||
-    entry.error ||
-    entry.sourceClient;
+    entry.toolArguments || entry.details || entry.result || entry.error || entry.sourceClient;
 
   // Extract tool call ID from entry ID (format: "action-{executionId}" or "log-{timestamp}-{index}")
   const toolCallId = entry.type === 'action' ? entry.id.replace('action-', '') : undefined;
@@ -257,18 +253,12 @@ const ActivityRow: React.FC<ActivityRowProps> = ({ entry, onStop }) => {
     >
       {/* Timeline dot */}
       <div
-        className={cn(
-          'absolute -left-[5px] top-3 w-2 h-2 rounded-full',
-          statusConfig.dotColor
-        )}
+        className={cn('absolute -left-[5px] top-3 w-2 h-2 rounded-full', statusConfig.dotColor)}
       />
 
       {/* Main content */}
       <div
-        className={cn(
-          'flex items-start gap-3 cursor-pointer',
-          hasDetails && 'cursor-pointer'
-        )}
+        className={cn('flex items-start gap-3 cursor-pointer', hasDetails && 'cursor-pointer')}
         onClick={() => hasDetails && setIsExpanded(!isExpanded)}
       >
         {/* Expand indicator */}
@@ -390,8 +380,7 @@ const ActivityRow: React.FC<ActivityRowProps> = ({ entry, onStop }) => {
           {/* Source client */}
           {entry.sourceClient && (
             <div className="text-muted-foreground">
-              <span className="font-medium">Source:</span>{' '}
-              <span>{entry.sourceClient}</span>
+              <span className="font-medium">Source:</span> <span>{entry.sourceClient}</span>
             </div>
           )}
 

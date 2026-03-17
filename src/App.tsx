@@ -1,4 +1,5 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { WorkflowPage } from './components/workflow/WorkflowPage';
 import { SpecList } from './components/spec-editor/SpecList';
 import { SpecEditor } from './components/spec-editor/SpecEditor';
@@ -21,6 +22,7 @@ import {
   McpStatusButton,
 } from './components/status-bar';
 import { ActionConfirmationDialog } from './components/settings/mcp';
+import { FirstRunWizard } from './components/onboarding/FirstRunWizard';
 import { cn } from './lib/utils';
 
 type AppTab = 'specs' | 'workflows';
@@ -59,6 +61,21 @@ function App() {
     restartApp,
     retryUpdate,
   } = useUpdater();
+
+  // First-run wizard state
+  const [showWizard, setShowWizard] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    invoke<boolean>('check_specforge_exists', { projectDir: PROJECT_DIR }).then(
+      (exists) => setShowWizard(!exists),
+      () => setShowWizard(false) // On error, skip wizard
+    );
+  }, []);
+
+  const handleWizardComplete = useCallback(() => {
+    setShowWizard(false);
+    setDataVersion((prev) => prev + 1);
+  }, []);
 
   const [activeTab, setActiveTab] = useState<AppTab>('specs');
   const [selectedSpecId, setSelectedSpecId] = useState<string | null>(null);
@@ -273,6 +290,16 @@ function App() {
   );
 
   useKeyboardShortcuts(shortcuts);
+
+  // Show wizard if .specforge/ doesn't exist (null = still checking)
+  if (showWizard === true) {
+    return <FirstRunWizard projectDir={PROJECT_DIR} onComplete={handleWizardComplete} />;
+  }
+
+  // Still checking — render nothing to avoid flash
+  if (showWizard === null) {
+    return <div className="h-screen bg-background" />;
+  }
 
   return (
     <div className="h-screen flex flex-col bg-background rounded-lg overflow-hidden select-none">

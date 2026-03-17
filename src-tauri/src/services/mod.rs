@@ -13,6 +13,7 @@ pub mod notification;
 // Spec-driven development services
 pub mod schema_service;
 pub mod spec_service;
+pub mod template_engine;
 
 pub use config_service::*;
 pub use file_watcher::*;

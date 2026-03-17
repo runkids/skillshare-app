@@ -5,14 +5,7 @@
  * Replaces ScriptTerminal with xterm.js + tauri-plugin-pty for full interactive support
  */
 
-import {
-  useRef,
-  useEffect,
-  useCallback,
-  useState,
-  forwardRef,
-  useImperativeHandle,
-} from 'react';
+import { useRef, useEffect, useCallback, useState, forwardRef, useImperativeHandle } from 'react';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { spawn } from 'tauri-pty';
 import {

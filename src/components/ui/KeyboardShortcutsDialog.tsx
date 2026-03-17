@@ -726,15 +726,12 @@ export function KeyboardShortcutsFloatingButton({
   }, [onClick]);
 
   // Handle double click to reset position
-  const handleDoubleClick = React.useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setButtonPosition(null);
-      localStorage.removeItem(FLOATING_BUTTON_POSITION_KEY);
-    },
-    []
-  );
+  const handleDoubleClick = React.useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setButtonPosition(null);
+    localStorage.removeItem(FLOATING_BUTTON_POSITION_KEY);
+  }, []);
 
   // Calculate default position (bottom-right)
   const defaultStyle =

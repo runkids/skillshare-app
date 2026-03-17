@@ -96,7 +96,9 @@ interface UsePtySessionsReturn {
   ) => Promise<string | null>;
   killSession: (sessionId: string) => void;
   killAllSessions: () => void;
-  pendingSpawnsRef: React.MutableRefObject<Map<string, { command: string; args: string[]; cwd: string }>>;
+  pendingSpawnsRef: React.MutableRefObject<
+    Map<string, { command: string; args: string[]; cwd: string }>
+  >;
 }
 
 export function usePtySessions({
@@ -112,11 +114,10 @@ export function usePtySessions({
   );
 
   // Get active session
-  const activeSession = activeSessionId ? sessions.get(activeSessionId) ?? null : null;
+  const activeSession = activeSessionId ? (sessions.get(activeSessionId) ?? null) : null;
 
   // Session list for iteration
   const sessionList = Array.from(sessions.values());
-
 
   // Spawn a new PTY session
   const spawnSession = useCallback(

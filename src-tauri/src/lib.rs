@@ -255,6 +255,7 @@ pub fn run() {
             spec_commands::delete_spec,
             spec_commands::init_specforge_project,
             spec_commands::sync_specs,
+            spec_commands::check_specforge_exists,
             // Schema commands (spec-driven development)
             schema_commands::list_schemas,
             schema_commands::get_schema,
