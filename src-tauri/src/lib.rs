@@ -25,7 +25,7 @@ use std::sync::Arc;
 use commands::workflow::WorkflowExecutionState;
 use commands::{
     config, file_watcher, git, mcp, notification,
-    settings, shortcuts, workflow,
+    schema_commands, settings, shortcuts, spec_commands, workflow,
 };
 use services::FileWatcherManager;
 use tauri::{Emitter, Manager};
@@ -243,6 +243,17 @@ pub fn run() {
             notification::delete_notification,
             notification::cleanup_old_notifications,
             notification::clear_all_notifications,
+            // Spec commands (spec-driven development)
+            spec_commands::create_spec,
+            spec_commands::list_specs,
+            spec_commands::get_spec,
+            spec_commands::update_spec,
+            spec_commands::delete_spec,
+            spec_commands::init_specforge_project,
+            spec_commands::sync_specs,
+            // Schema commands (spec-driven development)
+            schema_commands::list_schemas,
+            schema_commands::get_schema,
         ])
         // Setup hook
         .setup(|app| {
