@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { WorkflowPage } from './components/workflow/WorkflowPage';
+import { SpecList } from './components/spec-editor/SpecList';
 import { useShortcutsContext } from './contexts/ShortcutsContext';
 import { SettingsButton } from './components/settings/SettingsButton';
 import { SettingsPage } from './components/settings/SettingsPage';
@@ -19,8 +20,13 @@ import {
   McpStatusButton,
 } from './components/status-bar';
 import { ActionConfirmationDialog } from './components/settings/mcp';
+import { cn } from './lib/utils';
 
-type AppTab = 'workflows';
+type AppTab = 'specs' | 'workflows';
+
+// TODO: projectDir should come from a project context / settings.
+// Using the current working directory as a reasonable default for now.
+const PROJECT_DIR = '.';
 
 const DEFAULT_SHORTCUT_KEYS: Record<string, string> = {
   refresh: 'cmd+r',
@@ -53,7 +59,8 @@ function App() {
     retryUpdate,
   } = useUpdater();
 
-  const [_activeTab] = useState<AppTab>('workflows');
+  const [activeTab, setActiveTab] = useState<AppTab>('specs');
+  const [_selectedSpecId, setSelectedSpecId] = useState<string | null>(null);
   const [settingsPageOpen, setSettingsPageOpen] = useState(false);
   const [settingsInitialSection, setSettingsInitialSection] = useState<SettingsSection>('storage');
   const [dataVersion, setDataVersion] = useState(0);
@@ -160,6 +167,7 @@ function App() {
         category: 'Navigation',
         enabled: isShortcutEnabled('tab-workflows'),
         action: () => {
+          setActiveTab('workflows');
           showShortcutToast(
             'Workflows',
             getEffectiveKey('tab-workflows', DEFAULT_SHORTCUT_KEYS['tab-workflows'])
@@ -191,7 +199,7 @@ function App() {
         },
       },
     ],
-    [showShortcutToast, getEffectiveKey, isShortcutEnabled, openSettings]
+    [showShortcutToast, getEffectiveKey, isShortcutEnabled, openSettings, setActiveTab]
   );
 
   const displayShortcuts: KeyboardShortcut[] = useMemo(
@@ -273,6 +281,35 @@ function App() {
       >
         {/* Left: Space for macOS traffic lights */}
         <div data-tauri-drag-region className="w-20 h-full" />
+
+        {/* Tab navigation */}
+        <nav className="flex items-center gap-1 h-full">
+          <button
+            type="button"
+            onClick={() => setActiveTab('specs')}
+            className={cn(
+              'px-3 h-full text-sm font-medium transition-colors duration-150 border-b-2',
+              activeTab === 'specs'
+                ? 'text-foreground border-blue-500'
+                : 'text-muted-foreground border-transparent hover:text-foreground'
+            )}
+          >
+            Specs
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('workflows')}
+            className={cn(
+              'px-3 h-full text-sm font-medium transition-colors duration-150 border-b-2',
+              activeTab === 'workflows'
+                ? 'text-foreground border-blue-500'
+                : 'text-muted-foreground border-transparent hover:text-foreground'
+            )}
+          >
+            Workflows
+          </button>
+        </nav>
+
         {/* Center: Draggable region */}
         <div data-tauri-drag-region className="flex-1 h-full" />
         <div className="flex items-center gap-1 px-2">
@@ -290,7 +327,19 @@ function App() {
 
       <main className="flex-1 flex flex-col overflow-hidden bg-background">
         <div className="flex-1 overflow-hidden">
-          <WorkflowPage dataVersion={dataVersion} />
+          {activeTab === 'specs' ? (
+            <SpecList
+              projectDir={PROJECT_DIR}
+              onSelectSpec={(specId) => {
+                setSelectedSpecId(specId);
+                // TODO: Task 11 will add the SpecEditor component
+                // eslint-disable-next-line no-console -- placeholder until Task 11 adds SpecEditor
+                console.log('[SpecList] Selected spec:', specId);
+              }}
+            />
+          ) : (
+            <WorkflowPage dataVersion={dataVersion} />
+          )}
         </div>
       </main>
 
