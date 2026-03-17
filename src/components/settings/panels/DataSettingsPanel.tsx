@@ -62,14 +62,11 @@ export const DataSettingsPanel: React.FC<DataSettingsPanelProps> = ({ onExport, 
   useEffect(() => {
     const loadCounts = async () => {
       try {
-        // Fetch projects and workflows counts using settingsAPI
-        const [projectsResult, workflowsResult] = await Promise.all([
-          settingsAPI.loadProjects(),
-          settingsAPI.loadWorkflows(),
-        ]);
+        // Fetch workflows count using settingsAPI
+        const workflowsResult = await settingsAPI.loadWorkflows();
 
         setDataCounts({
-          projects: projectsResult.length,
+          projects: 0,
           workflows: workflowsResult.length,
           templates: 0, // Templates count would need separate API
           isLoading: false,

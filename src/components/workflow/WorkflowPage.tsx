@@ -21,7 +21,6 @@ import {
 import { workflowAPI, settingsAPI, incomingWebhookAPI } from '../../lib/tauri-api';
 import type { Workflow, RunningExecution } from '../../types/workflow';
 import type { AppSettings, WorkflowSortMode } from '../../types/tauri';
-import type { Project } from '../../types/project';
 
 interface WorkflowPageProps {
   initialWorkflow?: Workflow;
@@ -37,7 +36,7 @@ export function WorkflowPage({
   dataVersion,
 }: WorkflowPageProps) {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<{ id: string; path: string }[]>([]);
   const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | null>(null);
   const [currentDefaultCwd, setCurrentDefaultCwd] = useState<string | undefined>(defaultCwd);
   const [isLoading, setIsLoading] = useState(true);
@@ -75,13 +74,12 @@ export function WorkflowPage({
 
   const fetchWorkflows = useCallback(async () => {
     try {
-      const [loaded, loadedSettings, loadedProjects] = await Promise.all([
+      const [loaded, loadedSettings] = await Promise.all([
         loadWorkflows(),
         settingsAPI.loadSettings(),
-        settingsAPI.loadProjects(),
       ]);
       setWorkflows(loaded);
-      setProjects(loadedProjects);
+      setProjects([]);
       setSettings(loadedSettings);
       setWorkflowSortMode((loadedSettings.workflowSortMode as WorkflowSortMode) || 'updated');
       setWorkflowOrder(loadedSettings.workflowOrder || []);

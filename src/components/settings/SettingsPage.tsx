@@ -10,20 +10,13 @@ import {
   Loader2,
   Search,
   HardDrive,
-  Users,
-  Bot,
-  FileText,
   Palette,
   Keyboard,
   ArrowLeftRight,
   Sun,
   Moon,
-  Wrench,
   Bell,
   Info,
-  Activity,
-  ShieldCheck,
-  Shield,
 } from 'lucide-react';
 import { McpIcon } from '../ui/McpIcon';
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -34,16 +27,10 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { Toggle } from '../ui/Toggle';
 import { Button } from '../ui/Button';
-import { ExportDialog } from './ExportDialog';
-import { ImportDialog } from './ImportDialog';
-import type { ImportResult } from '../../types/export-import';
 
 // Lazy load panel components
 const StorageSettingsPanel = lazy(() =>
   import('./panels/StorageSettingsPanel').then((m) => ({ default: m.StorageSettingsPanel }))
-);
-const DeployAccountsPanel = lazy(() =>
-  import('./panels/DeployAccountsPanel').then((m) => ({ default: m.DeployAccountsPanel }))
 );
 const AppearanceSettingsPanel = lazy(() =>
   import('./panels/AppearanceSettingsPanel').then((m) => ({ default: m.AppearanceSettingsPanel }))
@@ -51,22 +38,8 @@ const AppearanceSettingsPanel = lazy(() =>
 const ShortcutsSettingsPanel = lazy(() =>
   import('./panels/ShortcutsSettingsPanel').then((m) => ({ default: m.ShortcutsSettingsPanel }))
 );
-const AIProviderSettingsPanel = lazy(() =>
-  import('./panels/AIProviderSettingsPanel').then((m) => ({ default: m.AIProviderSettingsPanel }))
-);
-const PromptTemplatePanel = lazy(() =>
-  import('./panels/PromptTemplatePanel').then((m) => ({ default: m.PromptTemplatePanel }))
-);
 const McpSettingsFullPanel = lazy(() =>
   import('./panels/McpSettingsFullPanel').then((m) => ({ default: m.McpSettingsFullPanel }))
-);
-const AIActivityPanel = lazy(() =>
-  import('./panels/AIActivityPanel').then((m) => ({ default: m.AIActivityPanel }))
-);
-const ToolchainPreferencesPanel = lazy(() =>
-  import('./panels/ToolchainPreferencesPanel').then((m) => ({
-    default: m.ToolchainPreferencesPanel,
-  }))
 );
 const NotificationSettingsPanel = lazy(() =>
   import('./panels/NotificationSettingsPanel').then((m) => ({
@@ -76,16 +49,6 @@ const NotificationSettingsPanel = lazy(() =>
 const DataSettingsPanel = lazy(() =>
   import('./panels/DataSettingsPanel').then((m) => ({ default: m.DataSettingsPanel }))
 );
-const LockfileValidationPanel = lazy(() =>
-  import('./panels/LockfileValidationPanel').then((m) => ({
-    default: m.LockfileValidationPanel,
-  }))
-);
-const SecurityAuditPanel = lazy(() =>
-  import('./panels/SecurityAuditPanel').then((m) => ({
-    default: m.SecurityAuditPanel,
-  }))
-);
 const AboutSettingsPanel = lazy(() =>
   import('./panels/AboutSettingsPanel').then((m) => ({ default: m.AboutSettingsPanel }))
 );
@@ -94,23 +57,16 @@ interface SettingsPageProps {
   isOpen: boolean;
   onClose: () => void;
   initialSection?: SettingsSection;
-  onImportComplete?: (result: ImportResult) => void;
+  onImportComplete?: () => void;
 }
 
 // Icon mapping
 const SECTION_ICONS: Record<SettingsSection, React.ElementType> = {
   storage: HardDrive,
-  'deploy-accounts': Users,
-  'ai-providers': Bot,
-  prompts: FileText,
-  'ai-activity': Activity,
   mcp: McpIcon,
   appearance: Palette,
   notifications: Bell,
   shortcuts: Keyboard,
-  toolchain: Wrench,
-  'lockfile-validation': ShieldCheck,
-  'security-audit': Shield,
   data: ArrowLeftRight,
   about: Info,
 };
@@ -121,17 +77,10 @@ const SECTION_PANELS: Record<
   React.LazyExoticComponent<React.ComponentType<{ onExport?: () => void; onImport?: () => void }>>
 > = {
   storage: StorageSettingsPanel,
-  'deploy-accounts': DeployAccountsPanel,
-  'ai-providers': AIProviderSettingsPanel,
-  prompts: PromptTemplatePanel,
-  'ai-activity': AIActivityPanel,
   mcp: McpSettingsFullPanel,
   appearance: AppearanceSettingsPanel,
   notifications: NotificationSettingsPanel,
   shortcuts: ShortcutsSettingsPanel,
-  toolchain: ToolchainPreferencesPanel,
-  'lockfile-validation': LockfileValidationPanel,
-  'security-audit': SecurityAuditPanel,
   data: DataSettingsPanel,
   about: AboutSettingsPanel,
 };
@@ -141,22 +90,17 @@ const SIDEBAR_CATEGORIES: { id: SettingsCategory; label: string; sections: Setti
   {
     id: 'project',
     label: 'Project',
-    sections: ['storage', 'deploy-accounts'],
+    sections: ['storage'],
   },
   {
-    id: 'security',
-    label: 'Security',
-    sections: ['lockfile-validation', 'security-audit'],
-  },
-  {
-    id: 'ai',
-    label: 'AI & Automation',
-    sections: ['ai-providers', 'prompts', 'ai-activity', 'mcp'],
+    id: 'mcp',
+    label: 'MCP',
+    sections: ['mcp'],
   },
   {
     id: 'preferences',
     label: 'Preferences',
-    sections: ['appearance', 'notifications', 'shortcuts', 'toolchain'],
+    sections: ['appearance', 'notifications', 'shortcuts'],
   },
   {
     id: 'data',
@@ -218,8 +162,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [isClosing, setIsClosing] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [exportDialogOpen, setExportDialogOpen] = useState(false);
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -227,42 +169,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   const { theme, setTheme } = useTheme();
   const { pathDisplayFormat, setPathDisplayFormat } = useSettings();
 
-  // Handlers for Export/Import dialogs
-  const handleOpenExport = useCallback(() => {
-    setExportDialogOpen(true);
-  }, []);
-
-  const handleOpenImport = useCallback(() => {
-    setImportDialogOpen(true);
-  }, []);
-
-  const handleImportComplete = useCallback(
-    (result: ImportResult) => {
-      onImportComplete?.(result);
-    },
-    [onImportComplete]
-  );
-
-  // Listen for external events to open dialogs (from keyboard shortcuts)
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleOpenExportEvent = () => {
-      setExportDialogOpen(true);
-    };
-
-    const handleOpenImportEvent = () => {
-      setImportDialogOpen(true);
-    };
-
-    window.addEventListener('settings-open-export', handleOpenExportEvent);
-    window.addEventListener('settings-open-import', handleOpenImportEvent);
-
-    return () => {
-      window.removeEventListener('settings-open-export', handleOpenExportEvent);
-      window.removeEventListener('settings-open-import', handleOpenImportEvent);
-    };
-  }, [isOpen]);
+  void onImportComplete; // kept for future use
 
   // Search results
   const searchResults = searchQuery ? searchSections(searchQuery) : [];
@@ -570,24 +477,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         <main className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 max-w-3xl w-full mx-auto p-6 flex flex-col min-h-0">
             <Suspense fallback={<PanelLoadingFallback />}>
-              <ActivePanelComponent
-                onExport={activeSection === 'data' ? handleOpenExport : undefined}
-                onImport={activeSection === 'data' ? handleOpenImport : undefined}
-              />
+              <ActivePanelComponent />
             </Suspense>
           </div>
         </main>
       </div>
-
-      {/* Export Dialog - rendered within Settings page */}
-      <ExportDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} />
-
-      {/* Import Dialog - rendered within Settings page */}
-      <ImportDialog
-        open={importDialogOpen}
-        onOpenChange={setImportDialogOpen}
-        onImportComplete={handleImportComplete}
-      />
     </div>
   );
 };

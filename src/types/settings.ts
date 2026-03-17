@@ -4,17 +4,10 @@
 
 export type SettingsSection =
   | 'storage'
-  | 'deploy-accounts'
   | 'appearance'
   | 'notifications'
   | 'shortcuts'
-  | 'ai-providers'
-  | 'prompts'
-  | 'ai-activity'
   | 'mcp'
-  | 'toolchain'
-  | 'lockfile-validation'
-  | 'security-audit'
   | 'data'
   | 'about';
 
@@ -35,10 +28,7 @@ export const SETTINGS_SECTIONS: SettingsSidebarSection[] = [
   {
     id: 'project',
     label: 'Project',
-    items: [
-      { id: 'storage', label: 'Storage', icon: 'HardDrive' },
-      { id: 'deploy-accounts', label: 'Deploy Accounts', icon: 'Users' },
-    ],
+    items: [{ id: 'storage', label: 'Storage', icon: 'HardDrive' }],
   },
   {
     id: 'preferences',
@@ -47,23 +37,6 @@ export const SETTINGS_SECTIONS: SettingsSidebarSection[] = [
       { id: 'appearance', label: 'Appearance', icon: 'Palette' },
       { id: 'notifications', label: 'Notifications', icon: 'Bell' },
       { id: 'shortcuts', label: 'Keyboard Shortcuts', icon: 'Keyboard' },
-      { id: 'toolchain', label: 'Toolchain', icon: 'Wrench' },
-    ],
-  },
-  {
-    id: 'security',
-    label: 'Security',
-    items: [
-      { id: 'lockfile-validation', label: 'Lockfile Validation', icon: 'ShieldCheck' },
-      { id: 'security-audit', label: 'Security Audit', icon: 'Shield' },
-    ],
-  },
-  {
-    id: 'ai',
-    label: 'AI',
-    items: [
-      { id: 'ai-providers', label: 'AI Providers', icon: 'Bot' },
-      { id: 'prompts', label: 'Prompt Templates', icon: 'FileText' },
     ],
   },
   {

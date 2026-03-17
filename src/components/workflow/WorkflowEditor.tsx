@@ -37,11 +37,37 @@ import {
   Star,
 } from 'lucide-react';
 import { resolveCommand, saveNodeAsTemplate } from '../../data/step-templates';
-import { exportWorkflow, importWorkflow, exportNode, importNode } from '../../lib/export-import';
 import { settingsAPI, workflowAPI } from '../../lib/tauri-api';
 import { useWorkflowExecutionContext } from '../../contexts/WorkflowExecutionContext';
-import type { Workflow, TriggerWorkflowConfig, NodeConfig } from '../../types/workflow';
+import type {
+  Workflow,
+  WorkflowNode,
+  TriggerWorkflowConfig,
+  NodeConfig,
+} from '../../types/workflow';
 import { isScriptNodeConfig } from '../../types/workflow';
+
+// TODO: export-import removed during feature cleanup, re-implement when needed
+const exportWorkflow = async (_w: unknown) => ({
+  success: false as boolean,
+  error: 'NOT_IMPLEMENTED',
+  filePath: '',
+});
+const importWorkflow = async () => ({
+  success: false as boolean,
+  error: 'NOT_IMPLEMENTED',
+  workflow: null as Workflow | null,
+});
+const exportNode = async (_n: unknown) => ({
+  success: false as boolean,
+  error: 'NOT_IMPLEMENTED',
+  filePath: '',
+});
+const importNode = async () => ({
+  success: false as boolean,
+  error: 'NOT_IMPLEMENTED',
+  node: null as WorkflowNode | null,
+});
 import type { StepTemplate } from '../../types/step-template';
 
 interface NewNodeDialogProps {

@@ -4,8 +4,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import type { AppSettings, StoreData, StorePathInfo } from '../types/tauri';
-import type { Project, Workflow, WorkspacePackage } from '../types';
-import type { ScanProjectResponse, RefreshProjectResponse } from '../types/project';
+import type { Workflow } from '../types';
 
 // Re-export plugin APIs
 export { open, save, message, confirm } from '@tauri-apps/plugin-dialog';
@@ -15,39 +14,6 @@ export { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
 // Re-export for use in other modules
 export { invoke, listen };
 export type { UnlistenFn };
-
-// ============================================================================
-// Project Commands (Phase 5 - US2)
-// ============================================================================
-
-// Response type for trash_node_modules command
-export interface TrashNodeModulesResponse {
-  success: boolean;
-  message?: string;
-  error?: string;
-}
-
-// Re-export types for convenience
-export type { ScanProjectResponse as ProjectScanResult };
-export type { RefreshProjectResponse as ProjectRefreshResult };
-
-export const projectAPI = {
-  scanProject: (path: string): Promise<ScanProjectResponse> =>
-    invoke<ScanProjectResponse>('scan_project', { path }),
-
-  saveProject: (project: Project): Promise<void> => invoke('save_project', { project }),
-
-  removeProject: (id: string): Promise<void> => invoke('remove_project', { id }),
-
-  refreshProject: (id: string): Promise<RefreshProjectResponse> =>
-    invoke<RefreshProjectResponse>('refresh_project', { id }),
-
-  getWorkspacePackages: (projectPath: string): Promise<WorkspacePackage[]> =>
-    invoke<WorkspacePackage[]>('get_workspace_packages', { projectPath }),
-
-  trashNodeModules: (projectPath: string): Promise<TrashNodeModulesResponse> =>
-    invoke<TrashNodeModulesResponse>('trash_node_modules', { projectPath }),
-};
 
 // ============================================================================
 // Script Commands (Phase 6 - US3)
@@ -92,37 +58,31 @@ export interface ScriptCompletedPayload {
   durationMs: number;
 }
 
-// Feature 007: Extended RunningScriptInfo with reconnection support
 export type ScriptExecutionStatus = 'running' | 'completed' | 'failed' | 'cancelled';
 
-// Feature 008: Write to script stdin response
 export interface WriteToScriptResponse {
   success: boolean;
   error?: string;
 }
 
 export interface RunningScriptInfo {
-  // Original fields
   executionId: string;
   scriptName: string;
-  startedAtMs: number; // elapsed time for backward compatibility
-  // Feature 007: New fields for reconnection support
+  startedAtMs: number;
   projectPath: string;
   projectName?: string;
-  startedAt: string; // ISO 8601 absolute timestamp
+  startedAt: string;
   status: ScriptExecutionStatus;
   exitCode?: number;
   completedAt?: string;
 }
 
-// Feature 007: Output line for detailed rendering
 export interface OutputLine {
   content: string;
   stream: 'stdout' | 'stderr';
-  timestamp: string; // ISO 8601
+  timestamp: string;
 }
 
-// Feature 007: Response for get_script_output command
 export interface GetScriptOutputResponse {
   success: boolean;
   executionId: string;
@@ -154,18 +114,14 @@ export const scriptAPI = {
   getRunningScripts: (): Promise<RunningScriptInfo[]> =>
     invoke<RunningScriptInfo[]>('get_running_scripts'),
 
-  // Feature 007: Get script output buffer for reconnection
   getScriptOutput: (executionId: string): Promise<GetScriptOutputResponse> =>
     invoke<GetScriptOutputResponse>('get_script_output', { executionId }),
 
-  // Feature 008: Write to script stdin
   writeToScript: (executionId: string, input: string): Promise<WriteToScriptResponse> =>
     invoke<WriteToScriptResponse>('write_to_script', { executionId, input }),
 
-  // Feature 008: Get PTY environment variables (for proper PATH, VOLTA_HOME, etc.)
   getPtyEnv: (): Promise<Record<string, string>> => invoke<Record<string, string>>('get_pty_env'),
 
-  // Get Volta-wrapped command for PTY execution
   getVoltaWrappedCommand: (
     command: string,
     args: string[],
@@ -174,7 +130,6 @@ export const scriptAPI = {
     invoke<VoltaWrappedCommand>('get_volta_wrapped_command', { command, args, cwd }),
 };
 
-// Volta-wrapped command response
 export interface VoltaWrappedCommand {
   command: string;
   args: string[];
@@ -185,23 +140,18 @@ export interface VoltaWrappedCommand {
 // Workflow Commands (Phase 7 - US4)
 // ============================================================================
 
-// Workflow execution event types
 export interface NodeStartedPayload {
   executionId: string;
-  /** Workflow ID for direct matching (fixes output mixing between workflows) */
   workflowId: string;
   nodeId: string;
   nodeName: string;
-  /** Feature 013: Node type for differentiated UI messages */
   nodeType: 'script' | 'trigger-workflow';
-  /** Feature 013: Target workflow name for trigger-workflow nodes */
   targetWorkflowName?: string;
   startedAt: string;
 }
 
 export interface ExecutionOutputPayload {
   executionId: string;
-  /** Workflow ID for direct matching (fixes output mixing between workflows) */
   workflowId: string;
   nodeId: string;
   output: string;
@@ -211,7 +161,6 @@ export interface ExecutionOutputPayload {
 
 export interface NodeCompletedPayload {
   executionId: string;
-  /** Workflow ID for direct matching (fixes output mixing between workflows) */
   workflowId: string;
   nodeId: string;
   status: 'completed' | 'failed' | 'cancelled';
@@ -255,7 +204,6 @@ export interface Execution {
   >;
 }
 
-// Available workflow info for trigger selection (Feature 013)
 export interface AvailableWorkflowInfo {
   id: string;
   name: string;
@@ -266,14 +214,12 @@ export interface AvailableWorkflowInfo {
   lastExecutedAt?: string;
 }
 
-// Feature 013: Cycle detection result
 export interface CycleDetectionResult {
   hasCycle: boolean;
   cyclePath?: string[];
   cycleDescription?: string;
 }
 
-// Feature 013 T050: Child execution info
 export interface ChildExecutionInfo {
   executionId: string;
   workflowId: string;
@@ -284,7 +230,6 @@ export interface ChildExecutionInfo {
   depth: number;
 }
 
-// Workflow output line from backend buffer
 export interface WorkflowOutputLine {
   nodeId: string;
   nodeName: string;
@@ -293,7 +238,6 @@ export interface WorkflowOutputLine {
   timestamp: string;
 }
 
-// Response from get_workflow_output command
 export interface WorkflowOutputResponse {
   found: boolean;
   workflowId?: string;
@@ -303,7 +247,6 @@ export interface WorkflowOutputResponse {
   bufferSize: number;
 }
 
-// Execution history item
 export interface ExecutionHistoryItem {
   id: string;
   workflowId: string;
@@ -319,14 +262,12 @@ export interface ExecutionHistoryItem {
   triggeredBy: string;
 }
 
-// Execution history settings
 export interface ExecutionHistorySettings {
   maxHistoryPerWorkflow: number;
   retentionDays: number;
   maxOutputLines: number;
 }
 
-// Execution history store data
 export interface ExecutionHistoryStoreData {
   version: string;
   histories: Record<string, ExecutionHistoryItem[]>;
@@ -334,8 +275,6 @@ export interface ExecutionHistoryStoreData {
 }
 
 export const workflowAPI = {
-  // Note: loadWorkflows is in settingsAPI.loadWorkflows
-
   saveWorkflow: (workflow: Workflow): Promise<void> => invoke('save_workflow', { workflow }),
 
   deleteWorkflow: (workflowId: string): Promise<void> => invoke('delete_workflow', { workflowId }),
@@ -356,26 +295,21 @@ export const workflowAPI = {
 
   killProcess: (executionId: string): Promise<void> => invoke('kill_process', { executionId }),
 
-  // Feature 013: Workflow Trigger Workflow
   getAvailableWorkflows: (excludeWorkflowId: string): Promise<AvailableWorkflowInfo[]> =>
     invoke<AvailableWorkflowInfo[]>('get_available_workflows', { excludeWorkflowId }),
 
-  // Feature 013: Detect workflow cycle (T039)
   detectWorkflowCycle: (
     sourceWorkflowId: string,
     targetWorkflowId: string
   ): Promise<CycleDetectionResult> =>
     invoke<CycleDetectionResult>('detect_workflow_cycle', { sourceWorkflowId, targetWorkflowId }),
 
-  // Feature 013 T050: Get child executions
   getChildExecutions: (parentExecutionId: string): Promise<ChildExecutionInfo[]> =>
     invoke<ChildExecutionInfo[]>('get_child_executions', { parentExecutionId }),
 
-  // Get buffered output for a workflow execution
   getWorkflowOutput: (workflowId: string): Promise<WorkflowOutputResponse> =>
     invoke<WorkflowOutputResponse>('get_workflow_output', { workflowId }),
 
-  // Execution history commands
   loadExecutionHistory: (workflowId: string): Promise<ExecutionHistoryItem[]> =>
     invoke<ExecutionHistoryItem[]>('load_execution_history', { workflowId }),
 
@@ -401,14 +335,9 @@ export const workflowAPI = {
 
 import type { WebhookDeliveryEvent, WebhookTestResult } from '../types/webhook';
 
-// Store unlisten functions for webhook events
 const webhookUnlisteners: UnlistenFn[] = [];
 
 export const webhookAPI = {
-  /**
-   * Listen for webhook delivery events
-   * Emitted after each webhook delivery attempt (success or failure)
-   */
   onWebhookDelivery: (callback: (event: WebhookDeliveryEvent) => void): void => {
     listen<WebhookDeliveryEvent>('webhook_delivery', (event) => {
       callback(event.payload);
@@ -417,18 +346,11 @@ export const webhookAPI = {
     });
   },
 
-  /**
-   * Remove all webhook event listeners
-   */
   removeWebhookListeners: (): void => {
     webhookUnlisteners.forEach((unlisten) => unlisten());
     webhookUnlisteners.length = 0;
   },
 
-  /**
-   * Test webhook configuration (Phase 5 - US3)
-   * Sends a test request to the webhook URL
-   */
   testWebhook: (
     url: string,
     headers?: Record<string, string>,
@@ -441,7 +363,6 @@ export const webhookAPI = {
 // Worktree Commands (Phase 8 - US5)
 // ============================================================================
 
-// Worktree types
 export interface Worktree {
   path: string;
   branch: string | null;
@@ -451,7 +372,6 @@ export interface Worktree {
   isDetached?: boolean;
 }
 
-// T003: WorktreeStatus interface for enhanced worktree management
 export interface WorktreeStatus {
   uncommittedCount: number;
   ahead: number;
@@ -462,7 +382,6 @@ export interface WorktreeStatus {
   hasRunningProcess: boolean;
 }
 
-// T004: EditorDefinition interface for IDE integration
 export interface EditorDefinition {
   id: string;
   name: string;
@@ -471,7 +390,6 @@ export interface EditorDefinition {
   isAvailable: boolean;
 }
 
-// T005: Response types for enhanced worktree commands
 export interface GetWorktreeStatusResponse {
   success: boolean;
   status?: WorktreeStatus;
@@ -611,15 +529,12 @@ export const worktreeAPI = {
   ): Promise<SyncWorktreeResponse> =>
     invoke<SyncWorktreeResponse>('sync_worktree', { worktreePath, baseBranch, method }),
 
-  // T012: Enhanced worktree status API
   getWorktreeStatus: (worktreePath: string): Promise<GetWorktreeStatusResponse> =>
     invoke<GetWorktreeStatusResponse>('get_worktree_status', { worktreePath }),
 
-  // T013: Get all worktree statuses
   getAllWorktreeStatuses: (projectPath: string): Promise<GetAllWorktreeStatusesResponse> =>
     invoke<GetAllWorktreeStatusesResponse>('get_all_worktree_statuses', { projectPath }),
 
-  // T016: Execute script in worktree
   executeScriptInWorktree: (params: {
     worktreePath: string;
     scriptName: string;
@@ -627,15 +542,12 @@ export const worktreeAPI = {
   }): Promise<ExecuteScriptInWorktreeResponse> =>
     invoke<ExecuteScriptInWorktreeResponse>('execute_script_in_worktree', { ...params }),
 
-  // T035: Open worktree in editor
   openInEditor: (worktreePath: string, editorId?: string): Promise<OpenInEditorResponse> =>
     invoke<OpenInEditorResponse>('open_in_editor', { worktreePath, editorId }),
 
-  // T036: Get available editors
   getAvailableEditors: (): Promise<GetAvailableEditorsResponse> =>
     invoke<GetAvailableEditorsResponse>('get_available_editors'),
 
-  // Gitignore management
   checkGitignoreHasWorktrees: (projectPath: string): Promise<CheckGitignoreResponse> =>
     invoke<CheckGitignoreResponse>('check_gitignore_has_worktrees', { projectPath }),
 
@@ -699,31 +611,21 @@ export interface AddToGitignoreResponse {
 }
 
 // ============================================================================
-// Worktree Template Types & API (Phase 7 - US5)
+// Worktree Template Types & API
 // ============================================================================
 
-// T048: WorktreeTemplate interface for template/preset feature
 export interface WorktreeTemplate {
   id: string;
   name: string;
   description?: string;
-  /** Branch naming pattern with placeholders: {name}, {date}, {user}, {repo}, {num} */
   branchPattern: string;
-  /** Path pattern for worktree location with placeholders */
   pathPattern: string;
-  /** Scripts to run after worktree creation */
   postCreateScripts: string[];
-  /** Whether to open in editor after creation */
   openInEditor: boolean;
-  /** Preferred editor ID to use */
   preferredEditor?: string;
-  /** Base branch to create from (e.g., "main", "develop") */
   baseBranch?: string;
-  /** Whether this is a default template */
   isDefault: boolean;
-  /** Creation timestamp */
   createdAt: string;
-  /** Last modified timestamp */
   updatedAt?: string;
 }
 
@@ -766,7 +668,6 @@ export interface CreateWorktreeFromTemplateResponse {
 }
 
 export const worktreeTemplateAPI = {
-  // T049: Template storage operations
   saveTemplate: (template: WorktreeTemplate): Promise<SaveTemplateResponse> =>
     invoke<SaveTemplateResponse>('save_worktree_template', { template }),
 
@@ -782,7 +683,6 @@ export const worktreeTemplateAPI = {
   getNextFeatureNumber: (projectPath: string): Promise<GetNextFeatureNumberResponse> =>
     invoke<GetNextFeatureNumberResponse>('get_next_feature_number', { projectPath }),
 
-  // T050: Create worktree from template
   createWorktreeFromTemplate: (
     params: CreateWorktreeFromTemplateParams
   ): Promise<CreateWorktreeFromTemplateResponse> =>
@@ -790,10 +690,9 @@ export const worktreeTemplateAPI = {
 };
 
 // ============================================================================
-// IPA Commands (Phase 9 - US6)
+// IPA Commands
 // ============================================================================
 
-// IPA types
 export interface IpaMetadata {
   fileName: string;
   filePath: string;
@@ -832,7 +731,6 @@ export const ipaAPI = {
 // APK Commands
 // ============================================================================
 
-// APK types
 export interface ApkMetadata {
   fileName: string;
   filePath: string;
@@ -869,205 +767,7 @@ export const apkAPI = {
 };
 
 // ============================================================================
-// Security Audit Commands (005-package-security-audit)
-// ============================================================================
-
-import type {
-  VulnScanResult,
-  VulnSeverity,
-  ScanStatus,
-  ScanError,
-  VulnSummary,
-  SecurityScanData,
-} from '../types/security';
-
-// Security API types
-export type { VulnScanResult, VulnSeverity, ScanStatus, ScanError, VulnSummary, SecurityScanData };
-
-export type PackageManagerType = 'npm' | 'pnpm' | 'yarn' | 'bun' | 'unknown';
-
-export interface DetectPackageManagerResponse {
-  success: boolean;
-  packageManager?: PackageManagerType;
-  lockFile?: string;
-  error?: string;
-}
-
-export interface CheckCliInstalledResponse {
-  success: boolean;
-  installed: boolean;
-  version?: string;
-  path?: string;
-  error?: string;
-}
-
-export interface RunSecurityAuditResponse {
-  success: boolean;
-  result?: VulnScanResult;
-  error?: ScanError;
-}
-
-export interface GetSecurityScanResponse {
-  success: boolean;
-  data?: SecurityScanData;
-  error?: string;
-}
-
-export interface SecurityScanSummary {
-  projectId: string;
-  projectName: string;
-  projectPath: string;
-  packageManager: PackageManagerType;
-  lastScannedAt: string | null;
-  summary: VulnSummary | null;
-  status: ScanStatus;
-}
-
-export interface GetAllSecurityScansResponse {
-  success: boolean;
-  scans?: SecurityScanSummary[];
-  error?: string;
-}
-
-export interface SaveSecurityScanResponse {
-  success: boolean;
-  error?: string;
-}
-
-// Security event payloads
-export interface SecurityScanStartedPayload {
-  projectId: string;
-  packageManager: PackageManagerType;
-}
-
-export interface SecurityScanProgressPayload {
-  projectId: string;
-  stage: 'detecting' | 'auditing' | 'parsing';
-  message: string;
-}
-
-export interface SecurityScanCompletedPayload {
-  projectId: string;
-  success: boolean;
-  result?: VulnScanResult;
-  error?: ScanError;
-}
-
-export const securityAPI = {
-  detectPackageManager: (projectPath: string): Promise<DetectPackageManagerResponse> =>
-    invoke<DetectPackageManagerResponse>('detect_package_manager', { projectPath }),
-
-  checkCliInstalled: (packageManager: PackageManagerType): Promise<CheckCliInstalledResponse> =>
-    invoke<CheckCliInstalledResponse>('check_cli_installed', { packageManager }),
-
-  runSecurityAudit: (
-    projectId: string,
-    projectPath: string,
-    packageManager?: PackageManagerType
-  ): Promise<RunSecurityAuditResponse> =>
-    invoke<RunSecurityAuditResponse>('run_security_audit', {
-      projectId,
-      projectPath,
-      packageManager,
-    }),
-
-  getSecurityScan: (projectId: string): Promise<GetSecurityScanResponse> =>
-    invoke<GetSecurityScanResponse>('get_security_scan', { projectId }),
-
-  getAllSecurityScans: (): Promise<GetAllSecurityScansResponse> =>
-    invoke<GetAllSecurityScansResponse>('get_all_security_scans'),
-
-  saveSecurityScan: (
-    projectId: string,
-    result: VulnScanResult
-  ): Promise<SaveSecurityScanResponse> =>
-    invoke<SaveSecurityScanResponse>('save_security_scan', { projectId, result }),
-
-  /** Snooze scan reminder for X hours (default: 24) */
-  snoozeScanReminder: (
-    projectId: string,
-    snoozeDurationHours: number = 24
-  ): Promise<SaveSecurityScanResponse> =>
-    invoke<SaveSecurityScanResponse>('snooze_scan_reminder', {
-      projectId,
-      snoozeDurationHours,
-    }),
-
-  /** Dismiss scan reminder (clears snooze) */
-  dismissScanReminder: (projectId: string): Promise<SaveSecurityScanResponse> =>
-    invoke<SaveSecurityScanResponse>('dismiss_scan_reminder', { projectId }),
-};
-
-export const securityEvents = {
-  onScanStarted: (callback: (data: SecurityScanStartedPayload) => void): Promise<UnlistenFn> =>
-    listen<SecurityScanStartedPayload>('security_scan_started', (event) => callback(event.payload)),
-
-  onScanProgress: (callback: (data: SecurityScanProgressPayload) => void): Promise<UnlistenFn> =>
-    listen<SecurityScanProgressPayload>('security_scan_progress', (event) =>
-      callback(event.payload)
-    ),
-
-  onScanCompleted: (callback: (data: SecurityScanCompletedPayload) => void): Promise<UnlistenFn> =>
-    listen<SecurityScanCompletedPayload>('security_scan_completed', (event) =>
-      callback(event.payload)
-    ),
-};
-
-// ============================================================================
-// Version Management Commands (006-node-package-manager)
-// ============================================================================
-
-import type {
-  VersionRequirement,
-  SystemEnvironment,
-  VersionCompatibility,
-  VersionRequirementResponse,
-  SystemEnvironmentResponse,
-  VersionCompatibilityResponse,
-} from '../types/version';
-
-export type {
-  VersionRequirement,
-  SystemEnvironment,
-  VersionCompatibility,
-  VersionRequirementResponse,
-  SystemEnvironmentResponse,
-  VersionCompatibilityResponse,
-};
-
-export interface CommandWrapperResponse {
-  success: boolean;
-  command?: string;
-  args?: string[];
-  usingVersionManager: boolean;
-  versionManager?: string;
-  error?: string;
-}
-
-export const versionAPI = {
-  /** Get version requirements from project's package.json */
-  getVersionRequirement: (projectPath: string): Promise<VersionRequirementResponse> =>
-    invoke<VersionRequirementResponse>('get_version_requirement', { projectPath }),
-
-  /** Get system environment (installed Node.js, npm, yarn, pnpm, Volta, Corepack) */
-  getSystemEnvironment: (): Promise<SystemEnvironmentResponse> =>
-    invoke<SystemEnvironmentResponse>('get_system_environment'),
-
-  /** Check version compatibility between project requirements and system environment */
-  checkVersionCompatibility: (projectPath: string): Promise<VersionCompatibilityResponse> =>
-    invoke<VersionCompatibilityResponse>('check_version_compatibility', { projectPath }),
-
-  /** Get wrapped command for execution with proper version management (uses Volta if available) */
-  getWrappedCommand: (
-    projectPath: string,
-    command: string,
-    args: string[]
-  ): Promise<CommandWrapperResponse> =>
-    invoke<CommandWrapperResponse>('get_wrapped_command', { projectPath, command, args }),
-};
-
-// ============================================================================
-// Settings Commands (Phase 4 - US7)
+// Settings Commands
 // ============================================================================
 
 export const settingsAPI = {
@@ -1075,17 +775,12 @@ export const settingsAPI = {
 
   saveSettings: (settings: AppSettings): Promise<void> => invoke('save_settings', { settings }),
 
-  loadProjects: (): Promise<Project[]> => invoke<Project[]>('load_projects'),
-
-  saveProjects: (projects: Project[]): Promise<void> => invoke('save_projects', { projects }),
-
   loadWorkflows: (): Promise<Workflow[]> => invoke<Workflow[]>('load_workflows'),
 
   saveWorkflows: (workflows: Workflow[]): Promise<void> => invoke('save_workflows', { workflows }),
 
   loadStoreData: (): Promise<StoreData> => invoke<StoreData>('load_store_data'),
 
-  // Store path management
   getStorePath: (): Promise<StorePathInfo> => invoke<StorePathInfo>('get_store_path'),
 
   setStorePath: (newPath: string): Promise<StorePathInfo> =>
@@ -1109,11 +804,9 @@ import type {
 export type { NotificationSettings, NotificationRecord, NotificationListResponse };
 
 export const notificationAPI = {
-  /** Load notification settings from database */
   loadSettings: (): Promise<NotificationSettings> =>
     invoke<NotificationSettings>('load_notification_settings'),
 
-  /** Save notification settings to database */
   saveSettings: (settings: NotificationSettings): Promise<void> =>
     invoke('save_notification_settings', { settings }),
 };
@@ -1123,28 +816,21 @@ export const notificationAPI = {
 // ============================================================================
 
 export const notificationHistoryAPI = {
-  /** Get recent notifications with pagination */
   getNotifications: (limit?: number, offset?: number): Promise<NotificationListResponse> =>
     invoke<NotificationListResponse>('get_notifications', { limit, offset }),
 
-  /** Get unread notification count */
   getUnreadCount: (): Promise<number> => invoke<number>('get_unread_notification_count'),
 
-  /** Mark a notification as read */
   markAsRead: (id: string): Promise<boolean> => invoke<boolean>('mark_notification_read', { id }),
 
-  /** Mark all notifications as read */
   markAllAsRead: (): Promise<number> => invoke<number>('mark_all_notifications_read'),
 
-  /** Delete a notification */
   deleteNotification: (id: string): Promise<boolean> =>
     invoke<boolean>('delete_notification', { id }),
 
-  /** Cleanup old notifications (default: older than 30 days) */
   cleanupOld: (retentionDays?: number): Promise<number> =>
     invoke<number>('cleanup_old_notifications', { retentionDays }),
 
-  /** Clear all notifications */
   clearAll: (): Promise<number> => invoke<number>('clear_all_notifications'),
 };
 
@@ -1152,7 +838,6 @@ export const notificationHistoryAPI = {
 // Event Listeners
 // ============================================================================
 
-// Feature 013: Child execution event payloads
 export interface ChildExecutionStartedPayload {
   parentExecutionId: string;
   parentNodeId: string;
@@ -1185,14 +870,14 @@ export interface ChildExecutionCompletedPayload {
 }
 
 export const tauriEvents = {
-  // Script events (Phase 6 - US3)
+  // Script events
   onScriptOutput: (callback: (data: ScriptOutputPayload) => void): Promise<UnlistenFn> =>
     listen<ScriptOutputPayload>('script_output', (event) => callback(event.payload)),
 
   onScriptCompleted: (callback: (data: ScriptCompletedPayload) => void): Promise<UnlistenFn> =>
     listen<ScriptCompletedPayload>('script_completed', (event) => callback(event.payload)),
 
-  // Workflow events (Phase 7)
+  // Workflow events
   onWorkflowNodeStarted: (callback: (data: NodeStartedPayload) => void): Promise<UnlistenFn> =>
     listen<NodeStartedPayload>('execution_node_started', (event) => callback(event.payload)),
 
@@ -1208,7 +893,7 @@ export const tauriEvents = {
   onWorkflowPaused: (callback: (data: ExecutionPausedPayload) => void): Promise<UnlistenFn> =>
     listen<ExecutionPausedPayload>('execution_paused', (event) => callback(event.payload)),
 
-  // Feature 013: Child execution events (T028-T030)
+  // Child execution events
   onChildExecutionStarted: (
     callback: (data: ChildExecutionStartedPayload) => void
   ): Promise<UnlistenFn> =>
@@ -1230,19 +915,19 @@ export const tauriEvents = {
       callback(event.payload)
     ),
 
-  // File watcher events (package.json monitoring)
+  // File watcher events
   onPackageJsonChanged: (
     callback: (data: PackageJsonChangedPayload) => void
   ): Promise<UnlistenFn> =>
     listen<PackageJsonChangedPayload>('package-json-changed', (event) => callback(event.payload)),
 
-  // Notification Center events (021-mcp-actions)
+  // Notification Center events
   onNewNotification: (callback: (data: NotificationRecord) => void): Promise<UnlistenFn> =>
     listen<NotificationRecord>('notification:new', (event) => callback(event.payload)),
 };
 
 // ============================================================================
-// File Watcher Types and API (package.json monitoring)
+// File Watcher Types and API
 // ============================================================================
 
 export interface PackageJsonChangedPayload {
@@ -1256,174 +941,17 @@ export interface FileWatcherResponse {
 }
 
 export const fileWatcherAPI = {
-  /** Start watching a project's package.json file for changes */
   watchProject: (projectPath: string): Promise<FileWatcherResponse> =>
     invoke<FileWatcherResponse>('watch_project', { projectPath }),
 
-  /** Stop watching a project's package.json file */
   unwatchProject: (projectPath: string): Promise<FileWatcherResponse> =>
     invoke<FileWatcherResponse>('unwatch_project', { projectPath }),
 
-  /** Stop watching all projects */
   unwatchAllProjects: (): Promise<FileWatcherResponse> =>
     invoke<FileWatcherResponse>('unwatch_all_projects'),
 
-  /** Get list of currently watched project paths */
   getWatchedProjects: (): Promise<string[]> => invoke<string[]>('get_watched_projects'),
 };
-
-// ============================================================================
-// Unified API Export (for compatibility with existing hooks)
-// ============================================================================
-
-// ============================================================================
-// Monorepo Commands (008-monorepo-support)
-// ============================================================================
-
-import type {
-  MonorepoToolType,
-  MonorepoToolInfo,
-  DetectMonorepoToolsResponse,
-  GetDependencyGraphParams,
-  GetDependencyGraphResponse,
-  GetNxTargetsResponse,
-  GetTurboPipelinesResponse,
-  RunNxCommandParams,
-  RunNxCommandResponse,
-  RunTurboCommandParams,
-  RunTurboCommandResponse,
-  GetTurboCacheStatusResponse,
-  ClearTurboCacheResponse,
-  GetNxCacheStatusResponse,
-  ClearNxCacheResponse,
-  RunBatchScriptsParams,
-  RunBatchScriptsResponse,
-  BatchProgressPayload,
-  BatchCompletedPayload,
-  NxTarget,
-  TurboPipeline,
-  TurboCacheStatus,
-  NxCacheStatus,
-  DependencyGraph,
-} from '../types/monorepo';
-
-export type {
-  MonorepoToolType,
-  MonorepoToolInfo,
-  DetectMonorepoToolsResponse,
-  GetDependencyGraphParams,
-  GetDependencyGraphResponse,
-  GetNxTargetsResponse,
-  GetTurboPipelinesResponse,
-  RunNxCommandParams,
-  RunNxCommandResponse,
-  RunTurboCommandParams,
-  RunTurboCommandResponse,
-  GetTurboCacheStatusResponse,
-  ClearTurboCacheResponse,
-  GetNxCacheStatusResponse,
-  ClearNxCacheResponse,
-  RunBatchScriptsParams,
-  RunBatchScriptsResponse,
-  BatchProgressPayload,
-  BatchCompletedPayload,
-  NxTarget,
-  TurboPipeline,
-  TurboCacheStatus,
-  NxCacheStatus,
-  DependencyGraph,
-};
-
-export const monorepoAPI = {
-  /** Detect monorepo tools in the project (fast - no version checks) */
-  detectTools: (projectPath: string): Promise<DetectMonorepoToolsResponse> =>
-    invoke<DetectMonorepoToolsResponse>('detect_monorepo_tools', { projectPath }),
-
-  /** Get tool version lazily (call when you need to display version) */
-  getToolVersion: (projectPath: string, toolType: string): Promise<string | null> =>
-    invoke<string | null>('get_tool_version', { projectPath, toolType }),
-
-  /** Get dependency graph for the project */
-  getDependencyGraph: (params: GetDependencyGraphParams): Promise<GetDependencyGraphResponse> =>
-    invoke<GetDependencyGraphResponse>('get_dependency_graph', {
-      projectPath: params.projectPath,
-      tool: params.tool,
-      includeAffected: params.includeAffected,
-      base: params.base,
-    }),
-
-  /** Get Nx targets */
-  getNxTargets: (projectPath: string): Promise<GetNxTargetsResponse> =>
-    invoke<GetNxTargetsResponse>('get_nx_targets', { projectPath }),
-
-  /** Get Turborepo pipelines */
-  getTurboPipelines: (projectPath: string): Promise<GetTurboPipelinesResponse> =>
-    invoke<GetTurboPipelinesResponse>('get_turbo_pipelines', { projectPath }),
-
-  /** Run Nx command */
-  runNxCommand: (params: RunNxCommandParams): Promise<RunNxCommandResponse> =>
-    invoke<RunNxCommandResponse>('run_nx_command', {
-      projectPath: params.projectPath,
-      command: params.command,
-      target: params.target,
-      project: params.project,
-      projects: params.projects,
-      base: params.base,
-      parallel: params.parallel,
-    }),
-
-  /** Run Turborepo command */
-  runTurboCommand: (params: RunTurboCommandParams): Promise<RunTurboCommandResponse> =>
-    invoke<RunTurboCommandResponse>('run_turbo_command', {
-      projectPath: params.projectPath,
-      task: params.task,
-      filter: params.filter,
-      force: params.force,
-      dryRun: params.dryRun,
-      concurrency: params.concurrency,
-    }),
-
-  /** Get Turborepo cache status */
-  getTurboCacheStatus: (projectPath: string): Promise<GetTurboCacheStatusResponse> =>
-    invoke<GetTurboCacheStatusResponse>('get_turbo_cache_status', { projectPath }),
-
-  /** Clear Turborepo cache */
-  clearTurboCache: (projectPath: string): Promise<ClearTurboCacheResponse> =>
-    invoke<ClearTurboCacheResponse>('clear_turbo_cache', { projectPath }),
-
-  /** Get Nx cache status */
-  getNxCacheStatus: (projectPath: string): Promise<GetNxCacheStatusResponse> =>
-    invoke<GetNxCacheStatusResponse>('get_nx_cache_status', { projectPath }),
-
-  /** Clear Nx cache */
-  clearNxCache: (projectPath: string): Promise<ClearNxCacheResponse> =>
-    invoke<ClearNxCacheResponse>('clear_nx_cache', { projectPath }),
-
-  /** Run scripts in batch across multiple packages */
-  runBatchScripts: (params: RunBatchScriptsParams): Promise<RunBatchScriptsResponse> =>
-    invoke<RunBatchScriptsResponse>('run_batch_scripts', {
-      projectPath: params.projectPath,
-      packages: params.packages,
-      script: params.script,
-      tool: params.tool,
-      parallel: params.parallel,
-      stopOnError: params.stopOnError,
-    }),
-};
-
-export const monorepoEvents = {
-  /** Listen for batch execution progress */
-  onBatchProgress: (callback: (data: BatchProgressPayload) => void): Promise<UnlistenFn> =>
-    listen<BatchProgressPayload>('batch_progress', (event) => callback(event.payload)),
-
-  /** Listen for batch execution completion */
-  onBatchCompleted: (callback: (data: BatchCompletedPayload) => void): Promise<UnlistenFn> =>
-    listen<BatchCompletedPayload>('batch_completed', (event) => callback(event.payload)),
-};
-
-// ============================================================================
-// Unified API Export (for compatibility with existing hooks)
-// ============================================================================
 
 // ============================================================================
 // Git Commands (009-git-integration)
@@ -1460,7 +988,6 @@ import type {
   GitAuthStatus,
   GetGitAuthStatusResponse,
   TestRemoteConnectionResponse,
-  // Diff types (010-git-diff-viewer)
   FileDiff,
   DiffHunk,
   DiffLine,
@@ -1498,7 +1025,6 @@ export type {
   GitAuthStatus,
   GetGitAuthStatusResponse,
   TestRemoteConnectionResponse,
-  // Diff types (010-git-diff-viewer)
   FileDiff,
   DiffHunk,
   DiffLine,
@@ -1506,11 +1032,9 @@ export type {
 };
 
 export const gitAPI = {
-  // US1: View Git Status
   getStatus: (projectPath: string): Promise<GetGitStatusResponse> =>
     invoke<GetGitStatusResponse>('get_git_status', { projectPath }),
 
-  // US2: Stage and Commit
   stageFiles: (projectPath: string, files: string[]): Promise<StageFilesResponse> =>
     invoke<StageFilesResponse>('stage_files', { projectPath, files }),
 
@@ -1524,7 +1048,6 @@ export const gitAPI = {
   ): Promise<CreateCommitResponse> =>
     invoke<CreateCommitResponse>('create_commit', { projectPath, message, amendLast }),
 
-  // US3: Branch Management
   getBranches: (projectPath: string, includeRemote?: boolean): Promise<GetBranchesResponse> =>
     invoke<GetBranchesResponse>('get_branches', { projectPath, includeRemote }),
 
@@ -1549,7 +1072,6 @@ export const gitAPI = {
   ): Promise<DeleteBranchResponse> =>
     invoke<DeleteBranchResponse>('delete_branch', { projectPath, branchName, force }),
 
-  // US4: Commit History
   getCommitHistory: (
     projectPath: string,
     skip?: number,
@@ -1563,7 +1085,6 @@ export const gitAPI = {
       branch,
     }),
 
-  // US5: Push and Pull
   push: (
     projectPath: string,
     options?: {
@@ -1596,7 +1117,6 @@ export const gitAPI = {
       rebase: options?.rebase,
     }),
 
-  // US6: Stash Management
   listStashes: (projectPath: string): Promise<ListStashesResponse> =>
     invoke<ListStashesResponse>('list_stashes', { projectPath }),
 
@@ -1613,7 +1133,6 @@ export const gitAPI = {
   dropStash: (projectPath: string, index?: number): Promise<DropStashResponse> =>
     invoke<DropStashResponse>('drop_stash', { projectPath, index }),
 
-  // Remote Management
   getRemotes: (projectPath: string): Promise<GetRemotesResponse> =>
     invoke<GetRemotesResponse>('get_remotes', { projectPath }),
 
@@ -1623,7 +1142,6 @@ export const gitAPI = {
   removeRemote: (projectPath: string, name: string): Promise<RemoveRemoteResponse> =>
     invoke<RemoveRemoteResponse>('remove_remote', { projectPath, name }),
 
-  // Discard Changes
   discardChanges: (projectPath: string, files: string[]): Promise<DiscardChangesResponse> =>
     invoke<DiscardChangesResponse>('discard_changes', { projectPath, files }),
 
@@ -1638,7 +1156,6 @@ export const gitAPI = {
       includeDirectories,
     }),
 
-  // Fetch
   fetch: (
     projectPath: string,
     options?: {
@@ -1654,7 +1171,6 @@ export const gitAPI = {
       prune: options?.prune,
     }),
 
-  // Rebase
   rebase: (projectPath: string, onto: string): Promise<GitRebaseResponse> =>
     invoke<GitRebaseResponse>('git_rebase', { projectPath, onto }),
 
@@ -1664,7 +1180,6 @@ export const gitAPI = {
   rebaseContinue: (projectPath: string): Promise<GitRebaseResponse> =>
     invoke<GitRebaseResponse>('git_rebase_continue', { projectPath }),
 
-  // Authentication
   getAuthStatus: (projectPath: string): Promise<GetGitAuthStatusResponse> =>
     invoke<GetGitAuthStatusResponse>('get_git_auth_status', { projectPath }),
 
@@ -1674,7 +1189,6 @@ export const gitAPI = {
   ): Promise<TestRemoteConnectionResponse> =>
     invoke<TestRemoteConnectionResponse>('test_remote_connection', { projectPath, remoteName }),
 
-  // Diff Viewer (010-git-diff-viewer)
   getFileDiff: (
     projectPath: string,
     filePath: string,
@@ -1684,10 +1198,9 @@ export const gitAPI = {
 };
 
 // ============================================================================
-// Custom Step Template Commands (011-workflow-step-templates)
+// Custom Step Template Commands
 // ============================================================================
 
-/** Template category identifiers */
 export type StepTemplateCategory =
   | 'package-manager'
   | 'git'
@@ -1703,7 +1216,6 @@ export type StepTemplateCategory =
   | 'nodejs'
   | 'custom';
 
-/** Custom step template saved by user */
 export interface CustomStepTemplate {
   id: string;
   name: string;
@@ -1727,337 +1239,40 @@ export interface CustomTemplateResponse {
 }
 
 export const stepTemplateAPI = {
-  /** Load all custom step templates */
   loadCustomTemplates: (): Promise<ListCustomTemplatesResponse> =>
     invoke<ListCustomTemplatesResponse>('load_custom_step_templates'),
 
-  /** Save a custom step template */
   saveCustomTemplate: (template: CustomStepTemplate): Promise<CustomTemplateResponse> =>
     invoke<CustomTemplateResponse>('save_custom_step_template', { template }),
 
-  /** Delete a custom step template */
   deleteCustomTemplate: (templateId: string): Promise<CustomTemplateResponse> =>
     invoke<CustomTemplateResponse>('delete_custom_step_template', { templateId }),
 };
 
 // ============================================================================
 // Incoming Webhook API
-// Per-workflow server architecture: each workflow has its own HTTP server
 // ============================================================================
 
 import type { IncomingWebhookConfig, IncomingWebhookServerStatus } from '../types/incoming-webhook';
 
-/** Port status returned by check_port_available */
-export type PortStatus =
-  | 'Available'
-  | { InUseByWorkflow: string } // Contains workflow name using this port
-  | 'InUseByOther';
+export type PortStatus = 'Available' | { InUseByWorkflow: string } | 'InUseByOther';
 
 export const incomingWebhookAPI = {
-  /** Generate a new API token */
   generateToken: (): Promise<string> => invoke<string>('generate_incoming_webhook_token'),
 
-  /** Generate a new HMAC secret for signature verification */
   generateSecret: (): Promise<string> => invoke<string>('generate_webhook_secret'),
 
-  /** Get incoming webhook server status (multi-server) */
   getServerStatus: (): Promise<IncomingWebhookServerStatus> =>
     invoke<IncomingWebhookServerStatus>('get_incoming_webhook_status'),
 
-  /** Create a new incoming webhook config with fresh token and default port */
   createConfig: (): Promise<IncomingWebhookConfig> =>
     invoke<IncomingWebhookConfig>('create_incoming_webhook_config'),
 
-  /** Regenerate token for an existing config */
   regenerateToken: (config: IncomingWebhookConfig): Promise<IncomingWebhookConfig> =>
     invoke<IncomingWebhookConfig>('regenerate_incoming_webhook_token', { config }),
 
-  /**
-   * Check if a port is available
-   * @param port - Port number to check
-   * @param workflowId - Optional workflow ID to exclude from check (for editing existing webhook)
-   */
   checkPortAvailable: (port: number, workflowId?: string): Promise<PortStatus> =>
     invoke<PortStatus>('check_port_available', { port, workflowId }),
-};
-
-// ============================================================================
-// Deploy API (015-one-click-deploy)
-// ============================================================================
-
-import type {
-  PlatformType,
-  DeploymentEnvironment,
-  DeploymentStatus,
-  EnvVariable,
-  ConnectedPlatform,
-  DeploymentConfig,
-  Deployment,
-  OAuthFlowResult,
-  DeploymentStatusEvent,
-  // 016-multi-deploy-accounts
-  DeployAccount,
-  DeployPreferences,
-  RemoveAccountResult,
-  CheckAccountResult,
-  // GitHub Pages workflow generation
-  GitHubWorkflowResult,
-  // Cloudflare Pages
-  CloudflareValidationResult,
-  // Secure backup
-  EncryptedData,
-  BackupExportResult,
-  BackupImportResult,
-  // 018-deploy-ui-enhancement
-  DeploymentStats,
-  PlatformSiteInfo,
-  DeploymentProgressEvent,
-} from '../types/deploy';
-
-export type {
-  PlatformType,
-  DeploymentEnvironment,
-  DeploymentStatus,
-  EnvVariable,
-  ConnectedPlatform,
-  DeploymentConfig,
-  Deployment,
-  OAuthFlowResult,
-  DeploymentStatusEvent,
-  // 016-multi-deploy-accounts
-  DeployAccount,
-  DeployPreferences,
-  RemoveAccountResult,
-  // GitHub Pages workflow generation
-  GitHubWorkflowResult,
-  // Cloudflare Pages
-  CloudflareValidationResult,
-  // Secure backup
-  EncryptedData,
-  BackupExportResult,
-  BackupImportResult,
-  // 018-deploy-ui-enhancement
-  DeploymentStats,
-  PlatformSiteInfo,
-  DeploymentProgressEvent,
-};
-
-export const deployAPI = {
-  // OAuth (Legacy)
-  startOAuthFlow: (platform: PlatformType): Promise<OAuthFlowResult> =>
-    invoke<OAuthFlowResult>('start_oauth_flow', { platform }),
-
-  getConnectedPlatforms: (): Promise<ConnectedPlatform[]> =>
-    invoke<ConnectedPlatform[]>('get_connected_platforms'),
-
-  disconnectPlatform: (platform: PlatformType): Promise<void> =>
-    invoke('disconnect_platform', { platform }),
-
-  // Deployment
-  startDeployment: (
-    projectId: string,
-    projectPath: string,
-    config: DeploymentConfig
-  ): Promise<Deployment> =>
-    invoke<Deployment>('start_deployment', { projectId, projectPath, config }),
-
-  getDeploymentHistory: (projectId: string): Promise<Deployment[]> =>
-    invoke<Deployment[]>('get_deployment_history', { projectId }),
-
-  deleteDeploymentHistoryItem: (projectId: string, deploymentId: string): Promise<void> =>
-    invoke('delete_deployment_history_item', { projectId, deploymentId }),
-
-  clearDeploymentHistory: (projectId: string): Promise<void> =>
-    invoke('clear_deployment_history', { projectId }),
-
-  getDeploymentConfig: (projectId: string): Promise<DeploymentConfig | null> =>
-    invoke<DeploymentConfig | null>('get_deployment_config', { projectId }),
-
-  saveDeploymentConfig: (config: DeploymentConfig): Promise<void> =>
-    invoke('save_deployment_config', { config }),
-
-  deleteDeploymentConfig: (projectId: string): Promise<boolean> =>
-    invoke<boolean>('delete_deployment_config', { projectId }),
-
-  detectFramework: (projectPath: string): Promise<string | null> =>
-    invoke<string | null>('detect_framework', { projectPath }),
-
-  redeploy: (projectId: string, projectPath: string): Promise<Deployment> =>
-    invoke<Deployment>('redeploy', { projectId, projectPath }),
-
-  // ============================================================================
-  // T012-T014: Multi Deploy Accounts API (016-multi-deploy-accounts)
-  // ============================================================================
-
-  // T012: Account Management
-  /** Get all deploy accounts (sanitized - no tokens) */
-  getDeployAccounts: (): Promise<DeployAccount[]> => invoke<DeployAccount[]>('get_deploy_accounts'),
-
-  /** Get accounts filtered by platform */
-  getAccountsByPlatform: (platform: PlatformType): Promise<DeployAccount[]> =>
-    invoke<DeployAccount[]>('get_accounts_by_platform', { platform }),
-
-  /** Add a new deploy account via OAuth */
-  addDeployAccount: (platform: PlatformType): Promise<OAuthFlowResult> =>
-    invoke<OAuthFlowResult>('add_deploy_account', { platform }),
-
-  /** Remove a deploy account */
-  removeDeployAccount: (accountId: string, force?: boolean): Promise<RemoveAccountResult> =>
-    invoke<RemoveAccountResult>('remove_deploy_account', { accountId, force }),
-
-  /** Update deploy account (display name) */
-  updateDeployAccount: (accountId: string, displayName?: string): Promise<DeployAccount> =>
-    invoke<DeployAccount>('update_deploy_account', { accountId, displayName }),
-
-  // T013: Project Binding
-  /** Bind a project to a specific deploy account */
-  bindProjectAccount: (projectId: string, accountId: string): Promise<DeploymentConfig> =>
-    invoke<DeploymentConfig>('bind_project_account', { projectId, accountId }),
-
-  /** Unbind a project from its deploy account */
-  unbindProjectAccount: (projectId: string): Promise<DeploymentConfig> =>
-    invoke<DeploymentConfig>('unbind_project_account', { projectId }),
-
-  /** Get the account bound to a project */
-  getProjectBinding: (projectId: string): Promise<DeployAccount | null> =>
-    invoke<DeployAccount | null>('get_project_binding', { projectId }),
-
-  // T014: Preferences
-  /** Get deploy preferences (default accounts) */
-  getDeployPreferences: (): Promise<DeployPreferences> =>
-    invoke<DeployPreferences>('get_deploy_preferences'),
-
-  /** Set default account for a platform */
-  setDefaultAccount: (platform: PlatformType, accountId?: string): Promise<DeployPreferences> =>
-    invoke<DeployPreferences>('set_default_account', { platform, accountId }),
-
-  // ============================================================================
-  // GitHub Pages Workflow Generation
-  // ============================================================================
-
-  /** Generate GitHub Actions workflow file for GitHub Pages deployment */
-  generateGitHubActionsWorkflow: (
-    projectPath: string,
-    config: DeploymentConfig
-  ): Promise<GitHubWorkflowResult> =>
-    invoke<GitHubWorkflowResult>('generate_github_actions_workflow', { projectPath, config }),
-
-  // ============================================================================
-  // Cloudflare Pages Integration
-  // ============================================================================
-
-  /** Validate Cloudflare API token and get account info */
-  validateCloudflareToken: (apiToken: string): Promise<CloudflareValidationResult> =>
-    invoke<CloudflareValidationResult>('validate_cloudflare_token', { apiToken }),
-
-  /** Add Cloudflare Pages account via API token */
-  addCloudflareAccount: (apiToken: string, displayName?: string): Promise<DeployAccount> =>
-    invoke<DeployAccount>('add_cloudflare_account', { apiToken, displayName }),
-
-  /** Check if a deploy account is in use */
-  checkAccountUsage: (accountId: string): Promise<CheckAccountResult> =>
-    invoke<CheckAccountResult>('check_account_usage', { accountId }),
-
-  // ============================================================================
-  // Secure Backup (Token Encryption)
-  // ============================================================================
-
-  /** Export encrypted backup of deploy accounts */
-  exportDeployBackup: (password: string): Promise<BackupExportResult> =>
-    invoke<BackupExportResult>('export_deploy_backup', { password }),
-
-  /** Import encrypted backup of deploy accounts */
-  importDeployBackup: (
-    encryptedData: EncryptedData,
-    password: string
-  ): Promise<BackupImportResult> =>
-    invoke<BackupImportResult>('import_deploy_backup', { encryptedData, password }),
-
-  // ============================================================================
-  // Deploy UI Enhancement (018-deploy-ui-enhancement)
-  // ============================================================================
-
-  /** Get deployment statistics for a project */
-  getDeploymentStats: (projectId: string): Promise<DeploymentStats> =>
-    invoke<DeploymentStats>('get_deployment_stats', { projectId }),
-
-  /** Get platform-specific site information */
-  getPlatformSiteInfo: (projectId: string): Promise<PlatformSiteInfo | null> =>
-    invoke<PlatformSiteInfo | null>('get_platform_site_info', { projectId }),
-};
-
-export const deployEvents = {
-  onDeploymentStatus: (callback: (event: DeploymentStatusEvent) => void): Promise<UnlistenFn> =>
-    listen<DeploymentStatusEvent>('deployment:status', (e) => callback(e.payload)),
-
-  /** Listen for deployment progress events with extended info */
-  onDeploymentProgress: (callback: (event: DeploymentProgressEvent) => void): Promise<UnlistenFn> =>
-    listen<DeploymentProgressEvent>('deployment:progress', (e) => callback(e.payload)),
-};
-
-// ============================================================================
-// Toolchain Conflict Detection API (017-toolchain-conflict-detection)
-// ============================================================================
-
-import type {
-  ToolchainStrategy,
-  ToolchainConflictResult,
-  ProjectPreference,
-  ToolchainError,
-  BuildCommandResult,
-  EnvironmentDiagnostics,
-} from '../types/toolchain';
-
-export type {
-  ToolchainStrategy,
-  ToolchainConflictResult,
-  ProjectPreference,
-  ToolchainError,
-  BuildCommandResult,
-  EnvironmentDiagnostics,
-};
-
-export const toolchainAPI = {
-  /** Detect toolchain conflict for a project */
-  detectConflict: (projectPath: string): Promise<ToolchainConflictResult> =>
-    invoke<ToolchainConflictResult>('detect_toolchain_conflict', { projectPath }),
-
-  /** Build wrapped command with toolchain strategy */
-  buildCommand: (
-    projectPath: string,
-    command: string,
-    args: string[],
-    strategy?: ToolchainStrategy
-  ): Promise<BuildCommandResult> =>
-    invoke<BuildCommandResult>('build_toolchain_command', {
-      projectPath,
-      command,
-      args,
-      strategy,
-    }),
-
-  /** Get project toolchain preference */
-  getPreference: (projectPath: string): Promise<ProjectPreference | null> =>
-    invoke<ProjectPreference | null>('get_toolchain_preference', { projectPath }),
-
-  /** Set project toolchain preference */
-  setPreference: (
-    projectPath: string,
-    strategy: ToolchainStrategy,
-    remember: boolean
-  ): Promise<void> => invoke('set_toolchain_preference', { projectPath, strategy, remember }),
-
-  /** Clear project toolchain preference */
-  clearPreference: (projectPath: string): Promise<void> =>
-    invoke('clear_toolchain_preference', { projectPath }),
-
-  /** Get environment diagnostics */
-  getDiagnostics: (projectPath?: string): Promise<EnvironmentDiagnostics> =>
-    invoke<EnvironmentDiagnostics>('get_environment_diagnostics', { projectPath }),
-
-  /** Humanize toolchain error */
-  humanizeError: (rawError: string): Promise<ToolchainError> =>
-    invoke<ToolchainError>('humanize_toolchain_error', { rawError }),
 };
 
 // ============================================================================
@@ -2067,327 +1282,28 @@ export const toolchainAPI = {
 import type { KeyboardShortcutsSettings } from '../types/shortcuts';
 
 export const shortcutsAPI = {
-  /** Load keyboard shortcuts settings */
   loadSettings: (): Promise<KeyboardShortcutsSettings> =>
     invoke<KeyboardShortcutsSettings>('load_keyboard_shortcuts'),
 
-  /** Save keyboard shortcuts settings */
   saveSettings: (settings: KeyboardShortcutsSettings): Promise<void> =>
     invoke('save_keyboard_shortcuts', { settings }),
 
-  /** Register global shortcut for toggling window visibility */
   registerGlobalToggle: (shortcutKey: string): Promise<void> =>
     invoke('register_global_toggle_shortcut', { shortcutKey }),
 
-  /** Unregister all global shortcuts */
   unregisterGlobal: (): Promise<void> => invoke('unregister_global_shortcuts'),
 
-  /** Toggle window visibility */
   toggleWindowVisibility: (): Promise<boolean> => invoke<boolean>('toggle_window_visibility'),
 
-  /** Get all registered global shortcuts */
   getRegisteredShortcuts: (): Promise<string[]> => invoke<string[]>('get_registered_shortcuts'),
 
-  /** Check if a shortcut is registered */
   isShortcutRegistered: (shortcutKey: string): Promise<boolean> =>
     invoke<boolean>('is_shortcut_registered', { shortcutKey }),
 };
 
 export const shortcutsEvents = {
-  /** Listen for global shortcut triggered events */
   onGlobalShortcutTriggered: (callback: (action: string) => void): Promise<UnlistenFn> =>
     listen<string>('global-shortcut-triggered', (event) => callback(event.payload)),
-};
-
-// ============================================================================
-// AI Integration API (020-ai-cli-integration)
-// ============================================================================
-
-import type {
-  AIProvider,
-  AIProviderConfig,
-  PromptTemplate,
-  ProjectAISettings,
-  GenerateResult,
-  TestConnectionResult,
-  ModelInfo,
-  AddServiceRequest,
-  UpdateServiceRequest,
-  AddTemplateRequest,
-  UpdateTemplateRequest,
-  GenerateCommitMessageRequest,
-  GenerateCodeReviewRequest,
-  GenerateCodeReviewResult,
-  GenerateStagedReviewRequest,
-  UpdateProjectSettingsRequest,
-  ProbeModelsRequest,
-  GenerateSecurityAnalysisRequest,
-  GenerateSecuritySummaryRequest,
-  GenerateSecurityAnalysisResult,
-} from '../types/ai';
-
-export type {
-  AIProvider,
-  AIProviderConfig,
-  PromptTemplate,
-  ProjectAISettings,
-  GenerateResult,
-  TestConnectionResult,
-  ModelInfo,
-  AddServiceRequest,
-  UpdateServiceRequest,
-  AddTemplateRequest,
-  UpdateTemplateRequest,
-  GenerateCommitMessageRequest,
-  GenerateCodeReviewRequest,
-  GenerateCodeReviewResult,
-  GenerateStagedReviewRequest,
-  UpdateProjectSettingsRequest,
-  ProbeModelsRequest,
-  GenerateSecurityAnalysisRequest,
-  GenerateSecuritySummaryRequest,
-  GenerateSecurityAnalysisResult,
-};
-
-/** Generic API response type */
-export interface AIApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
-
-export const aiAPI = {
-  // ============================================================================
-  // AI Service Management
-  // ============================================================================
-
-  /** List all AI service configurations */
-  listServices: (): Promise<AIApiResponse<AIProviderConfig[]>> =>
-    invoke<AIApiResponse<AIProviderConfig[]>>('ai_list_providers'),
-
-  /** Add a new AI service configuration */
-  addService: (config: AddServiceRequest): Promise<AIApiResponse<AIProviderConfig>> =>
-    invoke<AIApiResponse<AIProviderConfig>>('ai_add_service', { config }),
-
-  /** Update an AI service configuration */
-  updateService: (config: UpdateServiceRequest): Promise<AIApiResponse<AIProviderConfig>> =>
-    invoke<AIApiResponse<AIProviderConfig>>('ai_update_service', { config }),
-
-  /** Delete an AI service configuration */
-  deleteService: (id: string): Promise<AIApiResponse<void>> =>
-    invoke<AIApiResponse<void>>('ai_delete_provider', { id }),
-
-  /** Set a service as the default */
-  setDefaultService: (id: string): Promise<AIApiResponse<void>> =>
-    invoke<AIApiResponse<void>>('ai_set_default_provider', { id }),
-
-  /** Test connection to an AI service */
-  testConnection: (id: string): Promise<AIApiResponse<TestConnectionResult>> =>
-    invoke<AIApiResponse<TestConnectionResult>>('ai_test_connection', { id }),
-
-  /** List available models for a service (Ollama/LMStudio) */
-  listModels: (providerId: string): Promise<AIApiResponse<ModelInfo[]>> =>
-    invoke<AIApiResponse<ModelInfo[]>>('ai_list_models', { providerId }),
-
-  /** Probe models for a provider/endpoint without saving a service */
-  probeModels: (request: ProbeModelsRequest): Promise<AIApiResponse<ModelInfo[]>> =>
-    invoke<AIApiResponse<ModelInfo[]>>('ai_probe_models', { request }),
-
-  // ============================================================================
-  // Prompt Template Management
-  // ============================================================================
-
-  /** List all prompt templates */
-  listTemplates: (): Promise<AIApiResponse<PromptTemplate[]>> =>
-    invoke<AIApiResponse<PromptTemplate[]>>('ai_list_templates'),
-
-  /** Add a new prompt template */
-  addTemplate: (template: AddTemplateRequest): Promise<AIApiResponse<PromptTemplate>> =>
-    invoke<AIApiResponse<PromptTemplate>>('ai_add_template', { template }),
-
-  /** Update a prompt template */
-  updateTemplate: (template: UpdateTemplateRequest): Promise<AIApiResponse<PromptTemplate>> =>
-    invoke<AIApiResponse<PromptTemplate>>('ai_update_template', { template }),
-
-  /** Delete a prompt template */
-  deleteTemplate: (id: string): Promise<AIApiResponse<void>> =>
-    invoke<AIApiResponse<void>>('ai_delete_template', { id }),
-
-  /** Set a template as the default */
-  setDefaultTemplate: (id: string): Promise<AIApiResponse<void>> =>
-    invoke<AIApiResponse<void>>('ai_set_default_template', { id }),
-
-  // ============================================================================
-  // Project AI Settings
-  // ============================================================================
-
-  /** Get project-specific AI settings */
-  getProjectSettings: (projectPath: string): Promise<AIApiResponse<ProjectAISettings>> =>
-    invoke<AIApiResponse<ProjectAISettings>>('ai_get_project_settings', { projectPath }),
-
-  /** Update project-specific AI settings */
-  updateProjectSettings: (settings: UpdateProjectSettingsRequest): Promise<AIApiResponse<void>> =>
-    invoke<AIApiResponse<void>>('ai_update_project_settings', { settings }),
-
-  // ============================================================================
-  // Commit Message Generation
-  // ============================================================================
-
-  /** Generate a commit message using AI */
-  generateCommitMessage: (
-    request: GenerateCommitMessageRequest
-  ): Promise<AIApiResponse<GenerateResult>> =>
-    invoke<AIApiResponse<GenerateResult>>('ai_generate_commit_message', { request }),
-
-  // ============================================================================
-  // Code Review Generation
-  // ============================================================================
-
-  /** Generate a code review using AI */
-  generateCodeReview: (
-    request: GenerateCodeReviewRequest
-  ): Promise<AIApiResponse<GenerateCodeReviewResult>> =>
-    invoke<AIApiResponse<GenerateCodeReviewResult>>('ai_generate_code_review', { request }),
-
-  /** Generate a code review for all staged changes */
-  generateStagedReview: (
-    request: GenerateStagedReviewRequest
-  ): Promise<AIApiResponse<GenerateCodeReviewResult>> =>
-    invoke<AIApiResponse<GenerateCodeReviewResult>>('ai_generate_staged_review', { request }),
-
-  // ============================================================================
-  // Security Analysis Generation
-  // ============================================================================
-
-  /** Generate security analysis for a single vulnerability */
-  generateSecurityAnalysis: (
-    request: GenerateSecurityAnalysisRequest
-  ): Promise<AIApiResponse<GenerateSecurityAnalysisResult>> =>
-    invoke<AIApiResponse<GenerateSecurityAnalysisResult>>('ai_generate_security_analysis', {
-      request,
-    }),
-
-  /** Generate security summary for all vulnerabilities */
-  generateSecuritySummary: (
-    request: GenerateSecuritySummaryRequest
-  ): Promise<AIApiResponse<GenerateSecurityAnalysisResult>> =>
-    invoke<AIApiResponse<GenerateSecurityAnalysisResult>>('ai_generate_security_summary', {
-      request,
-    }),
-
-  // ============================================================================
-  // Diagnostic
-  // ============================================================================
-
-  /** Manually store an API key for a service (diagnostic) */
-  storeApiKey: (providerId: string, apiKey: string): Promise<AIApiResponse<string>> =>
-    invoke('ai_store_api_key', { providerId, apiKey }),
-
-  /** Check API key status for a service (diagnostic) */
-  checkApiKeyStatus: (
-    providerId: string
-  ): Promise<
-    AIApiResponse<{
-      providerId: string;
-      existsInDb: boolean;
-      canDecrypt: boolean;
-      keyPrefix: string | null;
-      error: string | null;
-    }>
-  > => invoke('ai_check_api_key_status', { providerId }),
-};
-
-// ============================================================================
-// AI CLI Integration API (Feature 020: AI CLI Integration)
-// ============================================================================
-
-import type {
-  CLIToolType,
-  CLIToolConfig,
-  DetectedCLITool,
-  AICLIExecuteRequest,
-  AICLIExecuteResult,
-  AICLIOutputEvent,
-  CLIExecutionLog,
-} from '../types/ai';
-
-export type {
-  CLIToolType,
-  CLIToolConfig,
-  DetectedCLITool,
-  AICLIExecuteRequest,
-  AICLIExecuteResult,
-  AICLIOutputEvent,
-  CLIExecutionLog,
-};
-
-export const aiCLIAPI = {
-  // ============================================================================
-  // CLI Tool Detection
-  // ============================================================================
-
-  /** Detect all available AI CLI tools on the system */
-  detectTools: (): Promise<AIApiResponse<DetectedCLITool[]>> =>
-    invoke<AIApiResponse<DetectedCLITool[]>>('ai_cli_detect_tools'),
-
-  /** Detect a specific CLI tool */
-  detectTool: (toolType: CLIToolType): Promise<AIApiResponse<DetectedCLITool | null>> =>
-    invoke<AIApiResponse<DetectedCLITool | null>>('ai_cli_detect_tool', { toolType }),
-
-  // ============================================================================
-  // CLI Tool Configuration
-  // ============================================================================
-
-  /** List all configured CLI tools */
-  listTools: (): Promise<AIApiResponse<CLIToolConfig[]>> =>
-    invoke<AIApiResponse<CLIToolConfig[]>>('ai_cli_list_tools'),
-
-  /** Save CLI tool configuration (create or update) */
-  saveTool: (config: CLIToolConfig): Promise<AIApiResponse<CLIToolConfig>> =>
-    invoke<AIApiResponse<CLIToolConfig>>('ai_cli_save_tool', { config }),
-
-  /** Delete CLI tool configuration */
-  deleteTool: (id: string): Promise<AIApiResponse<void>> =>
-    invoke<AIApiResponse<void>>('ai_cli_delete_tool', { id }),
-
-  /** Get CLI tool configuration by ID */
-  getTool: (id: string): Promise<AIApiResponse<CLIToolConfig | null>> =>
-    invoke<AIApiResponse<CLIToolConfig | null>>('ai_cli_get_tool', { id }),
-
-  /** Get CLI tool configuration by type */
-  getToolByType: (toolType: CLIToolType): Promise<AIApiResponse<CLIToolConfig | null>> =>
-    invoke<AIApiResponse<CLIToolConfig | null>>('ai_cli_get_tool_by_type', { toolType }),
-
-  // ============================================================================
-  // CLI Execution
-  // ============================================================================
-
-  /** Execute an AI CLI command */
-  execute: (request: AICLIExecuteRequest): Promise<AIApiResponse<AICLIExecuteResult>> =>
-    invoke<AIApiResponse<AICLIExecuteResult>>('ai_cli_execute', { request }),
-
-  /** Cancel a running CLI execution */
-  cancel: (executionId: string): Promise<AIApiResponse<boolean>> =>
-    invoke<AIApiResponse<boolean>>('ai_cli_cancel', { executionId }),
-
-  // ============================================================================
-  // CLI Execution History
-  // ============================================================================
-
-  /** Get CLI execution history */
-  getHistory: (projectPath?: string, limit?: number): Promise<AIApiResponse<CLIExecutionLog[]>> =>
-    invoke<AIApiResponse<CLIExecutionLog[]>>('ai_cli_get_history', { projectPath, limit }),
-
-  /** Clear CLI execution history */
-  clearHistory: (projectPath?: string): Promise<AIApiResponse<void>> =>
-    invoke<AIApiResponse<void>>('ai_cli_clear_history', { projectPath }),
-};
-
-/** AI CLI streaming output events */
-export const aiCLIEvents = {
-  /** Listen for streaming output from CLI execution */
-  onOutput: (callback: (event: AICLIOutputEvent) => void): Promise<UnlistenFn> =>
-    listen<AICLIOutputEvent>('ai:cli-output', (e) => callback(e.payload)),
 };
 
 // ============================================================================
@@ -2395,60 +1311,37 @@ export const aiCLIEvents = {
 // ============================================================================
 
 export interface McpServerInfo {
-  /** Path to the MCP server binary */
   binary_path: string;
-  /** Server name */
   name: string;
-  /** Server version */
   version: string;
-  /** Whether the binary exists */
   is_available: boolean;
-  /** JSON config for Claude Code / VS Code MCP settings */
   config_json: string;
-  /** TOML config for Codex CLI */
   config_toml: string;
-  /** Environment type: "production", "development (release)", "development (debug)", "not found" */
   env_type: string;
 }
 
-/** MCP tool information from backend API */
 export interface McpToolInfo {
-  /** Tool name (used in MCP calls) */
   name: string;
-  /** Human-readable description */
   description: string;
-  /** UI display category (e.g., "Project Management", "Git Worktree") */
   category: string;
-  /** Permission category for access control ("read", "execute", "write") */
   permissionCategory: 'read' | 'execute' | 'write';
-  /** Which permission types are applicable for this tool */
   applicablePermissions: ('read' | 'execute' | 'write')[];
 }
 
-/** MCP permission mode */
 export type McpPermissionMode = 'read_only' | 'execute_with_confirm' | 'full_access';
 
-/** Dev server mode for MCP */
 export type DevServerMode = 'mcp_managed' | 'ui_integrated' | 'reject_with_hint';
 
-/** MCP Server configuration */
 export interface McpServerConfig {
-  /** Whether MCP Server is enabled */
   isEnabled: boolean;
-  /** Default permission mode */
   permissionMode: McpPermissionMode;
-  /** Dev server mode - controls how dev server commands are handled */
   devServerMode: DevServerMode;
-  /** List of explicitly allowed tools (empty = use permissionMode defaults) */
   allowedTools: string[];
-  /** Whether to log all requests */
   logRequests: boolean;
 }
 
-/** Tool category for permission grouping */
 export type McpToolCategory = 'read' | 'write' | 'execute';
 
-/** MCP tool with permission status */
 export interface McpToolWithPermission {
   name: string;
   description: string;
@@ -2456,7 +1349,6 @@ export interface McpToolWithPermission {
   isAllowed: boolean;
 }
 
-/** MCP request log entry */
 export interface McpLogEntry {
   timestamp: string;
   tool: string;
@@ -2466,46 +1358,32 @@ export interface McpLogEntry {
   error: string | null;
 }
 
-/** MCP logs response */
 export interface McpLogsResponse {
   entries: McpLogEntry[];
   totalCount: number;
 }
 
-/** MCP health check result */
 export interface McpHealthCheckResult {
-  /** Whether the health check passed */
   isHealthy: boolean;
-  /** Server version (if available) */
   version: string | null;
-  /** Response time in milliseconds */
   responseTimeMs: number;
-  /** Error message (if any) */
   error: string | null;
-  /** Binary path that was tested */
   binaryPath: string;
-  /** Environment type */
   envType: string;
 }
 
 export const mcpAPI = {
-  /** Get MCP server information including binary path and config */
   getServerInfo: (): Promise<McpServerInfo> => invoke<McpServerInfo>('get_mcp_server_info'),
 
-  /** Test MCP server health by running --version */
   testConnection: (): Promise<McpHealthCheckResult> =>
     invoke<McpHealthCheckResult>('test_mcp_connection'),
 
-  /** Get available MCP tools */
   getTools: (): Promise<McpToolInfo[]> => invoke<McpToolInfo[]>('get_mcp_tools'),
 
-  /** Get MCP server configuration */
   getConfig: (): Promise<McpServerConfig> => invoke<McpServerConfig>('get_mcp_config'),
 
-  /** Save MCP server configuration */
   saveConfig: (config: McpServerConfig): Promise<void> => invoke('save_mcp_config', { config }),
 
-  /** Update specific MCP configuration fields */
   updateConfig: (options: {
     isEnabled?: boolean;
     permissionMode?: McpPermissionMode;
@@ -2514,15 +1392,12 @@ export const mcpAPI = {
     logRequests?: boolean;
   }): Promise<McpServerConfig> => invoke<McpServerConfig>('update_mcp_config', options),
 
-  /** Get all MCP tools with their permission status based on current config */
   getToolsWithPermissions: (): Promise<McpToolWithPermission[]> =>
     invoke<McpToolWithPermission[]>('get_mcp_tools_with_permissions'),
 
-  /** Get MCP request logs */
   getLogs: (limit?: number): Promise<McpLogsResponse> =>
     invoke<McpLogsResponse>('get_mcp_logs', { limit }),
 
-  /** Clear MCP request logs */
   clearLogs: (): Promise<void> => invoke('clear_mcp_logs'),
 };
 
@@ -2536,10 +1411,12 @@ import type {
   MCPActionExecution,
   MCPActionType,
   PermissionLevel,
-  ExecutionStatus,
+  ExecutionStatus as MCPExecutionStatus,
 } from '../types/mcp-action';
 
-/** Pending action request requiring user confirmation */
+export type { MCPAction, MCPActionPermission, MCPActionExecution, MCPActionType, PermissionLevel };
+export type { MCPExecutionStatus };
+
 export interface PendingActionRequest {
   executionId: string;
   actionId: string | null;
@@ -2551,7 +1428,6 @@ export interface PendingActionRequest {
   startedAt: string;
 }
 
-/** Response from action approval/denial */
 export interface ActionRequestResponse {
   executionId: string;
   approved: boolean;
@@ -2560,7 +1436,6 @@ export interface ActionRequestResponse {
 
 export const mcpActionAPI = {
   // Actions CRUD
-  /** List MCP actions with optional filtering */
   listActions: (
     projectId?: string,
     actionType?: MCPActionType,
@@ -2568,11 +1443,9 @@ export const mcpActionAPI = {
   ): Promise<MCPAction[]> =>
     invoke<MCPAction[]>('list_mcp_actions', { projectId, actionType, isEnabled }),
 
-  /** Get a single MCP action by ID */
   getAction: (actionId: string): Promise<MCPAction | null> =>
     invoke<MCPAction | null>('get_mcp_action', { actionId }),
 
-  /** Create a new MCP action */
   createAction: (
     actionType: MCPActionType,
     name: string,
@@ -2582,7 +1455,6 @@ export const mcpActionAPI = {
   ): Promise<MCPAction> =>
     invoke<MCPAction>('create_mcp_action', { actionType, name, description, config, projectId }),
 
-  /** Update an existing MCP action */
   updateAction: (
     actionId: string,
     name?: string,
@@ -2592,16 +1464,14 @@ export const mcpActionAPI = {
   ): Promise<MCPAction> =>
     invoke<MCPAction>('update_mcp_action', { actionId, name, description, config, isEnabled }),
 
-  /** Delete an MCP action */
   deleteAction: (actionId: string): Promise<boolean> =>
     invoke<boolean>('delete_mcp_action', { actionId }),
 
   // Executions
-  /** Get MCP action execution history */
   getExecutions: (
     actionId?: string,
     actionType?: MCPActionType,
-    status?: ExecutionStatus,
+    status?: MCPExecutionStatus,
     limit?: number
   ): Promise<MCPActionExecution[]> =>
     invoke<MCPActionExecution[]>('get_mcp_action_executions', {
@@ -2611,20 +1481,16 @@ export const mcpActionAPI = {
       limit,
     }),
 
-  /** Get a single execution by ID */
   getExecution: (executionId: string): Promise<MCPActionExecution | null> =>
     invoke<MCPActionExecution | null>('get_mcp_action_execution', { executionId }),
 
-  /** Cleanup old execution history */
   cleanupExecutions: (keepCount?: number, maxAgeDays?: number): Promise<number> =>
     invoke<number>('cleanup_mcp_action_executions', { keepCount, maxAgeDays }),
 
   // Permissions
-  /** List all MCP action permissions */
   listPermissions: (): Promise<MCPActionPermission[]> =>
     invoke<MCPActionPermission[]>('list_mcp_action_permissions'),
 
-  /** Update MCP action permission */
   updatePermission: (
     actionId: string | null,
     actionType: MCPActionType | null,
@@ -2636,16 +1502,13 @@ export const mcpActionAPI = {
       permissionLevel,
     }),
 
-  /** Delete MCP action permission */
   deletePermission: (permissionId: string): Promise<boolean> =>
     invoke<boolean>('delete_mcp_action_permission', { permissionId }),
 
   // Pending requests (user confirmation)
-  /** Get pending action requests requiring user confirmation */
   getPendingRequests: (): Promise<PendingActionRequest[]> =>
     invoke<PendingActionRequest[]>('get_pending_action_requests'),
 
-  /** Approve or deny a pending action request */
   respondToRequest: (
     executionId: string,
     approved: boolean,
@@ -2655,240 +1518,20 @@ export const mcpActionAPI = {
 };
 
 // ============================================================================
-// Time Machine - Snapshot API (025-ai-workflow-generator)
+// Unified API Export
 // ============================================================================
 
-import type {
-  ExecutionSnapshot,
-  SnapshotListItem,
-  SnapshotWithDependencies,
-  SnapshotFilter,
-  SnapshotDiff,
-  SnapshotStorageStats,
-  SecurityInsight,
-  InsightSummary,
-  AIAnalysisRequest,
-  AIAnalysisResponse,
-  PatternAnalysisResult,
-  IntegrityCheckResult,
-  TyposquattingCheckResult,
-  ReplayPreparation,
-  ReplayResult,
-  ExecuteReplayRequest,
-  ProjectSecurityOverview,
-  SnapshotSearchCriteria,
-  SearchResponse,
-  TimelineEntry,
-  SecurityAuditReport,
-  ExportFormat,
-  TimeMachineSettings,
-  // Lockfile Validation types
-  LockfileValidationConfig,
-  ValidationResult,
-} from '../types/snapshot';
-
-export const snapshotAPI = {
-  // Snapshot CRUD
-  /** List snapshots with optional filters */
-  listSnapshots: (filter?: SnapshotFilter): Promise<SnapshotListItem[]> =>
-    invoke<SnapshotListItem[]>('list_snapshots', { filter }),
-
-  /** Get a single snapshot by ID */
-  getSnapshot: (snapshotId: string): Promise<ExecutionSnapshot | null> =>
-    invoke<ExecutionSnapshot | null>('get_snapshot', { snapshotId }),
-
-  /** Get a snapshot with all its dependencies */
-  getSnapshotWithDependencies: (snapshotId: string): Promise<SnapshotWithDependencies | null> =>
-    invoke<SnapshotWithDependencies | null>('get_snapshot_with_dependencies', { snapshotId }),
-
-  /** Get the latest snapshot for a project - Feature 025 redesign */
-  getLatestSnapshot: (projectPath: string): Promise<ExecutionSnapshot | null> =>
-    invoke<ExecutionSnapshot | null>('get_latest_snapshot', { projectPath }),
-
-  /** Delete a snapshot */
-  deleteSnapshot: (snapshotId: string): Promise<boolean> =>
-    invoke<boolean>('delete_snapshot', { snapshotId }),
-
-  /** Prune old snapshots (keep snapshots newer than N days) - Feature 025 redesign */
-  pruneSnapshots: (keepDays?: number): Promise<number> =>
-    invoke<number>('prune_snapshots', { keepDays }),
-
-  // Snapshot capture
-  /** Capture a manual snapshot for a project - Feature 025 redesign */
-  captureManualSnapshot: (projectPath: string): Promise<ExecutionSnapshot> =>
-    invoke<ExecutionSnapshot>('capture_manual_snapshot', { projectPath }),
-
-  // Snapshot comparison
-  /** Compare two snapshots */
-  compareSnapshots: (snapshotAId: string, snapshotBId: string): Promise<SnapshotDiff> =>
-    invoke<SnapshotDiff>('compare_snapshots', { snapshotAId, snapshotBId }),
-
-  /** Generate AI-friendly prompt for diff analysis */
-  getDiffAiPrompt: (snapshotAId: string, snapshotBId: string): Promise<string> =>
-    invoke<string>('get_diff_ai_prompt', { snapshotAId, snapshotBId }),
-
-  /** Get comparison candidates (latest N snapshots for a project) - Feature 025 redesign */
-  getComparisonCandidates: (projectPath: string, limit?: number): Promise<ExecutionSnapshot[]> =>
-    invoke<ExecutionSnapshot[]>('get_comparison_candidates', { projectPath, limit }),
-
-  // Security insights
-  /** Get security insights for a snapshot */
-  getSecurityInsights: (snapshotId: string): Promise<SecurityInsight[]> =>
-    invoke<SecurityInsight[]>('get_security_insights', { snapshotId }),
-
-  /** Get security insight summary for a snapshot */
-  getInsightSummary: (snapshotId: string): Promise<InsightSummary> =>
-    invoke<InsightSummary>('get_insight_summary', { snapshotId }),
-
-  /** Dismiss a security insight */
-  dismissInsight: (insightId: string): Promise<boolean> =>
-    invoke<boolean>('dismiss_insight', { insightId }),
-
-  // Storage management
-  /** Get storage statistics */
-  getStorageStats: (): Promise<SnapshotStorageStats> =>
-    invoke<SnapshotStorageStats>('get_snapshot_storage_stats'),
-
-  /** Cleanup orphaned storage */
-  cleanupOrphanedStorage: (): Promise<number> => invoke<number>('cleanup_orphaned_storage'),
-
-  // AI Analysis
-  /** Request AI analysis of snapshot diff */
-  requestAiAnalysis: (request: AIAnalysisRequest): Promise<AIAnalysisResponse> =>
-    invoke<AIAnalysisResponse>('request_ai_analysis', { request }),
-
-  // Pattern-based Analysis (Offline)
-  /** Get pattern-based security analysis for a diff (no AI required) */
-  analyzeDiffPatterns: (
-    snapshotAId: string,
-    snapshotBId: string
-  ): Promise<PatternAnalysisResult> =>
-    invoke<PatternAnalysisResult>('analyze_diff_patterns', { snapshotAId, snapshotBId }),
-
-  // Dependency Integrity (US3 - Security Guardian)
-  /** Check dependency integrity against reference snapshot - Feature 025: removed workflowId */
-  checkDependencyIntegrity: (projectPath: string): Promise<IntegrityCheckResult> =>
-    invoke<IntegrityCheckResult>('check_dependency_integrity', { projectPath }),
-
-  /** Check a package name for potential typosquatting */
-  checkTyposquatting: (packageName: string): Promise<TyposquattingCheckResult> =>
-    invoke<TyposquattingCheckResult>('check_typosquatting', { packageName }),
-
-  // Execution Replay (US4)
-  /** Prepare a replay by verifying dependencies */
-  prepareReplay: (snapshotId: string): Promise<ReplayPreparation> =>
-    invoke<ReplayPreparation>('prepare_replay', { snapshotId }),
-
-  /** Execute a replay with the specified option */
-  executeReplay: (request: ExecuteReplayRequest): Promise<ReplayResult> =>
-    invoke<ReplayResult>('execute_replay', { request }),
-
-  /** Restore lockfile from a snapshot */
-  restoreLockfile: (snapshotId: string): Promise<boolean> =>
-    invoke<boolean>('restore_lockfile', { snapshotId }),
-
-  // Security Insights Dashboard (US5)
-  /** Get project security overview with risk score */
-  getProjectSecurityOverview: (projectPath: string): Promise<ProjectSecurityOverview> =>
-    invoke<ProjectSecurityOverview>('get_project_security_overview', { projectPath }),
-
-  // Searchable Execution History (US6)
-  /** Search snapshots with criteria */
-  searchSnapshots: (criteria: SnapshotSearchCriteria): Promise<SearchResponse> =>
-    invoke<SearchResponse>('search_snapshots', { criteria }),
-
-  /** Get snapshot timeline for a project */
-  getSnapshotTimeline: (projectPath: string, limit?: number): Promise<TimelineEntry[]> =>
-    invoke<TimelineEntry[]>('get_snapshot_timeline', { projectPath, limit }),
-
-  /** Generate a security audit report for a project */
-  generateSecurityAuditReport: (projectPath: string): Promise<SecurityAuditReport> =>
-    invoke<SecurityAuditReport>('generate_security_audit_report', { projectPath }),
-
-  /** Export a security report in the specified format */
-  exportSecurityReport: (report: SecurityAuditReport, format: ExportFormat): Promise<string> =>
-    invoke<string>('export_security_report', { report, format }),
-
-  // Time Machine Settings (Feature 025)
-  /** Get Time Machine global settings */
-  getTimeMachineSettings: (): Promise<TimeMachineSettings> =>
-    invoke<TimeMachineSettings>('get_time_machine_settings'),
-
-  /** Update Time Machine global settings */
-  updateTimeMachineSettings: (settings: TimeMachineSettings): Promise<void> =>
-    invoke<void>('update_time_machine_settings', { settings }),
-
-  // Lockfile Watcher (Feature 025)
-  /** Start watching lockfile for a project */
-  startLockfileWatching: (projectPath: string): Promise<void> =>
-    invoke<void>('start_lockfile_watching', { projectPath }),
-
-  /** Stop watching lockfile for a project */
-  stopLockfileWatching: (projectPath: string): Promise<void> =>
-    invoke<void>('stop_lockfile_watching', { projectPath }),
-
-  /** Check if lockfile is being watched for a project */
-  getLockfileWatcherStatus: (projectPath: string): Promise<boolean> =>
-    invoke<boolean>('get_lockfile_watcher_status', { projectPath }),
-
-  /** Get list of projects with active lockfile watchers */
-  getLockfileWatchedProjects: (): Promise<string[]> =>
-    invoke<string[]>('get_lockfile_watched_projects'),
-
-  // Lockfile Validation (Lockfile Security Enhancement)
-  /** Get lockfile validation configuration */
-  getLockfileValidationConfig: (): Promise<LockfileValidationConfig> =>
-    invoke<LockfileValidationConfig>('get_lockfile_validation_config'),
-
-  /** Save lockfile validation configuration */
-  saveLockfileValidationConfig: (config: LockfileValidationConfig): Promise<void> =>
-    invoke<void>('save_lockfile_validation_config', { config }),
-
-  /** Run manual lockfile validation on a snapshot */
-  validateLockfileManual: (snapshotId: string): Promise<ValidationResult> =>
-    invoke<ValidationResult>('validate_lockfile_manual', { snapshotId }),
-
-  /** Add a blocked package to the validation config */
-  addBlockedPackage: (name: string, reason: string): Promise<void> =>
-    invoke<void>('add_blocked_package', { name, reason }),
-
-  /** Remove a blocked package from the validation config */
-  removeBlockedPackage: (packageName: string): Promise<void> =>
-    invoke<void>('remove_blocked_package', { packageName }),
-
-  /** Add an allowed registry to the validation config */
-  addAllowedRegistry: (registry: string): Promise<void> =>
-    invoke<void>('add_allowed_registry', { registry }),
-
-  /** Remove an allowed registry from the validation config */
-  removeAllowedRegistry: (registry: string): Promise<void> =>
-    invoke<void>('remove_allowed_registry', { registry }),
-
-  /** Reset lockfile validation config to defaults */
-  resetLockfileValidationConfig: (): Promise<LockfileValidationConfig> =>
-    invoke<LockfileValidationConfig>('reset_lockfile_validation_config'),
-};
-
 export const tauriAPI = {
-  ...projectAPI,
   ...scriptAPI,
   ...workflowAPI,
   ...worktreeAPI,
   ...ipaAPI,
-  ...securityAPI,
-  ...versionAPI,
   ...settingsAPI,
   ...notificationAPI,
   ...notificationHistoryAPI,
-  ...monorepoAPI,
   ...gitAPI,
   ...stepTemplateAPI,
   ...shortcutsAPI,
-  ...deployAPI,
-  ...toolchainAPI,
-  ...aiAPI,
-  ...aiCLIAPI,
   ...mcpAPI,
   ...mcpActionAPI,
-  ...snapshotAPI,
 };

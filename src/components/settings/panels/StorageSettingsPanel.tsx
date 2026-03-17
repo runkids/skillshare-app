@@ -27,14 +27,47 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { Button } from '../../ui/Button';
-import { settingsAPI, snapshotAPI } from '../../../lib/tauri-api';
+import { settingsAPI } from '../../../lib/tauri-api';
 import { SettingSection } from '../ui/SettingSection';
 import { SettingInfoBox } from '../ui/SettingInfoBox';
 import { Skeleton } from '../../ui/Skeleton';
 import { cn } from '../../../lib/utils';
 import { useSettings } from '../../../contexts/SettingsContext';
 import type { StorePathInfo } from '../../../types/tauri';
-import type { SnapshotStorageStats, TimeMachineSettings } from '../../../types/snapshot';
+
+// Stub types for removed snapshot/time-machine features
+type SnapshotStorageStats = {
+  totalSnapshots: number;
+  totalSizeBytes: number;
+  totalSizeHuman: string;
+  projectCount: number;
+};
+type TimeMachineSettings = {
+  autoWatchEnabled: boolean;
+  retentionDays: number;
+  maxSnapshotsPerProject: number;
+  debounceMs: number;
+  updatedAt?: string;
+  [key: string]: unknown;
+};
+// Stub API for removed snapshot features
+const snapshotAPI = {
+  getStorageStats: async (): Promise<SnapshotStorageStats> => ({
+    totalSnapshots: 0,
+    totalSizeBytes: 0,
+    totalSizeHuman: '0 B',
+    projectCount: 0,
+  }),
+  pruneSnapshots: async (_keepDays?: number): Promise<number> => 0,
+  cleanupOrphanedStorage: async (): Promise<number> => 0,
+  getTimeMachineSettings: async (): Promise<TimeMachineSettings> => ({
+    autoWatchEnabled: false,
+    retentionDays: 30,
+    maxSnapshotsPerProject: 10,
+    debounceMs: 2000,
+  }),
+  updateTimeMachineSettings: async (_settings: TimeMachineSettings): Promise<void> => {},
+};
 
 export const StorageSettingsPanel: React.FC = () => {
   const { formatPath } = useSettings();
@@ -138,23 +171,26 @@ export const StorageSettingsPanel: React.FC = () => {
   }, [timeMachineSettings]);
 
   // Handle update debounce
-  const handleUpdateDebounce = useCallback(async (newDebounceMs: number) => {
-    if (!timeMachineSettings) return;
-    try {
-      setIsSavingTMSettings(true);
-      const newSettings: TimeMachineSettings = {
-        ...timeMachineSettings,
-        debounceMs: newDebounceMs,
-        updatedAt: new Date().toISOString(),
-      };
-      await snapshotAPI.updateTimeMachineSettings(newSettings);
-      setTimeMachineSettings(newSettings);
-    } catch (error) {
-      console.error('Failed to update debounce setting:', error);
-    } finally {
-      setIsSavingTMSettings(false);
-    }
-  }, [timeMachineSettings]);
+  const handleUpdateDebounce = useCallback(
+    async (newDebounceMs: number) => {
+      if (!timeMachineSettings) return;
+      try {
+        setIsSavingTMSettings(true);
+        const newSettings: TimeMachineSettings = {
+          ...timeMachineSettings,
+          debounceMs: newDebounceMs,
+          updatedAt: new Date().toISOString(),
+        };
+        await snapshotAPI.updateTimeMachineSettings(newSettings);
+        setTimeMachineSettings(newSettings);
+      } catch (error) {
+        console.error('Failed to update debounce setting:', error);
+      } finally {
+        setIsSavingTMSettings(false);
+      }
+    },
+    [timeMachineSettings]
+  );
 
   // Handle prune snapshots
   const handlePruneSnapshots = useCallback(async () => {
@@ -359,12 +395,14 @@ export const StorageSettingsPanel: React.FC = () => {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={cn(
-                        'p-2.5 rounded-lg',
-                        timeMachineSettings.autoWatchEnabled
-                          ? 'bg-cyan-500/10 text-cyan-500'
-                          : 'bg-muted text-muted-foreground'
-                      )}>
+                      <div
+                        className={cn(
+                          'p-2.5 rounded-lg',
+                          timeMachineSettings.autoWatchEnabled
+                            ? 'bg-cyan-500/10 text-cyan-500'
+                            : 'bg-muted text-muted-foreground'
+                        )}
+                      >
                         {timeMachineSettings.autoWatchEnabled ? (
                           <Eye className="w-5 h-5" />
                         ) : (
@@ -414,7 +452,10 @@ export const StorageSettingsPanel: React.FC = () => {
                           step="500"
                           value={timeMachineSettings.debounceMs}
                           onChange={(e) => {
-                            const value = Math.max(500, Math.min(10000, parseInt(e.target.value) || 2000));
+                            const value = Math.max(
+                              500,
+                              Math.min(10000, parseInt(e.target.value) || 2000)
+                            );
                             handleUpdateDebounce(value);
                           }}
                           className="w-20 px-2 py-1 text-sm text-center rounded border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
@@ -478,7 +519,9 @@ export const StorageSettingsPanel: React.FC = () => {
                       min="1"
                       max="100"
                       value={keepPerProject}
-                      onChange={(e) => setKeepPerProject(Math.max(1, parseInt(e.target.value) || 1))}
+                      onChange={(e) =>
+                        setKeepPerProject(Math.max(1, parseInt(e.target.value) || 1))
+                      }
                       className="w-16 px-2 py-1 text-sm text-center rounded border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                     />
                     <span className="text-xs text-muted-foreground">per project</span>

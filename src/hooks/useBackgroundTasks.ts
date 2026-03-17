@@ -1,17 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
-import type {
-  NodeStartedPayload,
-  ExecutionCompletedPayload,
-  SecurityScanProgressPayload,
-  SecurityScanCompletedPayload,
-} from '../lib/tauri-api';
+import type { NodeStartedPayload, ExecutionCompletedPayload } from '../lib/tauri-api';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export type BackgroundTaskType = 'workflow' | 'deployment' | 'security_scan';
+export type BackgroundTaskType = 'workflow';
 export type BackgroundTaskStatus = 'pending' | 'running' | 'completed' | 'failed';
 
 export interface BackgroundTask {
@@ -39,21 +34,6 @@ export interface UseBackgroundTasksReturn {
   tasks: BackgroundTask[];
   runningCount: number;
   isAnyRunning: boolean;
-}
-
-// Deployment status event payload
-interface DeploymentStatusPayload {
-  deploymentId: string;
-  status: 'queued' | 'building' | 'deploying' | 'ready' | 'failed';
-  url?: string;
-  errorMessage?: string;
-}
-
-interface DeploymentProgressPayload {
-  deploymentId: string;
-  status: string;
-  progress?: number;
-  currentStep?: string;
 }
 
 // ============================================================================
@@ -155,80 +135,7 @@ export function useBackgroundTasks(): UseBackgroundTasksReturn {
         }
       );
 
-      // Security scan events
-      const unlistenScanProgress = await listen<SecurityScanProgressPayload>(
-        'security_scan_progress',
-        (event) => {
-          const { projectId, stage, message } = event.payload;
-          upsertTask(`scan-${projectId}`, {
-            type: 'security_scan',
-            name: 'Security Scan',
-            status: 'running',
-            currentStep: message || stage,
-            metadata: { projectId },
-          });
-        }
-      );
-
-      const unlistenScanComplete = await listen<SecurityScanCompletedPayload>(
-        'security_scan_completed',
-        (event) => {
-          const { projectId, success } = event.payload;
-          upsertTask(`scan-${projectId}`, {
-            status: success ? 'completed' : 'failed',
-          });
-          scheduleRemoval(`scan-${projectId}`);
-        }
-      );
-
-      // Deployment events
-      const unlistenDeployStatus = await listen<DeploymentStatusPayload>(
-        'deployment:status',
-        (event) => {
-          const { deploymentId, status } = event.payload;
-          const isRunning = status === 'queued' || status === 'building' || status === 'deploying';
-          const taskStatus: BackgroundTaskStatus = isRunning
-            ? 'running'
-            : status === 'ready'
-              ? 'completed'
-              : 'failed';
-
-          if (isRunning) {
-            upsertTask(deploymentId, {
-              type: 'deployment',
-              name: 'Deployment',
-              status: taskStatus,
-              currentStep: status.charAt(0).toUpperCase() + status.slice(1),
-            });
-          } else {
-            upsertTask(deploymentId, { status: taskStatus });
-            scheduleRemoval(deploymentId);
-          }
-        }
-      );
-
-      const unlistenDeployProgress = await listen<DeploymentProgressPayload>(
-        'deployment:progress',
-        (event) => {
-          const { deploymentId, currentStep, progress } = event.payload;
-          upsertTask(deploymentId, {
-            type: 'deployment',
-            name: 'Deployment',
-            status: 'running',
-            currentStep,
-            progress,
-          });
-        }
-      );
-
-      unlistenRefs.current = [
-        unlistenWorkflowStart,
-        unlistenWorkflowComplete,
-        unlistenScanProgress,
-        unlistenScanComplete,
-        unlistenDeployStatus,
-        unlistenDeployProgress,
-      ];
+      unlistenRefs.current = [unlistenWorkflowStart, unlistenWorkflowComplete];
     };
 
     setupListeners();

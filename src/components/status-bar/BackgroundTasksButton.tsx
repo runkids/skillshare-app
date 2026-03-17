@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Loader2, X, CheckCircle, XCircle, Play, Shield, Rocket } from 'lucide-react';
+import { Loader2, X, CheckCircle, XCircle, Play } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { cn } from '../../lib/utils';
 import {
@@ -9,31 +9,13 @@ import {
 } from '../../hooks/useBackgroundTasks';
 
 // Task type icons
-const getTaskIcon = (type: BackgroundTaskType) => {
-  switch (type) {
-    case 'workflow':
-      return Play;
-    case 'security_scan':
-      return Shield;
-    case 'deployment':
-      return Rocket;
-    default:
-      return Play;
-  }
+const getTaskIcon = (_type: BackgroundTaskType) => {
+  return Play;
 };
 
 // Task type labels
-const getTaskLabel = (type: BackgroundTaskType) => {
-  switch (type) {
-    case 'workflow':
-      return 'Workflow';
-    case 'security_scan':
-      return 'Security Scan';
-    case 'deployment':
-      return 'Deployment';
-    default:
-      return 'Task';
-  }
+const getTaskLabel = (_type: BackgroundTaskType) => {
+  return 'Workflow';
 };
 
 // Format elapsed time
