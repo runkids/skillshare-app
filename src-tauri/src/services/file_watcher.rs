@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use tauri::{AppHandle, Emitter, Manager, Runtime};
+use tauri::{AppHandle, Emitter, Runtime};
 use tauri_plugin_notification::NotificationExt;
 
 /// Event payload sent to frontend when package.json changes
@@ -410,4 +410,392 @@ impl DatabaseWatcher {
     }
 }
 
-// Lockfile Watcher and Time Machine features removed
+// ---------------------------------------------------------------------------
+// SpecForge Directory Watcher
+// Monitors .specforge/specs/ and .specforge/schemas/ for external file changes
+// and auto-syncs the SQLite index.
+// ---------------------------------------------------------------------------
+
+use crate::local_models::schema::SchemaDefinition;
+use crate::local_models::spec::Spec;
+use crate::repositories::{schema_repo, spec_repo};
+use std::time::Instant;
+use utils::database::Database;
+
+use specforge_lib::utils;
+
+/// Event payload sent to frontend when a spec file changes externally
+#[derive(Clone, serde::Serialize)]
+pub struct SpecChangedPayload {
+    pub id: String,
+}
+
+/// Event payload sent to frontend when a schema file changes externally
+#[derive(Clone, serde::Serialize)]
+pub struct SchemaChangedPayload {
+    pub name: String,
+}
+
+/// Watches `.specforge/specs/` and `.specforge/schemas/` directories for
+/// changes made by external tools (AI agents, VS Code, etc.) and auto-syncs
+/// the SQLite index.
+pub struct SpecforgeWatcher {
+    /// The underlying debounced watcher (None until started)
+    watcher: Arc<Mutex<Option<Debouncer<RecommendedWatcher>>>>,
+    /// Tracks timestamps of app-initiated writes to skip re-processing.
+    /// Key = absolute file path, Value = instant of last app write.
+    app_writes: Arc<Mutex<HashMap<PathBuf, Instant>>>,
+}
+
+impl Default for SpecforgeWatcher {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl SpecforgeWatcher {
+    pub fn new() -> Self {
+        Self {
+            watcher: Arc::new(Mutex::new(None)),
+            app_writes: Arc::new(Mutex::new(HashMap::new())),
+        }
+    }
+
+    /// Record that the app itself just wrote this file.
+    /// The watcher will ignore events for this path within 1 second.
+    pub fn record_app_write(&self, path: &Path) {
+        if let Ok(mut writes) = self.app_writes.lock() {
+            writes.insert(path.to_path_buf(), Instant::now());
+        }
+    }
+
+    /// Start watching a project's `.specforge/specs/` and `.specforge/schemas/` directories.
+    ///
+    /// If the directories don't exist yet, this returns Ok(()) without error —
+    /// the watcher can be started later (e.g., after `init_specforge_project`).
+    pub fn start_watching<R: Runtime>(
+        &self,
+        app_handle: &AppHandle<R>,
+        project_dir: &Path,
+        db: Arc<Database>,
+    ) -> Result<(), String> {
+        let mut watcher_guard = self.watcher.lock().map_err(|e| e.to_string())?;
+
+        // Already watching
+        if watcher_guard.is_some() {
+            log::info!("[SpecforgeWatcher] Already watching");
+            return Ok(());
+        }
+
+        let specs_dir = project_dir.join(".specforge").join("specs");
+        let schemas_dir = project_dir.join(".specforge").join("schemas");
+
+        // If neither directory exists, skip silently — they'll be created by init_specforge_project
+        if !specs_dir.exists() && !schemas_dir.exists() {
+            log::info!(
+                "[SpecforgeWatcher] .specforge/ directories not found at {}, skipping watch",
+                project_dir.display()
+            );
+            return Ok(());
+        }
+
+        let app_handle = app_handle.clone();
+        let app_writes = self.app_writes.clone();
+        let project_dir_owned = project_dir.to_path_buf();
+        let specs_dir_clone = specs_dir.clone();
+        let schemas_dir_clone = schemas_dir.clone();
+
+        // Use 3-second debounce for specforge file changes
+        let mut debouncer = new_debouncer(
+            Duration::from_secs(3),
+            move |res: Result<Vec<DebouncedEvent>, notify::Error>| {
+                match res {
+                    Ok(events) => {
+                        for event in &events {
+                            if let DebouncedEventKind::Any = event.kind {
+                                Self::handle_event(
+                                    &event.path,
+                                    &specs_dir_clone,
+                                    &schemas_dir_clone,
+                                    &project_dir_owned,
+                                    &db,
+                                    &app_handle,
+                                    &app_writes,
+                                );
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        log::error!("[SpecforgeWatcher] Watch error: {:?}", e);
+                    }
+                }
+            },
+        )
+        .map_err(|e| format!("Failed to create specforge watcher: {}", e))?;
+
+        // Watch specs directory if it exists
+        if specs_dir.exists() {
+            debouncer
+                .watcher()
+                .watch(&specs_dir, RecursiveMode::NonRecursive)
+                .map_err(|e| format!("Failed to watch specs dir: {}", e))?;
+            log::info!(
+                "[SpecforgeWatcher] Watching specs: {}",
+                specs_dir.display()
+            );
+        }
+
+        // Watch schemas directory if it exists
+        if schemas_dir.exists() {
+            debouncer
+                .watcher()
+                .watch(&schemas_dir, RecursiveMode::NonRecursive)
+                .map_err(|e| format!("Failed to watch schemas dir: {}", e))?;
+            log::info!(
+                "[SpecforgeWatcher] Watching schemas: {}",
+                schemas_dir.display()
+            );
+        }
+
+        *watcher_guard = Some(debouncer);
+        Ok(())
+    }
+
+    /// Stop watching specforge directories.
+    pub fn stop_watching(&self) -> Result<(), String> {
+        let mut watcher_guard = self.watcher.lock().map_err(|e| e.to_string())?;
+        if watcher_guard.take().is_some() {
+            log::info!("[SpecforgeWatcher] Stopped watching");
+        }
+        Ok(())
+    }
+
+    /// Check if currently watching.
+    pub fn is_watching(&self) -> bool {
+        self.watcher
+            .lock()
+            .map(|guard| guard.is_some())
+            .unwrap_or(false)
+    }
+
+    /// Handle a single debounced file event.
+    fn handle_event<R: Runtime>(
+        path: &Path,
+        specs_dir: &Path,
+        schemas_dir: &Path,
+        project_dir: &Path,
+        db: &Arc<Database>,
+        app_handle: &AppHandle<R>,
+        app_writes: &Arc<Mutex<HashMap<PathBuf, Instant>>>,
+    ) {
+        // Check if this event was caused by the app itself (skip if < 1 second ago)
+        if let Ok(mut writes) = app_writes.lock() {
+            if let Some(write_time) = writes.get(path) {
+                if write_time.elapsed() < Duration::from_secs(1) {
+                    log::debug!(
+                        "[SpecforgeWatcher] Skipping app-initiated change: {}",
+                        path.display()
+                    );
+                    return;
+                }
+                // Clean up stale entry
+                writes.remove(path);
+            }
+        }
+
+        let file_name = match path.file_name().and_then(|n| n.to_str()) {
+            Some(name) => name.to_string(),
+            None => return,
+        };
+
+        // Determine if this is a spec or schema event
+        if path.starts_with(specs_dir) && file_name.ends_with(".md") {
+            Self::handle_spec_event(path, &file_name, project_dir, db, app_handle);
+        } else if path.starts_with(schemas_dir) && file_name.ends_with(".schema.yaml") {
+            Self::handle_schema_event(path, &file_name, project_dir, db, app_handle);
+        }
+    }
+
+    /// Handle a spec file change or deletion.
+    fn handle_spec_event<R: Runtime>(
+        path: &Path,
+        file_name: &str,
+        project_dir: &Path,
+        db: &Arc<Database>,
+        app_handle: &AppHandle<R>,
+    ) {
+        // Derive spec ID from filename: "{id}.md" -> "{id}"
+        let spec_id = file_name.trim_end_matches(".md");
+
+        if path.exists() {
+            // File created or modified — parse and upsert
+            let content = match std::fs::read_to_string(path) {
+                Ok(c) => c,
+                Err(e) => {
+                    log::warn!(
+                        "[SpecforgeWatcher] Failed to read spec file {}: {}",
+                        path.display(),
+                        e
+                    );
+                    return;
+                }
+            };
+
+            let spec = match Spec::from_markdown(&content) {
+                Ok(s) => s,
+                Err(e) => {
+                    log::warn!(
+                        "[SpecforgeWatcher] Failed to parse spec {}: {}",
+                        path.display(),
+                        e
+                    );
+                    return;
+                }
+            };
+
+            // Compute relative file path
+            let rel_path = path
+                .strip_prefix(project_dir)
+                .unwrap_or(path)
+                .to_string_lossy()
+                .to_string();
+
+            let row = spec_to_row_from_spec(&spec, &rel_path);
+
+            if let Err(e) = db.with_connection(|conn| spec_repo::upsert_spec(conn, &row)) {
+                log::error!("[SpecforgeWatcher] Failed to upsert spec {}: {}", spec.id, e);
+                return;
+            }
+
+            log::info!("[SpecforgeWatcher] Synced spec: {}", spec.id);
+
+            let payload = SpecChangedPayload { id: spec.id };
+            if let Err(e) = app_handle.emit("specforge://spec-changed", payload) {
+                log::error!("[SpecforgeWatcher] Failed to emit spec-changed event: {}", e);
+            }
+        } else {
+            // File deleted — remove from SQLite index
+            if let Err(e) = db.with_connection(|conn| spec_repo::delete_spec(conn, spec_id)) {
+                log::error!(
+                    "[SpecforgeWatcher] Failed to delete spec {}: {}",
+                    spec_id,
+                    e
+                );
+                return;
+            }
+
+            log::info!("[SpecforgeWatcher] Deleted spec from index: {}", spec_id);
+
+            let payload = SpecChangedPayload {
+                id: spec_id.to_string(),
+            };
+            if let Err(e) = app_handle.emit("specforge://spec-deleted", payload) {
+                log::error!(
+                    "[SpecforgeWatcher] Failed to emit spec-deleted event: {}",
+                    e
+                );
+            }
+        }
+    }
+
+    /// Handle a schema file change.
+    fn handle_schema_event<R: Runtime>(
+        path: &Path,
+        file_name: &str,
+        project_dir: &Path,
+        db: &Arc<Database>,
+        app_handle: &AppHandle<R>,
+    ) {
+        if !path.exists() {
+            // Schema deletion is not tracked in SQLite for now
+            log::info!(
+                "[SpecforgeWatcher] Schema file deleted (not tracked): {}",
+                file_name
+            );
+            return;
+        }
+
+        let content = match std::fs::read_to_string(path) {
+            Ok(c) => c,
+            Err(e) => {
+                log::warn!(
+                    "[SpecforgeWatcher] Failed to read schema file {}: {}",
+                    path.display(),
+                    e
+                );
+                return;
+            }
+        };
+
+        let schema = match SchemaDefinition::from_yaml(&content) {
+            Ok(s) => s,
+            Err(e) => {
+                log::warn!(
+                    "[SpecforgeWatcher] Failed to parse schema {}: {}",
+                    path.display(),
+                    e
+                );
+                return;
+            }
+        };
+
+        let fields_json =
+            serde_json::to_string(&schema.fields).unwrap_or_else(|_| "{}".to_string());
+        let rel_path = path
+            .strip_prefix(project_dir)
+            .unwrap_or(path)
+            .to_string_lossy()
+            .to_string();
+
+        if let Err(e) = db.with_connection(|conn| {
+            schema_repo::upsert_schema(
+                conn,
+                &schema.name,
+                schema.display_name.as_deref(),
+                &rel_path,
+                &fields_json,
+            )
+        }) {
+            log::error!(
+                "[SpecforgeWatcher] Failed to upsert schema {}: {}",
+                schema.name,
+                e
+            );
+            return;
+        }
+
+        log::info!("[SpecforgeWatcher] Synced schema: {}", schema.name);
+
+        let payload = SchemaChangedPayload {
+            name: schema.name,
+        };
+        if let Err(e) = app_handle.emit("specforge://schema-changed", payload) {
+            log::error!(
+                "[SpecforgeWatcher] Failed to emit schema-changed event: {}",
+                e
+            );
+        }
+    }
+}
+
+/// Convert a Spec into a SpecRow for SQLite (used by the watcher).
+fn spec_to_row_from_spec(spec: &Spec, file_path: &str) -> spec_repo::SpecRow {
+    let fields_json = if spec.fields.is_empty() {
+        None
+    } else {
+        serde_json::to_string(&spec.fields).ok()
+    };
+
+    spec_repo::SpecRow {
+        id: spec.id.clone(),
+        schema_id: spec.schema.clone(),
+        title: spec.title.clone(),
+        status: spec.status.clone(),
+        workflow_id: spec.workflow.clone(),
+        workflow_phase: spec.workflow_phase.clone(),
+        file_path: file_path.to_string(),
+        fields_json,
+        created_at: spec.created_at.clone(),
+        updated_at: spec.updated_at.clone(),
+    }
+}

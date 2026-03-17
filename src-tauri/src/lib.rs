@@ -27,7 +27,7 @@ use commands::{
     config, file_watcher, git, mcp, notification,
     schema_commands, settings, shortcuts, spec_commands, workflow,
 };
-use services::FileWatcherManager;
+use services::{FileWatcherManager, SpecforgeWatcher};
 use tauri::{Emitter, Manager};
 use utils::database::{Database, get_database_path};
 
@@ -124,6 +124,7 @@ pub fn run() {
         .manage(WorkflowExecutionState::default())
         .manage(FileWatcherManager::new())
         .manage(DatabaseWatcher::new())
+        .manage(SpecforgeWatcher::new())
         // Register commands
         .invoke_handler(tauri::generate_handler![
             // Global config commands
@@ -225,6 +226,9 @@ pub fn run() {
             file_watcher::unwatch_project,
             file_watcher::unwatch_all_projects,
             file_watcher::get_watched_projects,
+            // Specforge directory watcher (.specforge/specs/ and .specforge/schemas/)
+            file_watcher::watch_specforge,
+            file_watcher::unwatch_specforge,
             // MCP Server Integration
             mcp::get_mcp_server_info,
             mcp::test_mcp_connection,

@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use crate::services::{schema_service, spec_service};
+use crate::services::{schema_service, spec_service, SpecforgeWatcher};
 use crate::DatabaseState;
 
 /// Convert a Spec to a JSON value that includes body and file_path
@@ -33,6 +33,7 @@ pub async fn create_spec(
     title: String,
     project_dir: String,
     db: tauri::State<'_, DatabaseState>,
+    watcher: tauri::State<'_, SpecforgeWatcher>,
 ) -> Result<serde_json::Value, String> {
     let project = project_dir.clone();
     let schemas = schema_service::load_schemas_from_directory(Path::new(&project))?;
@@ -47,6 +48,13 @@ pub async fn create_spec(
     let spec = db.0.with_connection(|conn| {
         spec_service::create_spec(conn, Path::new(&project), &schema_name, &title, &all_schemas)
     })?;
+
+    // Record app write so the file watcher skips this change
+    let spec_file = Path::new(&project)
+        .join(".specforge")
+        .join("specs")
+        .join(format!("{}.md", spec.id));
+    watcher.record_app_write(&spec_file);
 
     spec_to_json(&spec)
 }
@@ -92,6 +100,7 @@ pub async fn update_spec(
     body: Option<String>,
     project_dir: String,
     db: tauri::State<'_, DatabaseState>,
+    watcher: tauri::State<'_, SpecforgeWatcher>,
 ) -> Result<serde_json::Value, String> {
     // Convert serde_json::Value fields map to HashMap<String, serde_yaml::Value>
     let yaml_fields: Option<HashMap<String, serde_yaml::Value>> = match fields {
@@ -112,6 +121,13 @@ pub async fn update_spec(
         }
     };
 
+    // Record app write before the file is written
+    let spec_file = Path::new(&project_dir)
+        .join(".specforge")
+        .join("specs")
+        .join(format!("{}.md", id));
+    watcher.record_app_write(&spec_file);
+
     let project = project_dir.clone();
     let spec = db.0.with_connection(|conn| {
         spec_service::update_spec(Path::new(&project), conn, &id, yaml_fields, body)
@@ -126,7 +142,15 @@ pub async fn delete_spec(
     id: String,
     project_dir: String,
     db: tauri::State<'_, DatabaseState>,
+    watcher: tauri::State<'_, SpecforgeWatcher>,
 ) -> Result<(), String> {
+    // Record app write so the watcher skips the delete event
+    let spec_file = Path::new(&project_dir)
+        .join(".specforge")
+        .join("specs")
+        .join(format!("{}.md", id));
+    watcher.record_app_write(&spec_file);
+
     let project = project_dir.clone();
     db.0.with_connection(|conn| {
         spec_service::delete_spec(Path::new(&project), conn, &id)
@@ -134,16 +158,29 @@ pub async fn delete_spec(
 }
 
 /// Initialize a `.specforge/` project directory structure.
+/// After creating the directory structure, automatically starts the file watcher.
 #[tauri::command]
 pub async fn init_specforge_project(
+    app: tauri::AppHandle,
     project_dir: String,
     preset: String,
     db: tauri::State<'_, DatabaseState>,
+    watcher: tauri::State<'_, SpecforgeWatcher>,
 ) -> Result<(), String> {
     let project = project_dir.clone();
     db.0.with_connection(|conn| {
         spec_service::init_project(Path::new(&project), conn, &preset)
-    })
+    })?;
+
+    // Start watching the newly created .specforge/ directories
+    if let Err(e) = watcher.start_watching(&app, Path::new(&project_dir), db.0.clone()) {
+        log::warn!(
+            "[init_specforge_project] Failed to start specforge watcher: {}",
+            e
+        );
+    }
+
+    Ok(())
 }
 
 /// Sync specs from `.specforge/specs/` directory into SQLite index.
