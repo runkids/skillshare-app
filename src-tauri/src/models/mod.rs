@@ -5,6 +5,8 @@ pub mod config;
 pub mod execution;
 pub mod git;
 pub mod mcp;
+pub mod schema;
+pub mod spec;
 pub mod workflow;
 
 // Re-export all models for convenience
