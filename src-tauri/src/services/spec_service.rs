@@ -421,26 +421,9 @@ fn write_default_workflow(project_dir: &Path) -> Result<(), String> {
     std::fs::create_dir_all(&workflows_dir)
         .map_err(|e| format!("Failed to create workflows directory: {}", e))?;
 
-    let content = r#"name: default
-phases:
-  - name: discuss
-    display_name: "Discuss"
-    description: "Initial discussion and scoping"
-  - name: refine
-    display_name: "Refine"
-    description: "Refine requirements and acceptance criteria"
-  - name: implement
-    display_name: "Implement"
-    description: "Implementation phase"
-  - name: review
-    display_name: "Review"
-    description: "Code review and QA"
-  - name: done
-    display_name: "Done"
-    description: "Completed"
-"#;
+    let content = crate::services::workflow_engine::default_workflow_yaml();
 
-    let path = workflows_dir.join("default.yaml");
+    let path = workflows_dir.join("default.workflow.yaml");
     std::fs::write(&path, content)
         .map_err(|e| format!("Failed to write default workflow: {}", e))?;
 
@@ -642,7 +625,7 @@ mod tests {
         assert!(base.join("schemas").join("task.schema.yaml").exists());
 
         // Default workflow written
-        assert!(base.join("workflows").join("default.yaml").exists());
+        assert!(base.join("workflows").join("default.workflow.yaml").exists());
 
         // Built-in templates written
         assert!(base.join("templates").join("spec.md").exists());

@@ -8,6 +8,7 @@ pub mod mcp;
 pub mod schema;
 pub mod spec;
 pub mod workflow;
+pub mod workflow_phase;
 
 // Re-export all models for convenience
 pub use execution::*;

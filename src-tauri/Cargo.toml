@@ -103,6 +103,7 @@ rusqlite = { version = "0.32", features = ["bundled", "backup"] }
 # Time Machine - Snapshot compression and security analysis
 zstd = "0.13"
 serde_yaml = "0.9"
+evalexpr = "13"
 strsim = "0.11"
 rayon = "1.10"
 
