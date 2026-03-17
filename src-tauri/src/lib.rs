@@ -1,4 +1,4 @@
-// PackageFlow - Tauri Application
+// SpecForge - Tauri Application
 // Migrated from Electron version
 
 // Allow shadowing of model modules by command modules - commands are internal use only
@@ -13,12 +13,12 @@ pub mod repositories; // Local repositories with Tauri dependencies
 #[path = "models/mod.rs"]
 pub mod local_models;
 
-// Re-export from packageflow-lib
-pub use packageflow_lib::models;
-pub use packageflow_lib::utils;
+// Re-export from specforge-lib
+pub use specforge_lib::models;
+pub use specforge_lib::utils;
 
 // Re-export models for use in commands
-pub use packageflow_lib::models::*;
+pub use specforge_lib::models::*;
 
 use std::sync::Arc;
 
@@ -48,16 +48,16 @@ pub fn run() {
     let db = match initialize_database() {
         Ok(db) => Arc::new(db),
         Err(e) => {
-            eprintln!("[PackageFlow] Failed to initialize database: {}", e);
+            eprintln!("[SpecForge] Failed to initialize database: {}", e);
             // Database is required - all commands use Repository layer
             // If initialization fails, we need to handle this gracefully
             // Try one more time with a fresh database path
             let db_path = get_database_path().unwrap_or_else(|_| {
                 dirs::data_dir()
                     .unwrap_or_else(|| std::path::PathBuf::from("."))
-                    .join("packageflow.db")
+                    .join("specforge.db")
             });
-            eprintln!("[PackageFlow] Attempting recovery at: {:?}", db_path);
+            eprintln!("[SpecForge] Attempting recovery at: {:?}", db_path);
             Arc::new(
                 Database::new(db_path)
                     .expect("Failed to create database - application cannot start")
@@ -598,11 +598,11 @@ fn initialize_database() -> Result<Database, String> {
             .map_err(|e| format!("Failed to create database directory: {}", e))?;
     }
 
-    println!("[PackageFlow] Initializing database at: {:?}", db_path);
+    println!("[SpecForge] Initializing database at: {:?}", db_path);
 
     // Create or open database (this also runs migrations internally)
     let db = Database::new(db_path.clone())?;
-    println!("[PackageFlow] Database schema migrations complete");
+    println!("[SpecForge] Database schema migrations complete");
 
     // ============================================================
     // CRITICAL DEBUG: Verify actual database file and state

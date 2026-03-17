@@ -4,7 +4,7 @@
 
 use once_cell::sync::Lazy;
 use tokio::sync::Semaphore;
-use packageflow_lib::utils::shared_store::RateLimiter;
+use specforge_lib::utils::shared_store::RateLimiter;
 use super::security::ToolCategory;
 
 // ============================================================================

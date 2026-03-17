@@ -18,10 +18,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 /// App identifier for Tauri (must match tauri.conf.json identifier)
 #[cfg(target_os = "macos")]
-pub const APP_IDENTIFIER: &str = "com.packageflow.PackageFlow-macOS";
+pub const APP_IDENTIFIER: &str = "com.specforge.app";
 
 #[cfg(not(target_os = "macos"))]
-pub const APP_IDENTIFIER: &str = "com.packageflow.PackageFlow";
+pub const APP_IDENTIFIER: &str = "com.specforge.app";
 
 /// Get the application data directory
 pub fn get_app_data_dir() -> Result<PathBuf, String> {

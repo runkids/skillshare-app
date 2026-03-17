@@ -14,7 +14,7 @@ use sha2::Digest;
 const NONCE_SIZE: usize = 12;
 const KEY_SIZE: usize = 32;
 // Application-specific salt for key derivation
-const APP_SALT: &[u8] = b"PackageFlow-Token-Encryption-v1";
+const APP_SALT: &[u8] = b"SpecForge-Token-Encryption-v1";
 
 /// Encrypted data structure stored in JSON
 #[derive(Debug, Clone, Serialize, Deserialize)]

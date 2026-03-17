@@ -1,4 +1,4 @@
-// PackageFlow Shared Library
+// SpecForge Shared Library
 // Contains models, repositories, services, and utilities shared between
 // the Tauri app and the MCP server.
 

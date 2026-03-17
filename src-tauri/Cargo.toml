@@ -1,10 +1,10 @@
 [package]
-name = "PackageFlow"
-version = "0.3.5"
-description = "The AI-Driven package.json Project Manager"
+name = "SpecForge"
+version = "0.4.0"
+description = "The spec-driven development platform"
 authors = ["runkids <https://github.com/runkids/PackageFlow>"]
 edition = "2021"
-default-run = "PackageFlow"
+default-run = "SpecForge"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -27,7 +27,7 @@ type_complexity = "allow"
 
 [lib]
 # Tauri app library - contains commands and Tauri-specific code
-name = "packageflow_app"
+name = "specforge_app"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
@@ -35,7 +35,7 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 # Shared library (models, repositories, services, utils)
-packageflow-lib = { path = "../crates/packageflow-lib" }
+specforge-lib = { path = "../crates/specforge-lib" }
 
 tauri = { version = "2", features = ["macos-private-api"] }
 tauri-plugin-opener = "2"

@@ -1,5 +1,5 @@
 // Workflow Executor for MCP Actions
-// Executes PackageFlow workflows with progress tracking
+// Executes SpecForge workflows with progress tracking
 // @see specs/021-mcp-actions/research.md
 
 use async_trait::async_trait;

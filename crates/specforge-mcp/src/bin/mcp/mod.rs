@@ -1,4 +1,4 @@
-//! MCP Server modules for PackageFlow
+//! MCP Server modules for SpecForge
 //!
 //! This module contains components extracted from mcp_server.rs
 //! for better maintainability and organization.

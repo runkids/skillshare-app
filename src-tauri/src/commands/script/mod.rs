@@ -538,7 +538,7 @@ pub async fn cancel_script(
     })
 }
 
-/// Kill all processes tracked by this app (safe mode - only kills PackageFlow-started processes)
+/// Kill all processes tracked by this app (safe mode - only kills SpecForge-started processes)
 #[tauri::command]
 pub async fn kill_all_node_processes(app: AppHandle) -> Result<CancelScriptResponse, String> {
     // Collect data to kill outside the lock

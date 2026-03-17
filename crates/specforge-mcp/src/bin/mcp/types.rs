@@ -624,7 +624,7 @@ pub struct ReadProjectFileParams {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectInfo {
-    /// Project ID (if registered in PackageFlow, null if not registered)
+    /// Project ID (if registered in SpecForge, null if not registered)
     pub id: Option<String>,
     /// Project path
     pub path: String,
@@ -644,7 +644,7 @@ pub struct ProjectInfo {
     pub project_type: Option<String>,
     /// Node.js version from .nvmrc, .node-version, or package.json engines
     pub node_version: Option<String>,
-    /// Associated workflows in PackageFlow
+    /// Associated workflows in SpecForge
     pub workflows: Option<Vec<WorkflowRef>>,
 }
 

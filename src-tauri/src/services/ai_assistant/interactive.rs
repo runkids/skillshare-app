@@ -181,12 +181,12 @@ mod tests {
 
     #[test]
     fn test_parse_entity_element() {
-        let content = "Check out [[entity:project:abc123|PackageFlow]] for details.";
+        let content = "Check out [[entity:project:abc123|SpecForge]] for details.";
         let elements = parse_interactive_elements(content);
 
         assert_eq!(elements.len(), 1);
         assert!(matches!(elements[0].element_type, InteractiveElementType::Entity));
-        assert_eq!(elements[0].label, "PackageFlow");
+        assert_eq!(elements[0].label, "SpecForge");
         assert_eq!(elements[0].payload, "project:abc123");
     }
 

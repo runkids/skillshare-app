@@ -3,7 +3,7 @@
 //! Contains tool categorization and permission checking logic.
 //! Uses centralized tool definitions from tools_registry.
 
-use packageflow_lib::models::mcp::{MCPPermissionMode, MCPServerConfig};
+use specforge_lib::models::mcp::{MCPPermissionMode, MCPServerConfig};
 use super::tools_registry::{PermissionCategory, get_permission_category};
 
 /// Tool permission category
@@ -51,7 +51,7 @@ pub fn is_tool_allowed(tool_name: &str, config: &MCPServerConfig) -> Result<(), 
             if category != ToolCategory::ReadOnly {
                 return Err(format!(
                     "Tool '{}' requires write/execute permission, but MCP server is in read-only mode. \
-                    Change permission mode in PackageFlow settings to enable this tool.",
+                    Change permission mode in SpecForge settings to enable this tool.",
                     tool_name
                 ));
             }

@@ -370,7 +370,7 @@ impl MCPToolHandler {
             },
             ToolDefinition {
                 name: "run_workflow".to_string(),
-                description: "Execute a PackageFlow workflow by ID. If unsure which workflow, call list_workflows first and ask the user.".to_string(),
+                description: "Execute a SpecForge workflow by ID. If unsure which workflow, call list_workflows first and ask the user.".to_string(),
                 parameters: serde_json::json!({
                     "type": "object",
                     "properties": {
@@ -455,7 +455,7 @@ impl MCPToolHandler {
             // Project management tools (Feature 023)
             ToolDefinition {
                 name: "list_projects".to_string(),
-                description: "List all registered projects in PackageFlow with their type, package manager, and workflow count".to_string(),
+                description: "List all registered projects in SpecForge with their type, package manager, and workflow count".to_string(),
                 parameters: serde_json::json!({
                     "type": "object",
                     "properties": {
@@ -487,7 +487,7 @@ impl MCPToolHandler {
             // Workflow tools
             ToolDefinition {
                 name: "list_workflows".to_string(),
-                description: "List all workflows in PackageFlow, optionally filtered by project".to_string(),
+                description: "List all workflows in SpecForge, optionally filtered by project".to_string(),
                 parameters: serde_json::json!({
                     "type": "object",
                     "properties": {
@@ -866,7 +866,7 @@ impl MCPToolHandler {
             // Step template creation (write tool)
             ToolDefinition {
                 name: "create_step_template".to_string(),
-                description: "Create a custom step template that can be reused across workflows. Templates are saved in PackageFlow.".to_string(),
+                description: "Create a custom step template that can be reused across workflows. Templates are saved in SpecForge.".to_string(),
                 parameters: serde_json::json!({
                     "type": "object",
                     "properties": {
@@ -1977,7 +1977,7 @@ impl MCPToolHandler {
     async fn execute_list_action_executions(&self, tool_call: &ToolCall) -> ToolResult {
         // Placeholder - would query execution history from database
         let output = serde_json::json!({
-            "message": "Action execution history available in PackageFlow UI",
+            "message": "Action execution history available in SpecForge UI",
             "hint": "Check the Actions tab for execution history"
         });
         ToolResult::success(
@@ -1999,7 +1999,7 @@ impl MCPToolHandler {
 
         // Placeholder - would query execution status from database
         let output = serde_json::json!({
-            "message": "Execution status available in PackageFlow UI",
+            "message": "Execution status available in SpecForge UI",
             "hint": "Check the Actions tab for execution details"
         });
         ToolResult::success(
@@ -2013,7 +2013,7 @@ impl MCPToolHandler {
     async fn execute_list_step_templates(&self, tool_call: &ToolCall) -> ToolResult {
         // Placeholder - would query step templates from database
         let output = serde_json::json!({
-            "message": "Step templates available in PackageFlow UI",
+            "message": "Step templates available in SpecForge UI",
             "hint": "Check workflow editor for available step templates"
         });
         ToolResult::success(
@@ -3659,7 +3659,7 @@ impl MCPToolHandler {
             "status": "workflow_queued",
             "workflow_id": workflow_id,
             "message": format!("Workflow '{}' has been queued for execution.", workflow_id),
-            "note": "Workflow execution is handled by the PackageFlow runtime. Check the Workflows panel for execution status."
+            "note": "Workflow execution is handled by the SpecForge runtime. Check the Workflows panel for execution status."
         });
 
         ToolResult::success(
@@ -3691,7 +3691,7 @@ impl MCPToolHandler {
             "webhook_id": webhook_id,
             "payload": payload,
             "message": format!("Webhook '{}' has been queued for triggering.", webhook_id),
-            "note": "Webhook execution is handled by the PackageFlow runtime. Check the Webhooks panel for execution status."
+            "note": "Webhook execution is handled by the SpecForge runtime. Check the Webhooks panel for execution status."
         });
 
         ToolResult::success(
@@ -4074,7 +4074,7 @@ impl MCPToolHandler {
         if let Some(ref db) = self.db {
             // Use the capture service to create a manual snapshot
             let storage_base = dirs::data_dir()
-                .map(|p| p.join("com.packageflow.app").join("time-machine"))
+                .map(|p| p.join("com.specforge.app").join("time-machine"))
                 .unwrap_or_else(|| std::path::PathBuf::from("."));
             let storage = crate::services::snapshot::SnapshotStorage::new(storage_base);
             let capture_service = crate::services::snapshot::SnapshotCaptureService::new(storage, db.clone());

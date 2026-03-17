@@ -1,12 +1,12 @@
 // Services module
 // Business logic and background services
 
-// Re-export shared services from packageflow-lib
-pub use packageflow_lib::services::crypto;
-pub use packageflow_lib::services::crypto::*;
-pub use packageflow_lib::services::mcp_action;
-pub use packageflow_lib::services::security_guardian;
-pub use packageflow_lib::services::snapshot;
+// Re-export shared services from specforge-lib
+pub use specforge_lib::services::crypto;
+pub use specforge_lib::services::crypto::*;
+pub use specforge_lib::services::mcp_action;
+pub use specforge_lib::services::security_guardian;
+pub use specforge_lib::services::snapshot;
 
 // Tauri-dependent services (local)
 pub mod ai;

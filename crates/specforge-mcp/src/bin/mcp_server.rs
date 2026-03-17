@@ -1,8 +1,8 @@
-// PackageFlow MCP Server
+// SpecForge MCP Server
 // Provides MCP (Model Context Protocol) tools for AI assistants like Claude Code
 //
-// Run with: cargo run --bin packageflow-mcp
-// Or install: cargo install --path . --bin packageflow-mcp
+// Run with: cargo run --bin specforge-mcp
+// Or install: cargo install --path . --bin specforge-mcp
 //
 // This server uses SQLite database for data storage with WAL mode for concurrent access.
 
@@ -48,8 +48,8 @@ use tokio::signal::unix::{signal, SignalKind};
 use uuid::Uuid;
 
 // Import SQLite database and repositories
-use packageflow_lib::utils::database::Database;
-use packageflow_lib::repositories::{
+use specforge_lib::utils::database::Database;
+use specforge_lib::repositories::{
     MCPActionRepository,
     // New repositories for enhanced MCP tools
     AIRepository, AIConversationRepository, NotificationRepository,
@@ -57,14 +57,14 @@ use packageflow_lib::repositories::{
 };
 
 // Import MCP action models and services
-use packageflow_lib::models::mcp_action::{
+use specforge_lib::models::mcp_action::{
     MCPActionType, PermissionLevel, ExecutionStatus, ActionFilter, ExecutionFilter,
 };
-use packageflow_lib::services::mcp_action::create_executor;
+use specforge_lib::services::mcp_action::create_executor;
 use rusqlite::params;
 
 // Import shared store utilities (for validation, etc.)
-use packageflow_lib::utils::shared_store::{
+use specforge_lib::utils::shared_store::{
     // Error handling
     sanitize_error,
     // Input validation
@@ -75,30 +75,30 @@ use packageflow_lib::utils::shared_store::{
 };
 
 // Import MCP types from models
-use packageflow_lib::models::mcp::{MCPServerConfig, DevServerMode};
+use specforge_lib::models::mcp::{MCPServerConfig, DevServerMode};
 
 // Import snapshot services for Time Machine
-use packageflow_lib::services::snapshot::{
+use specforge_lib::services::snapshot::{
     SnapshotStorage, SnapshotDiffService, SnapshotReplayService, SnapshotSearchService,
     SnapshotCaptureService,
 };
 
 // Import replay types from service module
-use packageflow_lib::services::snapshot::replay::{ReplayOption, ExecuteReplayRequest};
+use specforge_lib::services::snapshot::replay::{ReplayOption, ExecuteReplayRequest};
 
 // Import search types from service module
-use packageflow_lib::services::snapshot::search::{SnapshotSearchCriteria, ExportFormat};
+use specforge_lib::services::snapshot::search::{SnapshotSearchCriteria, ExportFormat};
 
 // Import security guardian services
-use packageflow_lib::services::security_guardian::{
+use specforge_lib::services::security_guardian::{
     DependencyIntegrityService, SecurityInsightsService,
 };
 
 // Import snapshot models
-use packageflow_lib::models::snapshot::SnapshotFilter;
+use specforge_lib::models::snapshot::SnapshotFilter;
 
 // Import path_resolver for proper command execution on macOS GUI apps
-use packageflow_lib::utils::path_resolver;
+use specforge_lib::utils::path_resolver;
 
 // Rate limiters, semaphore, and security are now imported from mcp::{state, security}
 // Background process management is now imported from mcp::background
@@ -107,12 +107,12 @@ use packageflow_lib::utils::path_resolver;
 // ============================================================================
 
 #[derive(Clone)]
-pub struct PackageFlowMcp {
+pub struct SpecForgeMcp {
     /// Tool router for handling tool calls
     tool_router: ToolRouter<Self>,
 }
 
-impl PackageFlowMcp {
+impl SpecForgeMcp {
     pub fn new() -> Self {
         Self {
             tool_router: Self::tool_router(),
@@ -246,13 +246,13 @@ impl PackageFlowMcp {
 
 // Implement tools using the tool_router macro
 #[tool_router]
-impl PackageFlowMcp {
+impl SpecForgeMcp {
     // ========================================================================
     // Existing Git Tools
     // ========================================================================
 
-    /// List all registered projects in PackageFlow
-    #[tool(description = "List all registered projects in PackageFlow with detailed info including project type, package manager, and workflow count.")]
+    /// List all registered projects in SpecForge
+    #[tool(description = "List all registered projects in SpecForge with detailed info including project type, package manager, and workflow count.")]
     async fn list_projects(
         &self,
         Parameters(params): Parameters<GetProjectsParams>,
@@ -766,7 +766,7 @@ impl PackageFlowMcp {
     // ========================================================================
 
     /// List all workflows, optionally filtered by project
-    #[tool(description = "List all workflows in PackageFlow. Optionally filter by project_id. Returns workflow summaries including step count.")]
+    #[tool(description = "List all workflows in SpecForge. Optionally filter by project_id. Returns workflow summaries including step count.")]
     async fn list_workflows(
         &self,
         Parameters(params): Parameters<ListWorkflowsParams>,
@@ -1341,7 +1341,7 @@ RETURNS: List of created step IDs and their assigned order positions.")]
     }
 
     /// Create a custom step template
-    #[tool(description = "Create a custom step template that can be reused across workflows. Templates are saved in PackageFlow.")]
+    #[tool(description = "Create a custom step template that can be reused across workflows. Templates are saved in SpecForge.")]
     async fn create_step_template(
         &self,
         Parameters(params): Parameters<CreateStepTemplateParams>,
@@ -1630,7 +1630,7 @@ RETURNS: List of created step IDs and their assigned order positions.")]
                                 format!(
                                     "Dev server mode is set to 'reject_with_hint'. \
                                     Running dev servers via MCP is disabled. \
-                                    Please use PackageFlow UI to manage dev servers for better process visibility, \
+                                    Please use SpecForge UI to manage dev servers for better process visibility, \
                                     port tracking, and process management. \
                                     Script: '{}'",
                                     params.script_name
@@ -1638,7 +1638,7 @@ RETURNS: List of created step IDs and their assigned order positions.")]
                             )]));
                         }
                         DevServerMode::UiIntegrated => {
-                            // UI Integrated mode: Process will be tracked in PackageFlow UI
+                            // UI Integrated mode: Process will be tracked in SpecForge UI
                             // The background process manager will emit events for UI integration
                             eprintln!(
                                 "[MCP Server] Starting dev server '{}' in UI integrated mode",
@@ -2176,7 +2176,7 @@ RETURNS: List of created step IDs and their assigned order positions.")]
         let execution_id = Uuid::new_v4().to_string();
         let started_at = Utc::now().to_rfc3339();
 
-        let mut execution = packageflow_lib::models::mcp_action::MCPActionExecution {
+        let mut execution = specforge_lib::models::mcp_action::MCPActionExecution {
             id: execution_id.clone(),
             action_id: Some(params.action_id.clone()),
             action_type: action.action_type.clone(),
@@ -2303,7 +2303,7 @@ RETURNS: List of created step IDs and their assigned order positions.")]
         let execution_id = Uuid::new_v4().to_string();
         let started_at = Utc::now().to_rfc3339();
 
-        let mut execution = packageflow_lib::models::mcp_action::MCPActionExecution {
+        let mut execution = specforge_lib::models::mcp_action::MCPActionExecution {
             id: execution_id.clone(),
             action_id: Some(params.action_id.clone()),
             action_type: action.action_type.clone(),
@@ -2745,7 +2745,7 @@ RETURNS: List of created step IDs and their assigned order positions.")]
 
         if !is_registered {
             return Ok(CallToolResult::error(vec![Content::text(
-                "Project path is not registered in PackageFlow. Register the project first."
+                "Project path is not registered in SpecForge. Register the project first."
             )]));
         }
 
@@ -2810,7 +2810,7 @@ RETURNS: List of created step IDs and their assigned order positions.")]
     }
 
     /// Get recent notifications
-    #[tool(description = "Get recent notifications from PackageFlow including workflow executions, security alerts, and deployment status. Use this to provide users with updates on recent activity.")]
+    #[tool(description = "Get recent notifications from SpecForge including workflow executions, security alerts, and deployment status. Use this to provide users with updates on recent activity.")]
     async fn get_notifications(
         &self,
         Parameters(params): Parameters<GetNotificationsParams>,
@@ -3193,7 +3193,7 @@ RETURNS: List of created step IDs and their assigned order positions.")]
 
         // Get storage base path for time machine
         let storage_base = dirs::data_dir()
-            .map(|p| p.join("com.packageflow.app").join("time-machine"))
+            .map(|p| p.join("com.specforge.app").join("time-machine"))
             .ok_or_else(|| McpError::internal_error("Failed to get data directory", None))?;
 
         let storage = SnapshotStorage::new(storage_base);
@@ -3274,7 +3274,7 @@ RETURNS: List of created step IDs and their assigned order positions.")]
 
         // Use the capture service to create a manual snapshot
         let storage_base = dirs::data_dir()
-            .map(|p| p.join("com.packageflow.app").join("time-machine"))
+            .map(|p| p.join("com.specforge.app").join("time-machine"))
             .ok_or_else(|| McpError::internal_error("Failed to get data directory", None))?;
 
         let storage = SnapshotStorage::new(storage_base);
@@ -3588,7 +3588,7 @@ RETURNS: List of created step IDs and their assigned order positions.")]
 
         if !is_registered {
             return Ok(CallToolResult::error(vec![Content::text(
-                "Project path is not registered in PackageFlow."
+                "Project path is not registered in SpecForge."
             )]));
         }
 
@@ -3668,7 +3668,7 @@ RETURNS: List of created step IDs and their assigned order positions.")]
 
         if !is_registered {
             return Ok(CallToolResult::error(vec![Content::text(
-                "Project path is not registered in PackageFlow."
+                "Project path is not registered in SpecForge."
             )]));
         }
 
@@ -3709,7 +3709,7 @@ RETURNS: List of created step IDs and their assigned order positions.")]
 }
 
 // Implement ServerHandler trait for the MCP server
-impl ServerHandler for PackageFlowMcp {
+impl ServerHandler for SpecForgeMcp {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
             protocol_version: ProtocolVersion::default(),
@@ -3718,13 +3718,13 @@ impl ServerHandler for PackageFlowMcp {
                 ..Default::default()
             },
             server_info: Implementation {
-                name: "packageflow-mcp".to_string(),
-                title: Some("PackageFlow MCP Server".to_string()),
+                name: "specforge-mcp".to_string(),
+                title: Some("SpecForge MCP Server".to_string()),
                 version: env!("CARGO_PKG_VERSION").to_string(),
                 icons: None,
                 website_url: None,
             },
-            instructions: Some("PackageFlow MCP Server provides tools for managing Git projects, worktrees, workflows, and step templates.".to_string()),
+            instructions: Some("SpecForge MCP Server provides tools for managing Git projects, worktrees, workflows, and step templates.".to_string()),
         }
     }
 
@@ -3771,7 +3771,7 @@ impl ServerHandler for PackageFlowMcp {
 
             // Check if MCP server is enabled
             if !config.is_enabled {
-                let error_msg = "MCP Server is disabled. Enable it in PackageFlow settings.";
+                let error_msg = "MCP Server is disabled. Enable it in SpecForge settings.";
                 if config.log_requests {
                     log_request(&tool_name, &arguments, "permission_denied", 0, Some(error_msg));
                 }
@@ -3948,10 +3948,10 @@ impl ServerHandler for PackageFlowMcp {
 /// Print help information about available MCP tools
 fn print_help() {
     let version = env!("CARGO_PKG_VERSION");
-    println!(r#"PackageFlow MCP Server v{}
+    println!(r#"SpecForge MCP Server v{}
 
 USAGE:
-    packageflow-mcp [OPTIONS]
+    specforge-mcp [OPTIONS]
 
 OPTIONS:
     --help, -h      Print this help information
@@ -3959,7 +3959,7 @@ OPTIONS:
     --list-tools    List all available MCP tools
 
 DESCRIPTION:
-    PackageFlow MCP Server provides AI assistants (Claude Code, Cursor, etc.)
+    SpecForge MCP Server provides AI assistants (Claude Code, Cursor, etc.)
     with tools to manage Git projects, worktrees, workflows, and automation.
 
 MCP TOOLS:
@@ -4035,23 +4035,23 @@ PERMISSION MODES:
     full_access         All operations including execute allowed
 
 CONFIGURATION:
-    Configure in PackageFlow: Settings → MCP Server
+    Configure in SpecForge: Settings → MCP Server
 
 EXAMPLES:
     # Start the MCP server (for AI integration)
-    packageflow-mcp
+    specforge-mcp
 
     # Get help
-    packageflow-mcp --help
+    specforge-mcp --help
 
     # List available tools
-    packageflow-mcp --list-tools
+    specforge-mcp --list-tools
 "#, version);
 }
 
 /// Print version information
 fn print_version() {
-    println!("packageflow-mcp {}", env!("CARGO_PKG_VERSION"));
+    println!("specforge-mcp {}", env!("CARGO_PKG_VERSION"));
 }
 
 /// List all tools in a simple format
@@ -4059,7 +4059,7 @@ fn print_version() {
 fn list_tools_simple() {
     use mcp::ALL_TOOLS;
 
-    println!("PackageFlow MCP Tools:\n");
+    println!("SpecForge MCP Tools:\n");
 
     // Group tools by category for better readability
     let mut current_category = "";
@@ -4126,7 +4126,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Debug: Log startup info
     let current_pid = std::process::id();
-    eprintln!("[MCP Server] Starting PackageFlow MCP Server (PID: {})...", current_pid);
+    eprintln!("[MCP Server] Starting SpecForge MCP Server (PID: {})...", current_pid);
 
     // Debug: Check database at startup
     match read_store_data() {
@@ -4139,7 +4139,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Create the MCP server
-    let server = PackageFlowMcp::new();
+    let server = SpecForgeMcp::new();
 
     // Run with stdio transport (for Claude Code integration)
     let transport = (stdin(), stdout());

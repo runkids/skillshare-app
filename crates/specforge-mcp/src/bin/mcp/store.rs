@@ -16,13 +16,13 @@ use chrono::Utc;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 
-use packageflow_lib::models::mcp::MCPServerConfig;
-use packageflow_lib::repositories::{
+use specforge_lib::models::mcp::MCPServerConfig;
+use specforge_lib::repositories::{
     MCPRepository, McpLogEntry, ProjectRepository, SettingsRepository,
     TemplateRepository, WorkflowRepository,
 };
-use packageflow_lib::utils::database::{Database, DATABASE_FILE};
-use packageflow_lib::utils::shared_store::{get_app_data_dir, sanitize_error};
+use specforge_lib::utils::database::{Database, DATABASE_FILE};
+use specforge_lib::utils::shared_store::{get_app_data_dir, sanitize_error};
 
 // ============================================================================
 // Constants
@@ -175,7 +175,7 @@ pub fn write_store_data(data: &StoreData) -> Result<(), String> {
 
     // Save workflows
     for workflow in &data.workflows {
-        let w = packageflow_lib::models::Workflow {
+        let w = specforge_lib::models::Workflow {
             id: workflow.id.clone(),
             name: workflow.name.clone(),
             description: workflow.description.clone(),
@@ -183,9 +183,9 @@ pub fn write_store_data(data: &StoreData) -> Result<(), String> {
             nodes: workflow.nodes.iter().map(|n| {
                 // Convert local NodePosition to library NodePosition
                 let position = n.position.as_ref().map(|p| {
-                    packageflow_lib::models::workflow::NodePosition { x: p.x, y: p.y }
+                    specforge_lib::models::workflow::NodePosition { x: p.x, y: p.y }
                 });
-                packageflow_lib::models::WorkflowNode {
+                specforge_lib::models::WorkflowNode {
                     id: n.id.clone(),
                     node_type: n.node_type.clone(),
                     name: n.name.clone(),
@@ -205,11 +205,11 @@ pub fn write_store_data(data: &StoreData) -> Result<(), String> {
 
     // Save custom step templates
     for template in &data.custom_step_templates {
-        let t = packageflow_lib::models::step_template::CustomStepTemplate {
+        let t = specforge_lib::models::step_template::CustomStepTemplate {
             id: template.id.clone(),
             name: template.name.clone(),
             command: template.command.clone(),
-            category: packageflow_lib::models::step_template::TemplateCategory::Custom,
+            category: specforge_lib::models::step_template::TemplateCategory::Custom,
             description: template.description.clone(),
             is_custom: template.is_custom,
             created_at: template.created_at.clone(),
@@ -334,7 +334,7 @@ pub fn sanitize_arguments(args: &serde_json::Value) -> serde_json::Value {
 
 // ============================================================================
 // Store Data Types (local types for MCP Server processing)
-// Note: Uses MCPServerConfig from packageflow_lib::models::mcp
+// Note: Uses MCPServerConfig from specforge_lib::models::mcp
 // ============================================================================
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -354,7 +354,7 @@ pub struct StoreData {
     pub security_scans: HashMap<String, serde_json::Value>,
     #[serde(default)]
     pub custom_step_templates: Vec<CustomStepTemplate>,
-    /// MCP Server configuration (imported from packageflow_lib)
+    /// MCP Server configuration (imported from specforge_lib)
     #[serde(default)]
     pub mcp_config: MCPServerConfig,
 }
@@ -527,10 +527,10 @@ mod tests {
         // It may fail if the app data directory is not accessible
         if let Ok(path) = get_database_path() {
             let path_str = path.to_string_lossy();
-            // In debug mode, uses packageflow-dev.db; in release, uses packageflow.db
+            // In debug mode, uses specforge-dev.db; in release, uses specforge.db
             assert!(
-                path_str.ends_with("packageflow.db") || path_str.ends_with("packageflow-dev.db"),
-                "Database path should end with packageflow.db or packageflow-dev.db, got: {}",
+                path_str.ends_with("specforge.db") || path_str.ends_with("specforge-dev.db"),
+                "Database path should end with specforge.db or specforge-dev.db, got: {}",
                 path_str
             );
         }

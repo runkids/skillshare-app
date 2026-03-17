@@ -1,16 +1,16 @@
 [package]
-name = "packageflow-mcp"
-version = "0.3.5"
+name = "specforge-mcp"
+version = "0.4.0"
 edition = "2021"
-description = "PackageFlow MCP Server for AI assistants"
+description = "SpecForge MCP Server for AI assistants"
 
 [[bin]]
-name = "packageflow-mcp"
+name = "specforge-mcp"
 path = "src/bin/mcp_server.rs"
 
 [dependencies]
 # Core library (shared with Tauri app)
-packageflow-lib = { path = "../packageflow-lib" }
+specforge-lib = { path = "../specforge-lib" }
 
 # MCP Protocol
 rmcp = { version = "0.8", features = ["server", "macros", "schemars"] }

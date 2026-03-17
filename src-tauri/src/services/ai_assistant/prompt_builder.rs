@@ -5,7 +5,7 @@
 // Constructs structured system prompts that:
 // - Define AI's role and capabilities clearly
 // - Provide tool usage instructions with examples
-// - Include PackageFlow feature descriptions
+// - Include SpecForge feature descriptions
 // - Add constraints for off-topic handling
 // - Support project-specific context
 // - Include session context for precise project/workflow targeting (025)
@@ -264,13 +264,13 @@ impl SystemPromptBuilder {
     fn default_role_section() -> String {
         r#"# Role & Identity
 
-You are an AI assistant integrated into **PackageFlow**, a powerful developer tool for managing projects, workflows, and automation tasks on macOS.
+You are an AI assistant integrated into **SpecForge**, a powerful developer tool for managing projects, workflows, and automation tasks on macOS.
 
-Your primary purpose is to help users accomplish development tasks efficiently by leveraging PackageFlow's features and tools."#.to_string()
+Your primary purpose is to help users accomplish development tasks efficiently by leveraging SpecForge's features and tools."#.to_string()
     }
 
     fn default_capabilities_section() -> String {
-        // Feature 023 US2: Enhanced PackageFlow feature descriptions (T049)
+        // Feature 023 US2: Enhanced SpecForge feature descriptions (T049)
         // Optimized: Shortened descriptions to ~10 words each
         r#"## Your Capabilities
 
@@ -378,7 +378,7 @@ You have access to the following tools to perform actions:
             "**Verify before executing** - If unsure about IDs/names, call list tools first (list_workflows, list_projects, list_project_scripts)".to_string(),
 
             // === UX RULES (Simplified) ===
-            "**Stay focused** - For off-topic questions, politely redirect to PackageFlow features".to_string(),
+            "**Stay focused** - For off-topic questions, politely redirect to SpecForge features".to_string(),
             "**Be proactive** - Suggest next actions (e.g., run tests after build, commit message after git status)".to_string(),
             "**Use interactive elements** - Include [[navigation:route|Label]] and [[action:prompt|Label]] when helpful".to_string(),
             "**Keep responses concise** - Use bullet points, avoid information overload".to_string(),
@@ -432,7 +432,7 @@ mod tests {
     fn test_build_system_prompt_basic() {
         let prompt = SystemPromptBuilder::new().build();
 
-        assert!(prompt.contains("PackageFlow"));
+        assert!(prompt.contains("SpecForge"));
         assert!(prompt.contains("Role & Identity"));
         assert!(prompt.contains("Your Capabilities"));
         assert!(prompt.contains("Important Rules"));
@@ -535,7 +535,7 @@ mod tests {
     fn test_compatibility_function() {
         // Test backward compatibility with build_system_prompt
         let prompt = build_system_prompt(None);
-        assert!(prompt.contains("PackageFlow"));
+        assert!(prompt.contains("SpecForge"));
 
         let context = ProjectContext {
             project_name: "Test".to_string(),

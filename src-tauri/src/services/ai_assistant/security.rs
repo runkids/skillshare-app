@@ -40,7 +40,7 @@ impl std::fmt::Display for SecurityError {
                 write!(f, "Path '{}' is outside of any registered project", path)
             }
             SecurityError::ProjectNotRegistered { path } => {
-                write!(f, "Project at '{}' is not registered in PackageFlow", path)
+                write!(f, "Project at '{}' is not registered in SpecForge", path)
             }
             SecurityError::DatabaseError { message } => {
                 write!(f, "Database error: {}", message)

@@ -6,7 +6,7 @@ function ensureAlias({ profile }) {
   const targetDir = path.join(projectRoot, 'target', profile);
 
   const exeSuffix = process.platform === 'win32' ? '.exe' : '';
-  const source = path.join(targetDir, `packageflow-mcp${exeSuffix}`);
+  const source = path.join(targetDir, `specforge-mcp${exeSuffix}`);
   const dest = path.join(targetDir, `mcp${exeSuffix}`);
 
   if (!fs.existsSync(source)) {

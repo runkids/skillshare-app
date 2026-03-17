@@ -504,17 +504,17 @@ pub enum MCPPermissionMode {
 ///
 /// Controls how dev server commands (npm run dev, etc.) are handled:
 /// - `McpManaged`: MCP manages background processes independently (default)
-/// - `UiIntegrated`: Processes are tracked in PackageFlow UI via events
-/// - `RejectWithHint`: Reject dev server commands with a hint to use PackageFlow UI
+/// - `UiIntegrated`: Processes are tracked in SpecForge UI via events
+/// - `RejectWithHint`: Reject dev server commands with a hint to use SpecForge UI
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum DevServerMode {
     /// MCP manages background processes independently (default)
     #[default]
     McpManaged,
-    /// Processes are tracked in PackageFlow UI via events
+    /// Processes are tracked in SpecForge UI via events
     UiIntegrated,
-    /// Reject dev server commands with a hint to use PackageFlow UI
+    /// Reject dev server commands with a hint to use SpecForge UI
     RejectWithHint,
 }
 

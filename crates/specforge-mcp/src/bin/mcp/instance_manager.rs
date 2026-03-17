@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
-use packageflow_lib::utils::shared_store::get_app_data_dir;
+use specforge_lib::utils::shared_store::get_app_data_dir;
 
 // ============================================================================
 // Constants

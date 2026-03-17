@@ -3,8 +3,8 @@
 version = 4
 
 [[package]]
-name = "PackageFlow"
-version = "0.3.5"
+name = "SpecForge"
+version = "0.4.0"
 dependencies = [
  "aes-gcm",
  "async-stream",
@@ -28,7 +28,6 @@ dependencies = [
  "notify-debouncer-mini",
  "once_cell",
  "opener",
- "packageflow-lib",
  "plist",
  "portable-pty 0.8.1",
  "rand 0.8.5",
@@ -45,6 +44,7 @@ dependencies = [
  "sha1",
  "sha2",
  "shellexpand",
+ "specforge-lib",
  "strsim",
  "tauri",
  "tauri-build",
@@ -3425,77 +3425,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "packageflow-lib"
-version = "0.3.4"
-dependencies = [
- "aes-gcm",
- "async-stream",
- "async-trait",
- "axum",
- "base64 0.22.1",
- "chrono",
- "dirs 5.0.1",
- "futures",
- "glob",
- "hostname",
- "libc",
- "log",
- "node-semver",
- "notify",
- "notify-debouncer-mini",
- "once_cell",
- "plist",
- "rand 0.8.5",
- "rayon",
- "regex",
- "reqwest",
- "reqwest-eventsource",
- "rusqlite",
- "schemars 1.1.0",
- "serde",
- "serde_json",
- "serde_yaml",
- "sha1",
- "sha2",
- "shellexpand",
- "strsim",
- "thiserror 2.0.17",
- "tokio",
- "tower",
- "tower-http",
- "trash",
- "url",
- "urlencoding",
- "uuid",
- "whoami",
- "zip 2.4.2",
- "zstd",
-]
-
-[[package]]
-name = "packageflow-mcp"
-version = "0.3.4"
-dependencies = [
- "chrono",
- "dirs 5.0.1",
- "fs2",
- "glob",
- "libc",
- "log",
- "once_cell",
- "packageflow-lib",
- "regex",
- "rmcp",
- "rusqlite",
- "schemars 1.1.0",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "uuid",
-]
-
-[[package]]
 name = "pango"
 version = "0.18.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5046,6 +4975,77 @@ dependencies = [
  "gobject-sys",
  "libc",
  "system-deps",
+]
+
+[[package]]
+name = "specforge-lib"
+version = "0.4.0"
+dependencies = [
+ "aes-gcm",
+ "async-stream",
+ "async-trait",
+ "axum",
+ "base64 0.22.1",
+ "chrono",
+ "dirs 5.0.1",
+ "futures",
+ "glob",
+ "hostname",
+ "libc",
+ "log",
+ "node-semver",
+ "notify",
+ "notify-debouncer-mini",
+ "once_cell",
+ "plist",
+ "rand 0.8.5",
+ "rayon",
+ "regex",
+ "reqwest",
+ "reqwest-eventsource",
+ "rusqlite",
+ "schemars 1.1.0",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "sha1",
+ "sha2",
+ "shellexpand",
+ "strsim",
+ "thiserror 2.0.17",
+ "tokio",
+ "tower",
+ "tower-http",
+ "trash",
+ "url",
+ "urlencoding",
+ "uuid",
+ "whoami",
+ "zip 2.4.2",
+ "zstd",
+]
+
+[[package]]
+name = "specforge-mcp"
+version = "0.4.0"
+dependencies = [
+ "chrono",
+ "dirs 5.0.1",
+ "fs2",
+ "glob",
+ "libc",
+ "log",
+ "once_cell",
+ "regex",
+ "rmcp",
+ "rusqlite",
+ "schemars 1.1.0",
+ "serde",
+ "serde_json",
+ "specforge-lib",
+ "tempfile",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]

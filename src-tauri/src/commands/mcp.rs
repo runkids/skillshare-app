@@ -30,8 +30,8 @@ pub struct McpServerInfo {
 ///
 /// Path resolution priority:
 /// 1. Production: bundled in Resources/bin/ (inside .app bundle)
-/// 2. Development Release: target/release/packageflow-mcp
-/// 3. Development Debug: target/debug/packageflow-mcp
+/// 2. Development Release: target/release/specforge-mcp
+/// 3. Development Debug: target/debug/specforge-mcp
 #[tauri::command]
 pub fn get_mcp_server_info(app: AppHandle) -> Result<McpServerInfo, String> {
     let resource_path = app
@@ -39,12 +39,12 @@ pub fn get_mcp_server_info(app: AppHandle) -> Result<McpServerInfo, String> {
         .resource_dir()
         .map_err(|e| format!("Failed to get resource dir: {}", e))?;
 
-    // Production path (preferred): Resources/bin/packageflow-mcp
-    // On macOS: /Applications/PackageFlow.app/Contents/Resources/bin/packageflow-mcp
+    // Production path (preferred): Resources/bin/specforge-mcp
+    // On macOS: /Applications/SpecForge.app/Contents/Resources/bin/specforge-mcp
     //
     // Some build configurations may bundle the MCP binary as `mcp`, so we also
     // support a fallback to Resources/bin/mcp.
-    let bundled_path_primary = resource_path.join("bin").join("packageflow-mcp");
+    let bundled_path_primary = resource_path.join("bin").join("specforge-mcp");
     let bundled_path_fallback = resource_path.join("bin").join("mcp");
 
     // Development paths - try to find src-tauri directory
@@ -61,7 +61,7 @@ pub fn get_mcp_server_info(app: AppHandle) -> Result<McpServerInfo, String> {
 
     if let Some(src_tauri_dir) = src_tauri_dir {
         candidates.push((
-            src_tauri_dir.join("target").join("debug").join("packageflow-mcp"),
+            src_tauri_dir.join("target").join("debug").join("specforge-mcp"),
             "development (debug)",
         ));
         candidates.push((
@@ -69,7 +69,7 @@ pub fn get_mcp_server_info(app: AppHandle) -> Result<McpServerInfo, String> {
             "development (debug, legacy name)",
         ));
         candidates.push((
-            src_tauri_dir.join("target").join("release").join("packageflow-mcp"),
+            src_tauri_dir.join("target").join("release").join("specforge-mcp"),
             "development (release)",
         ));
         candidates.push((
@@ -90,7 +90,7 @@ pub fn get_mcp_server_info(app: AppHandle) -> Result<McpServerInfo, String> {
     // Generate config JSON for Claude Code / VS Code
     let config_json = serde_json::json!({
         "mcpServers": {
-            "packageflow": {
+            "specforge": {
                 "command": binary_path_str
             }
         }
@@ -98,14 +98,14 @@ pub fn get_mcp_server_info(app: AppHandle) -> Result<McpServerInfo, String> {
 
     // Generate config TOML for Codex CLI
     let config_toml = format!(
-        r#"[mcp_servers.packageflow]
+        r#"[mcp_servers.specforge]
 command = "{}""#,
         binary_path_str
     );
 
     Ok(McpServerInfo {
         binary_path: binary_path_str.clone(),
-        name: "packageflow-mcp".to_string(),
+        name: "specforge-mcp".to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
         is_available,
         config_json: serde_json::to_string_pretty(&config_json).unwrap_or_default(),
@@ -167,7 +167,7 @@ pub async fn test_mcp_connection(app: AppHandle) -> Result<McpHealthCheckResult,
         Ok(output) => {
             if output.status.success() {
                 let version_output = String::from_utf8_lossy(&output.stdout).trim().to_string();
-                // Parse version from output (format: "packageflow-mcp v0.1.0")
+                // Parse version from output (format: "specforge-mcp v0.1.0")
                 let version = version_output
                     .split_whitespace()
                     .last()
@@ -265,9 +265,9 @@ impl Default for McpPermissionMode {
 pub enum DevServerMode {
     /// MCP manages background processes independently (default)
     McpManaged,
-    /// Processes are tracked in PackageFlow UI via events
+    /// Processes are tracked in SpecForge UI via events
     UiIntegrated,
-    /// Reject dev server commands with a hint to use PackageFlow UI
+    /// Reject dev server commands with a hint to use SpecForge UI
     RejectWithHint,
 }
 
@@ -405,7 +405,7 @@ pub fn get_mcp_tools_with_permissions(
 
     let tools = vec![
         // Read-only tools
-        ("list_projects", "List all registered projects in PackageFlow", ToolCategory::Read),
+        ("list_projects", "List all registered projects in SpecForge", ToolCategory::Read),
         ("get_project", "Get project info (name, remote URL, current branch)", ToolCategory::Read),
         ("list_worktrees", "List all Git worktrees", ToolCategory::Read),
         ("get_worktree_status", "Get Git status (branch, ahead/behind, file status)", ToolCategory::Read),

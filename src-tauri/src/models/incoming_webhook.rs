@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 /// Default port for incoming webhook server
 pub const DEFAULT_INCOMING_WEBHOOK_PORT: u16 = 9876;
 
-// Note: IncomingWebhookConfig is re-exported from packageflow-lib
-// This local definition is kept for reference but packageflow-lib's version takes precedence
+// Note: IncomingWebhookConfig is re-exported from specforge-lib
+// This local definition is kept for reference but specforge-lib's version takes precedence
 
 /// Information about a running webhook server
 #[derive(Debug, Clone, Serialize, Deserialize)]

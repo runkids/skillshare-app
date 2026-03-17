@@ -11,19 +11,19 @@
 //!
 //! ```bash
 //! # Run all MCP tests
-//! cd src-tauri && cargo test --bin packageflow-mcp mcp_tests
+//! cd src-tauri && cargo test --bin specforge-mcp mcp_tests
 //!
 //! # Run specific test group
-//! cargo test --bin packageflow-mcp mcp_tests::tests::tool_category
+//! cargo test --bin specforge-mcp mcp_tests::tests::tool_category
 //!
 //! # Run with output
-//! cargo test --bin packageflow-mcp mcp_tests -- --nocapture
+//! cargo test --bin specforge-mcp mcp_tests -- --nocapture
 //! ```
 
 use super::security::{get_tool_category, is_tool_allowed, ToolCategory};
 use super::state::ToolRateLimiters;
 use super::background::types::CircularBuffer;
-use packageflow_lib::models::mcp::{DevServerMode, MCPEncryptedSecrets, MCPPermissionMode, MCPServerConfig};
+use specforge_lib::models::mcp::{DevServerMode, MCPEncryptedSecrets, MCPPermissionMode, MCPServerConfig};
 
 // ============================================================================
 // Tool Name Constants
@@ -681,7 +681,7 @@ mod edge_case_tests {
         let result = is_tool_allowed("run_workflow", &config);
         let err = result.unwrap_err();
         assert!(
-            err.contains("PackageFlow settings"),
+            err.contains("SpecForge settings"),
             "Error should guide user to change settings: {}",
             err
         );

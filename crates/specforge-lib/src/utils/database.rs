@@ -10,10 +10,10 @@ use super::shared_store::APP_IDENTIFIER;
 
 /// Database file name
 #[cfg(debug_assertions)]
-pub const DATABASE_FILE: &str = "packageflow-dev.db";
+pub const DATABASE_FILE: &str = "specforge-dev.db";
 
 #[cfg(not(debug_assertions))]
-pub const DATABASE_FILE: &str = "packageflow.db";
+pub const DATABASE_FILE: &str = "specforge.db";
 
 /// Thread-safe database wrapper
 /// Uses Arc<Mutex<Connection>> for concurrent access from multiple threads

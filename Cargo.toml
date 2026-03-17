@@ -2,6 +2,6 @@
 resolver = "2"
 members = [
     "src-tauri",
-    "crates/packageflow-lib",
-    "crates/packageflow-mcp",
+    "crates/specforge-lib",
+    "crates/specforge-mcp",
 ]

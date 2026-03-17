@@ -19,15 +19,15 @@ use crate::utils::database::Database;
 use crate::DatabaseState;
 
 // Lockfile validation types
-use packageflow_lib::repositories::LockfileValidationRepository;
-use packageflow_lib::services::snapshot::validation::{
+use specforge_lib::repositories::LockfileValidationRepository;
+use specforge_lib::services::snapshot::validation::{
     BlockedPackageEntry, LockfileValidationConfig, ValidationEngine, ValidationResult,
 };
 
 /// Get the snapshot storage base path
 fn get_storage_base_path() -> Result<PathBuf, String> {
     dirs::data_dir()
-        .map(|p| p.join("com.packageflow.app").join("time-machine"))
+        .map(|p| p.join("com.specforge.app").join("time-machine"))
         .ok_or_else(|| "Failed to get data directory".to_string())
 }
 

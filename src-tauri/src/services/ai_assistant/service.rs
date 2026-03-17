@@ -747,7 +747,7 @@ mod tests {
     #[test]
     fn test_build_system_prompt_without_context() {
         let prompt = build_system_prompt(None);
-        assert!(prompt.contains("PackageFlow"));
+        assert!(prompt.contains("SpecForge"));
         // Feature 023: Uses SystemPromptBuilder, no project context section
         assert!(!prompt.contains("Current Project Context"));
     }
@@ -765,7 +765,7 @@ mod tests {
         let prompt = build_system_prompt(Some(&context));
 
         // Feature 023: Uses SystemPromptBuilder format
-        assert!(prompt.contains("PackageFlow"));
+        assert!(prompt.contains("SpecForge"));
         assert!(prompt.contains("TestApp"));
         assert!(prompt.contains("Node.js"));
         assert!(prompt.contains("pnpm"));

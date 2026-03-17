@@ -1,10 +1,10 @@
 //! MCP Tool Registry for bin/mcp
 //!
-//! Re-exports tool definitions from packageflow_lib::models::mcp
+//! Re-exports tool definitions from specforge_lib::models::mcp
 //! to provide a consistent interface within the MCP server binary.
 
-// Re-export from packageflow_lib
-pub use packageflow_lib::models::mcp::{
+// Re-export from specforge_lib
+pub use specforge_lib::models::mcp::{
     MCPToolPermissionCategory as PermissionCategory,
     MCP_ALL_TOOLS as ALL_TOOLS,
     get_mcp_tool_permission_category as get_permission_category,
@@ -12,7 +12,7 @@ pub use packageflow_lib::models::mcp::{
 
 // Additional re-exports used by tests
 #[cfg(test)]
-pub use packageflow_lib::models::mcp::get_mcp_tool as get_tool;
+pub use specforge_lib::models::mcp::get_mcp_tool as get_tool;
 
 #[cfg(test)]
 mod tests {

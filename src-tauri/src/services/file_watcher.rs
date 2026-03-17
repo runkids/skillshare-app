@@ -291,7 +291,7 @@ impl DatabaseWatcher {
                         // Check if any event is for database files
                         let has_db_change = events.iter().any(|e| {
                             let path_str = e.path.to_string_lossy();
-                            path_str.contains("packageflow.db")
+                            path_str.contains("specforge.db")
                         });
 
                         if has_db_change {
@@ -353,7 +353,7 @@ impl DatabaseWatcher {
                                 if let Err(e) = app_handle
                                     .notification()
                                     .builder()
-                                    .title("PackageFlow")
+                                    .title("SpecForge")
                                     .body(&notification_body)
                                     .show()
                                 {

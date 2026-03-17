@@ -158,7 +158,7 @@ impl SessionContextBuilder {
         }
 
         // Fall back to package manager
-        // Note: PackageFlow currently only supports Node.js package managers
+        // Note: SpecForge currently only supports Node.js package managers
         match project.package_manager {
             crate::models::PackageManager::Npm
             | crate::models::PackageManager::Yarn

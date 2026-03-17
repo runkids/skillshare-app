@@ -73,7 +73,7 @@ pub enum CLIAuthMode {
     /// e.g., `claude login`, `codex auth`
     #[default]
     CliNative,
-    /// Use API key from PackageFlow AI Providers
+    /// Use API key from SpecForge AI Providers
     ApiKey,
 }
 
@@ -155,7 +155,7 @@ pub struct AICLIContext {
     pub files: Vec<String>,
     /// Custom context text
     pub custom_context: Option<String>,
-    /// Include MCP context (PackageFlow project info)
+    /// Include MCP context (SpecForge project info)
     #[serde(default)]
     pub include_mcp_context: bool,
 }

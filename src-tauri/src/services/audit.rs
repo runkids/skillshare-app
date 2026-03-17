@@ -6,9 +6,9 @@ use chrono::{Duration, Utc};
 use rusqlite::params;
 use std::sync::Arc;
 
-use packageflow_lib::utils::database::Database;
+use specforge_lib::utils::database::Database;
 
-// Import from local models (Tauri-specific, not packageflow_lib)
+// Import from local models (Tauri-specific, not specforge_lib)
 // Re-export for external use
 pub use crate::local_models::audit::{
     Actor, AuditEvent, AuditFilter, AuditLogRow, AuditStats, Outcome, SecurityEventType,

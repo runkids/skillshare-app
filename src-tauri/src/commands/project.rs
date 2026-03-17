@@ -313,7 +313,7 @@ pub async fn scan_project(
 /// Get the snapshot storage base path
 fn get_storage_base_path() -> Result<PathBuf, String> {
     dirs::data_dir()
-        .map(|p| p.join("com.packageflow.app").join("time-machine"))
+        .map(|p| p.join("com.specforge.app").join("time-machine"))
         .ok_or_else(|| "Failed to get data directory".to_string())
 }
 
