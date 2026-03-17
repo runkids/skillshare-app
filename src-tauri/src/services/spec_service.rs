@@ -437,101 +437,49 @@ fn write_default_workflow(project_dir: &Path) -> Result<(), String> {
 ///
 /// Creates `.claude/commands/` with spec-related commands so that Claude Code
 /// can interact with SpecForge via MCP tools.
+/// Write Claude Code commands and CLAUDE.md from asset files.
+/// Templates live in `assets/claude-commands/` and are embedded at compile time
+/// via `include_str!`, so they are easy to edit as standalone .md files.
 fn write_claude_commands(project_dir: &Path) -> Result<(), String> {
     let claude_dir = project_dir.join(".claude");
     let commands_dir = claude_dir.join("commands");
     std::fs::create_dir_all(&commands_dir)
         .map_err(|e| format!("Failed to create .claude/commands/: {}", e))?;
 
-    // --- create-spec.md ---
-    let create_spec_md = r#"---
-description: Create a new spec using SpecForge
----
-Use the specforge MCP to create a new spec.
-1. Call list_schemas() with project_dir set to the current working directory to show available schemas
-2. Ask user which schema to use if not specified in $ARGUMENTS
-3. Call create_spec() with the chosen schema and title
-4. Call get_spec() with the returned ID to show the full spec
-5. Ask if user wants you to draft the body content
-6. If yes, read the schema sections and write appropriate content, then call update_spec() to save
-"#;
-
-    // --- review-spec.md ---
-    let review_spec_md = r#"---
-description: Review a spec and provide feedback
----
-Review a spec through the SpecForge workflow.
-1. If $ARGUMENTS contains a spec ID, use it. Otherwise call list_specs() with project_dir "." and status "review" to find specs needing review
-2. Call get_spec() to read the full spec content
-3. Read the spec carefully. Evaluate:
-   - Are all required sections filled in?
-   - Is the scope clear and achievable?
-   - Are acceptance criteria testable?
-4. Provide your review feedback to the user
-5. Ask if they want to approve or request changes
-6. Call review_spec() with approved=true/false and your comment
-7. If approved, ask if they want to advance to the next phase
-"#;
-
-    // --- implement.md ---
-    let implement_md = r#"---
-description: Start implementing a spec
----
-Begin implementation of a spec.
-1. If $ARGUMENTS contains a spec ID, use it. Otherwise call list_specs() with project_dir "." to find specs ready for implementation
-2. Call get_spec() to read the full spec
-3. Call advance_spec() to move to the "implement" phase (this auto-creates a git branch)
-4. Read the spec's acceptance criteria and technical notes
-5. Create an implementation plan based on the spec
-6. Begin implementing, following the spec requirements
-7. Commit work with messages prefixed with [spec:{id}]
-"#;
-
-    // --- spec-status.md ---
-    let spec_status_md = r#"---
-description: Check status of all specs in the project
----
-Show the current status of all specs.
-1. Call list_specs() with project_dir "." to get all specs
-2. For each spec, call get_workflow_status() to get the current phase and gate statuses
-3. Display a summary table:
-   - Spec title | Schema | Phase | Gate Status | Last Updated
-4. Highlight any specs with failing gates or paused autopilot
-5. Call get_agent_runs() to show any running AI agents
-"#;
-
-    let commands = [
-        ("create-spec.md", create_spec_md),
-        ("review-spec.md", review_spec_md),
-        ("implement.md", implement_md),
-        ("spec-status.md", spec_status_md),
+    // Command templates embedded from assets/claude-commands/ at compile time
+    let commands: &[(&str, &str)] = &[
+        (
+            "create-spec.md",
+            include_str!("../../../assets/claude-commands/create-spec.md"),
+        ),
+        (
+            "review-spec.md",
+            include_str!("../../../assets/claude-commands/review-spec.md"),
+        ),
+        (
+            "implement.md",
+            include_str!("../../../assets/claude-commands/implement.md"),
+        ),
+        (
+            "spec-status.md",
+            include_str!("../../../assets/claude-commands/spec-status.md"),
+        ),
     ];
 
-    for (filename, content) in &commands {
+    for (filename, content) in commands {
         let path = commands_dir.join(filename);
         std::fs::write(&path, content)
             .map_err(|e| format!("Failed to write .claude/commands/{}: {}", filename, e))?;
     }
 
-    // --- .claude/CLAUDE.md ---
-    let claude_md = r#"# SpecForge Project
-
-This project uses SpecForge for spec-driven development.
-MCP server: specforge-mcp
-
-## Spec Workflow
-- Specs live in .specforge/specs/ (markdown with frontmatter)
-- Use /create-spec, /review-spec, /implement commands
-- Check spec status: /spec-status
-- Schemas defined in .specforge/schemas/
-- Workflows defined in .specforge/workflows/
-"#;
-
+    // .claude/CLAUDE.md — only write if it doesn't already exist (don't overwrite user customizations)
     let claude_md_path = claude_dir.join("CLAUDE.md");
-    // Only write if it doesn't already exist (don't overwrite user customizations)
     if !claude_md_path.exists() {
-        std::fs::write(&claude_md_path, claude_md)
-            .map_err(|e| format!("Failed to write .claude/CLAUDE.md: {}", e))?;
+        std::fs::write(
+            &claude_md_path,
+            include_str!("../../../assets/claude-commands/CLAUDE.md"),
+        )
+        .map_err(|e| format!("Failed to write .claude/CLAUDE.md: {}", e))?;
     }
 
     Ok(())
