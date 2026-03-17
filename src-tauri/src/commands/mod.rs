@@ -11,3 +11,4 @@ pub mod settings;
 pub mod shortcuts;
 pub mod spec_commands;
 pub mod workflow;
+pub mod workflow_commands;

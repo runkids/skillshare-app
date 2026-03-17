@@ -11,6 +11,9 @@ pub mod file_watcher;
 pub mod notification;
 
 // Spec-driven development services
+pub mod action_runner;
+pub mod agent_dispatcher;
+pub mod autopilot;
 pub mod gate_evaluator;
 pub mod schema_service;
 pub mod spec_service;

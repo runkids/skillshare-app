@@ -26,6 +26,7 @@ use commands::workflow::WorkflowExecutionState;
 use commands::{
     config, file_watcher, git, mcp, notification,
     schema_commands, settings, shortcuts, spec_commands, workflow,
+    workflow_commands,
 };
 use services::{FileWatcherManager, SpecforgeWatcher};
 use tauri::{Emitter, Manager};
@@ -259,6 +260,12 @@ pub fn run() {
             // Schema commands (spec-driven development)
             schema_commands::list_schemas,
             schema_commands::get_schema,
+            // Workflow phase commands (spec-driven development)
+            workflow_commands::advance_spec,
+            workflow_commands::review_spec,
+            workflow_commands::get_workflow_status,
+            workflow_commands::get_gate_status,
+            workflow_commands::get_agent_runs,
         ])
         // Setup hook
         .setup(|app| {

@@ -445,6 +445,8 @@ pub struct SpecforgeWatcher {
     /// Tracks timestamps of app-initiated writes to skip re-processing.
     /// Key = absolute file path, Value = instant of last app write.
     app_writes: Arc<Mutex<HashMap<PathBuf, Instant>>>,
+    /// Autopilot state for rate-limiting and failure tracking.
+    autopilot_state: Arc<super::autopilot::AutopilotState>,
 }
 
 impl Default for SpecforgeWatcher {
@@ -458,6 +460,7 @@ impl SpecforgeWatcher {
         Self {
             watcher: Arc::new(Mutex::new(None)),
             app_writes: Arc::new(Mutex::new(HashMap::new())),
+            autopilot_state: Arc::new(super::autopilot::AutopilotState::new()),
         }
     }
 
@@ -501,6 +504,7 @@ impl SpecforgeWatcher {
 
         let app_handle = app_handle.clone();
         let app_writes = self.app_writes.clone();
+        let autopilot_state = self.autopilot_state.clone();
         let project_dir_owned = project_dir.to_path_buf();
         let specs_dir_clone = specs_dir.clone();
         let schemas_dir_clone = schemas_dir.clone();
@@ -521,6 +525,7 @@ impl SpecforgeWatcher {
                                     &db,
                                     &app_handle,
                                     &app_writes,
+                                    &autopilot_state,
                                 );
                             }
                         }
@@ -587,6 +592,7 @@ impl SpecforgeWatcher {
         db: &Arc<Database>,
         app_handle: &AppHandle<R>,
         app_writes: &Arc<Mutex<HashMap<PathBuf, Instant>>>,
+        autopilot_state: &Arc<super::autopilot::AutopilotState>,
     ) {
         // Check if this event was caused by the app itself (skip if < 1 second ago)
         if let Ok(mut writes) = app_writes.lock() {
@@ -610,7 +616,7 @@ impl SpecforgeWatcher {
 
         // Determine if this is a spec or schema event
         if path.starts_with(specs_dir) && file_name.ends_with(".md") {
-            Self::handle_spec_event(path, &file_name, project_dir, db, app_handle);
+            Self::handle_spec_event(path, &file_name, project_dir, db, app_handle, autopilot_state);
         } else if path.starts_with(schemas_dir) && file_name.ends_with(".schema.yaml") {
             Self::handle_schema_event(path, &file_name, project_dir, db, app_handle);
         }
@@ -623,6 +629,7 @@ impl SpecforgeWatcher {
         project_dir: &Path,
         db: &Arc<Database>,
         app_handle: &AppHandle<R>,
+        autopilot_state: &Arc<super::autopilot::AutopilotState>,
     ) {
         // Derive spec ID from filename: "{id}.md" -> "{id}"
         let spec_id = file_name.trim_end_matches(".md");
@@ -668,6 +675,43 @@ impl SpecforgeWatcher {
             }
 
             log::info!("[SpecforgeWatcher] Synced spec: {}", spec.id);
+
+            // Check autopilot: if the spec has a workflow with autopilot enabled,
+            // evaluate gates and potentially trigger an auto-advance event.
+            if spec.workflow.is_some() && spec.workflow_phase.is_some() {
+                let ap_state = autopilot_state.clone();
+                let _ = db.with_connection(|conn| {
+                    // Load workflow definition
+                    let workflow_name = spec.workflow.as_deref().unwrap_or("default");
+                    let workflow_path = project_dir
+                        .join(".specforge")
+                        .join("workflows")
+                        .join(format!("{workflow_name}.workflow.yaml"));
+
+                    let workflow = if workflow_path.exists() {
+                        match std::fs::read_to_string(&workflow_path) {
+                            Ok(content) => {
+                                super::workflow_engine::WorkflowEngine::load_workflow(&content).ok()
+                            }
+                            Err(_) => None,
+                        }
+                    } else {
+                        Some(super::workflow_engine::WorkflowEngine::get_default_workflow())
+                    };
+
+                    if let Some(wf) = workflow {
+                        super::autopilot::check_autopilot(
+                            &spec,
+                            &wf,
+                            conn,
+                            project_dir,
+                            app_handle,
+                            &ap_state,
+                        );
+                    }
+                    Ok::<(), String>(())
+                });
+            }
 
             let payload = SpecChangedPayload { id: spec.id };
             if let Err(e) = app_handle.emit("specforge://spec-changed", payload) {
