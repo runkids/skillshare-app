@@ -10,6 +10,10 @@ pub mod config_service;
 pub mod file_watcher;
 pub mod notification;
 
+// Spec-driven development services
+pub mod schema_service;
+pub mod spec_service;
+
 pub use config_service::*;
 pub use file_watcher::*;
 pub use notification::*;
