@@ -67,7 +67,8 @@ pub async fn detect_cli() -> Option<String> {
     None
 }
 
-/// Run `skillshare version` and return the trimmed stdout.
+/// Run `skillshare version` and extract the semver version string.
+/// The CLI outputs ASCII art with ANSI codes; we strip those and find the version.
 pub async fn get_version(cli_path: &str) -> Result<String, String> {
     let output = tokio::process::Command::new(cli_path)
         .arg("version")
@@ -75,12 +76,61 @@ pub async fn get_version(cli_path: &str) -> Result<String, String> {
         .await
         .map_err(|e| format!("Failed to run CLI: {e}"))?;
 
-    if output.status.success() {
-        Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
-    } else {
+    if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-        Err(format!("CLI version failed: {stderr}"))
+        return Err(format!("CLI version failed: {stderr}"));
     }
+
+    let raw = String::from_utf8_lossy(&output.stdout).to_string();
+    extract_version(&raw).ok_or_else(|| "Could not parse version from CLI output".to_string())
+}
+
+/// Strip ANSI escape codes and extract a semver version (e.g. "v0.17.6" or "0.17.6").
+fn extract_version(raw: &str) -> Option<String> {
+    // Strip ANSI escape sequences: ESC[ ... m, ESC[ ... ;...m, OSC sequences
+    let mut clean = String::with_capacity(raw.len());
+    let mut chars = raw.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch == '\x1b' {
+            // Skip ESC sequences
+            if let Some(&next) = chars.peek() {
+                if next == '[' {
+                    // CSI sequence: consume until letter
+                    chars.next();
+                    while let Some(&c) = chars.peek() {
+                        chars.next();
+                        if c.is_ascii_alphabetic() {
+                            break;
+                        }
+                    }
+                } else if next == ']' {
+                    // OSC sequence: consume until BEL or ST
+                    chars.next();
+                    while let Some(c) = chars.next() {
+                        if c == '\x07' {
+                            break;
+                        }
+                        if c == '\x1b' {
+                            chars.next(); // skip backslash in ST
+                            break;
+                        }
+                    }
+                }
+            }
+        } else {
+            clean.push(ch);
+        }
+    }
+
+    // Find version pattern: v?MAJOR.MINOR.PATCH
+    for word in clean.split_whitespace() {
+        let trimmed = word.trim_start_matches('v');
+        let parts: Vec<&str> = trimmed.split('.').collect();
+        if parts.len() >= 2 && parts.iter().all(|p| p.chars().all(|c| c.is_ascii_digit())) {
+            return Some(format!("v{trimmed}"));
+        }
+    }
+    None
 }
 
 // ── CLI execution ──────────────────────────────────────────────────

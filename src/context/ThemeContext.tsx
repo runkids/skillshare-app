@@ -17,7 +17,7 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-  style: 'playful',
+  style: 'clean',
   setStyle: () => {},
   modePreference: 'light',
   setModePreference: () => {},
@@ -31,9 +31,8 @@ export function useTheme() {
 }
 
 function getInitialStyle(): Style {
-  const stored = localStorage.getItem('skillshare-style');
-  if (stored === 'clean') return 'clean';
-  return 'playful';
+  // Skillshare App always uses clean mode
+  return 'clean';
 }
 
 function getInitialModePreference(): ModePreference {
@@ -68,8 +67,11 @@ function applyWithTransition(fn: () => void) {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [style, setStyleState] = useState<Style>(getInitialStyle);
-  const [modePreference, setModePreferenceState] = useState<ModePreference>(getInitialModePreference);
-  const [resolvedMode, setResolvedMode] = useState<ResolvedMode>(() => resolveMode(getInitialModePreference()));
+  const [modePreference, setModePreferenceState] =
+    useState<ModePreference>(getInitialModePreference);
+  const [resolvedMode, setResolvedMode] = useState<ResolvedMode>(() =>
+    resolveMode(getInitialModePreference())
+  );
 
   // Apply style to DOM
   useEffect(() => {
@@ -127,19 +129,18 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setModePreference(resolvedMode === 'light' ? 'dark' : 'light');
   }, [resolvedMode, setModePreference]);
 
-  const value = useMemo(() => ({
-    style,
-    setStyle,
-    modePreference,
-    setModePreference,
-    resolvedMode,
-    theme: resolvedMode,
-    toggleTheme,
-  }), [style, setStyle, modePreference, setModePreference, resolvedMode, toggleTheme]);
-
-  return (
-    <ThemeContext.Provider value={value}>
-      {children}
-    </ThemeContext.Provider>
+  const value = useMemo(
+    () => ({
+      style,
+      setStyle,
+      modePreference,
+      setModePreference,
+      resolvedMode,
+      theme: resolvedMode,
+      toggleTheme,
+    }),
+    [style, setStyle, modePreference, setModePreference, resolvedMode, toggleTheme]
   );
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
