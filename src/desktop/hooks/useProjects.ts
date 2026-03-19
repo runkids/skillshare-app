@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { tauriBridge, type Project } from '../api/tauri-bridge';
 
 export function useProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [switching, setSwitching] = useState(false);
+  const switchLock = useRef(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -25,7 +26,7 @@ export function useProjects() {
       await refresh();
       return project;
     },
-    [refresh],
+    [refresh]
   );
 
   const switchProject = useCallback(
@@ -38,7 +39,7 @@ export function useProjects() {
         setSwitching(false);
       }
     },
-    [refresh],
+    [refresh]
   );
 
   const removeProject = useCallback(
@@ -46,7 +47,29 @@ export function useProjects() {
       await tauriBridge.removeProject(id);
       await refresh();
     },
-    [refresh],
+    [refresh]
+  );
+
+  const switchWithRestart = useCallback(
+    async (id: string) => {
+      if (switchLock.current) return;
+      switchLock.current = true;
+      setSwitching(true);
+      try {
+        await tauriBridge.stopServer();
+        await tauriBridge.switchProject(id);
+        await refresh();
+        const cliPath = await tauriBridge.detectCli();
+        const active = await tauriBridge.getActiveProject();
+        const projectDir = active?.path;
+        const port = await tauriBridge.startServer(cliPath!, projectDir);
+        return port;
+      } finally {
+        setSwitching(false);
+        switchLock.current = false;
+      }
+    },
+    [refresh]
   );
 
   useEffect(() => {
@@ -60,6 +83,7 @@ export function useProjects() {
     refresh,
     addProject,
     switchProject,
+    switchWithRestart,
     removeProject,
   };
 }
