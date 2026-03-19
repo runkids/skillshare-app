@@ -10,7 +10,15 @@
     "shell:allow-spawn",
     "shell:allow-kill",
     "shell:allow-open",
-    "shell:allow-execute",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        { "name": "skillshare", "cmd": "skillshare", "args": true },
+        { "name": "which", "cmd": "which", "args": true },
+        { "name": "chmod", "cmd": "chmod", "args": true },
+        { "name": "tar", "cmd": "tar", "args": true }
+      ]
+    },
     "dialog:default",
     "notification:default"
   ]
