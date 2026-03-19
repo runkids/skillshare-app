@@ -19,6 +19,14 @@ pub fn add_project(
     project_type: ProjectType,
 ) -> Result<Project, String> {
     let mut store = project_store::load();
+
+    if project_type == ProjectType::Global {
+        let has_global = store.projects.iter().any(|p| p.project_type == ProjectType::Global);
+        if has_global {
+            return Err("A global project already exists. Remove it first to add a new one.".to_string());
+        }
+    }
+
     let project = project_store::add_project(&mut store, name, path, project_type);
     project_store::save(&store)?;
     Ok(project)
