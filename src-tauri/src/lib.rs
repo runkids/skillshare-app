@@ -10,6 +10,7 @@ use tauri_plugin_notification::NotificationExt;
 /// Global flag: when true, window close actually quits (instead of hiding to tray).
 static APP_QUITTING: AtomicBool = AtomicBool::new(false);
 
+#[allow(clippy::expect_used)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())

@@ -10,24 +10,13 @@ pub struct CliMeta {
     pub last_update_check: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct OnboardingStatus {
     pub completed: bool,
     pub cli_ready: bool,
     pub first_project_created: bool,
     pub first_sync_done: bool,
-}
-
-impl Default for OnboardingStatus {
-    fn default() -> Self {
-        Self {
-            completed: false,
-            cli_ready: false,
-            first_project_created: false,
-            first_sync_done: false,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
