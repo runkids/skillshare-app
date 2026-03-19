@@ -51,6 +51,12 @@ pub fn run() {
                 check_cli_update_background(&app_handle).await;
             });
 
+            // Auto-start Go server if onboarding is complete (non-blocking)
+            let server = app.state::<ServerManager>().inner().clone();
+            tauri::async_runtime::spawn(async move {
+                auto_start_server(server).await;
+            });
+
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -228,5 +234,42 @@ async fn check_cli_update_background(app: &tauri::AppHandle) {
             .show();
     } else {
         log::info!("CLI is up to date ({current})");
+    }
+}
+
+// ── Auto-Start Server ───────────────────────────────────────────────
+
+/// If onboarding is complete (CLI installed + project exists), start the
+/// Go server automatically so the UI is ready when the user opens the app.
+/// Runs silently — failures are logged but never block the app.
+async fn auto_start_server(server: ServerManager) {
+    // Check if onboarding is complete
+    let meta = services::cli_manager::load_meta();
+    let store = services::project_store::load();
+
+    let cli_installed = meta.version.is_some();
+    let has_project = !store.projects.is_empty();
+
+    if !cli_installed || !has_project {
+        log::info!("Auto-start skipped: onboarding not complete");
+        return;
+    }
+
+    // Detect CLI binary
+    let cli_path = match services::cli_manager::detect_cli().await {
+        Some(p) => p,
+        None => {
+            log::warn!("Auto-start: CLI not found despite meta indicating installation");
+            return;
+        }
+    };
+
+    // Get active project path
+    let project_dir = store.active_project().map(|p| p.path.clone());
+
+    // Start the server
+    match server.start(&cli_path, project_dir.as_deref()).await {
+        Ok(port) => log::info!("Auto-started server on port {port}"),
+        Err(e) => log::warn!("Auto-start server failed: {e}"),
     }
 }

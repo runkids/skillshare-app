@@ -7,6 +7,7 @@ const MAX_PORT: u16 = 19430;
 const HEALTH_POLL_INTERVAL_MS: u64 = 500;
 const HEALTH_POLL_MAX_RETRIES: u32 = 20;
 
+#[derive(Clone)]
 pub struct ServerManager {
     process: Arc<Mutex<Option<Child>>>,
     port: Arc<Mutex<u16>>,
