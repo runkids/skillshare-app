@@ -1,6 +1,16 @@
 use crate::models::app_state::CliMeta;
 use std::path::PathBuf;
 
+/// Persist CLI metadata after a GitHub release download/upgrade.
+pub fn save_release_meta(version: String, path: &str) -> Result<(), String> {
+    let mut meta = load_meta();
+    meta.version = Some(version);
+    meta.path = Some(path.to_string());
+    meta.source = Some("github-release".to_string());
+    meta.installed_at = Some(chrono::Utc::now().to_rfc3339());
+    save_meta(&meta)
+}
+
 /// Directory where the app stores its own copy of the CLI binary.
 pub fn cli_dir() -> PathBuf {
     let dir = dirs::data_dir()
