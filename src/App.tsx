@@ -1,16 +1,18 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { queryClient } from './lib/queryClient';
 import { ToastProvider } from './components/Toast';
 import { ThemeProvider } from './context/ThemeContext';
 import { AppProvider } from './context/AppContext';
+import { TauriProvider, useTauri } from './desktop/context/TauriContext';
 import { PageSkeleton } from './components/Skeleton';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import Layout from './components/Layout';
 import { TourProvider, TourOverlay, TourTooltip } from './components/tour';
 import DashboardPage from './pages/DashboardPage';
+import OnboardingPage from './desktop/pages/OnboardingPage';
 import { BASE_PATH } from './lib/basePath';
 
 const SkillsPage = lazy(() => import('./pages/SkillsPage'));
@@ -38,18 +40,40 @@ function Lazy({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<PageSkeleton />}>{children}</Suspense>;
 }
 
+/** Redirects to /onboarding if Tauri reports onboarding is not completed. */
+function OnboardingGuard({ children }: { children: React.ReactNode }) {
+  const { appInfo, loading } = useTauri();
+  const location = useLocation();
+
+  // Still loading app state — show nothing yet
+  if (loading) return null;
+
+  // Tauri not available (browser dev mode) — skip guard
+  if (!appInfo) return <>{children}</>;
+
+  // Onboarding incomplete — redirect (unless already on /onboarding)
+  if (!appInfo.onboarding.completed && location.pathname !== '/onboarding') {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
       <ToastProvider>
+        <TauriProvider>
         <AppProvider>
           <BrowserRouter basename={BASE_PATH}>
             <ErrorBoundary>
             <TourProvider>
             <TourOverlay />
             <TourTooltip />
+            <OnboardingGuard>
             <Routes>
+              <Route path="onboarding" element={<OnboardingPage />} />
               <Route element={<Layout />}>
                 <Route index element={<DashboardPage />} />
                 <Route path="skills" element={<Lazy><SkillsPage /></Lazy>} />
@@ -74,10 +98,12 @@ export default function App() {
                 <Route path="doctor" element={<Lazy><DoctorPage /></Lazy>} />
               </Route>
             </Routes>
+            </OnboardingGuard>
             </TourProvider>
             </ErrorBoundary>
           </BrowserRouter>
         </AppProvider>
+        </TauriProvider>
       </ToastProvider>
       </ThemeProvider>
       <ReactQueryDevtools initialIsOpen={false} />
