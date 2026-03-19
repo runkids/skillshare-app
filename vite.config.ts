@@ -1,50 +1,53 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import path from "path";
+/// <reference types="vitest/config" />
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
-// @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
+const SSE_PROXY = { target: 'http://localhost:19420', headers: { Accept: 'text/event-stream' } };
 
-// https://vite.dev/config/
-export default defineConfig(async () => ({
-  plugins: [react()],
-
-  // Path aliases for cleaner imports
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-      "@components": path.resolve(__dirname, "./src/components"),
-      "@hooks": path.resolve(__dirname, "./src/hooks"),
-      "@types": path.resolve(__dirname, "./src/types"),
-      "@lib": path.resolve(__dirname, "./src/lib"),
-    },
+export default defineConfig({
+  base: './',
+  plugins: [react(), tailwindcss()],
+  test: {
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.ts',
   },
-
-  // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
-  //
-  // 1. prevent Vite from obscuring rust errors
+  resolve: {
+    dedupe: ['react', 'react-dom'],
+  },
   clearScreen: false,
-  // 2. tauri expects a fixed port, fail if that port is not available
   server: {
     port: 1420,
     strictPort: true,
     host: host || false,
     hmr: host
-      ? {
-          protocol: "ws",
-          host,
-          port: 1421,
-        }
+      ? { protocol: 'ws', host, port: 1421 }
       : undefined,
     watch: {
-      // 3. tell Vite to ignore watching directories that shouldn't trigger HMR
-      ignored: [
-        "**/src-tauri/**",
-        "**/.worktrees/**",
-        "**/.trees/**",
-        "**/specs/**",
-        "**/.specify/**",
-      ],
+      ignored: ['**/src-tauri/**'],
+    },
+    proxy: {
+      '/api/audit/stream': SSE_PROXY,
+      '/api/update/stream': SSE_PROXY,
+      '/api/check/stream': SSE_PROXY,
+      '/api/diff/stream': SSE_PROXY,
+      '/api': 'http://localhost:19420',
     },
   },
-}));
+  build: {
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            { name: 'vendor-react', test: /\/react-dom\/|\/react\/|\/scheduler\//, priority: 20 },
+            { name: 'vendor-codemirror', test: /@codemirror\/(?!lang-)|@uiw\/|codemirror/, priority: 15 },
+            { name: 'vendor-codemirror-lang', test: /@codemirror\/lang-|@lezer\//, priority: 16 },
+            { name: 'vendor-markdown', test: /react-markdown|remark-|micromark|mdast-|unified|unist-|hast-|vfile|devlop/, priority: 15 },
+            { name: 'vendor-tanstack-query', test: /@tanstack\/react-query/, priority: 10 },
+          ],
+        },
+      },
+    },
+  },
+});
