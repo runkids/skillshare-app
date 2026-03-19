@@ -18,6 +18,7 @@ import {
   ShieldAlert,
   FolderPlus,
   LayoutDashboard,
+  Layers,
 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys, staleTimes } from '../lib/queryKeys';
@@ -35,6 +36,9 @@ import { api } from '../api/client';
 import type { Target as TargetType, CheckResult, AuditAllResponse, Extra } from '../api/client';
 import { useAppContext } from '../context/AppContext';
 import { radius, shadows } from '../design';
+import { useProjects } from '../desktop/hooks/useProjects';
+import ProjectCard from '../desktop/components/ProjectCard';
+import { tauriBridge } from '../desktop/api/tauri-bridge';
 
 const STAR_CTA_DISMISSED_KEY = 'skillshare.dashboard.starCta.dismissed';
 
@@ -63,9 +67,7 @@ export default function DashboardPage() {
   if (error) {
     return (
       <Card variant="accent" className="text-center py-8">
-        <p className="text-danger text-lg">
-          Oops! Something went wrong.
-        </p>
+        <p className="text-danger text-lg">Oops! Something went wrong.</p>
         <p className="text-pencil-light text-sm mt-1">{error.message}</p>
       </Card>
     );
@@ -85,7 +87,10 @@ export default function DashboardPage() {
       } else {
         const parts = [`${updated} updated`, `${upToDate} up-to-date`];
         if (blocked.length > 0) parts.push(`${blocked.length} blocked`);
-        toast(`Update complete: ${parts.join(', ')}.`, blocked.length > 0 ? 'warning' : updated > 0 ? 'success' : 'info');
+        toast(
+          `Update complete: ${parts.join(', ')}.`,
+          blocked.length > 0 ? 'warning' : updated > 0 ? 'success' : 'info'
+        );
       }
       blocked.forEach((r) => toast(`${r.name}: ${r.message}`, 'error'));
       errors.forEach((r) => toast(`${r.name}: ${r.message}`, 'error'));
@@ -104,8 +109,10 @@ export default function DashboardPage() {
     window.localStorage.setItem(STAR_CTA_DISMISSED_KEY, '1');
   };
 
-  const totalExtraFiles = extrasData?.extras?.reduce((sum: number, e: Extra) => sum + e.file_count, 0) ?? 0;
-  const totalExtraTargets = extrasData?.extras?.reduce((sum: number, e: Extra) => sum + e.targets.length, 0) ?? 0;
+  const totalExtraFiles =
+    extrasData?.extras?.reduce((sum: number, e: Extra) => sum + e.file_count, 0) ?? 0;
+  const totalExtraTargets =
+    extrasData?.extras?.reduce((sum: number, e: Extra) => sum + e.targets.length, 0) ?? 0;
 
   const stats = [
     {
@@ -148,15 +155,23 @@ export default function DashboardPage() {
 
   return (
     <div className="animate-fade-in">
-      <PageHeader icon={<LayoutDashboard size={24} strokeWidth={2.5} />} title="Dashboard" subtitle="Your skill management overview at a glance" />
+      <PageHeader
+        icon={<LayoutDashboard size={24} strokeWidth={2.5} />}
+        title="Dashboard"
+        subtitle="Your skill management overview at a glance"
+      />
+
+      {/* Cross-Project Overview */}
+      <ProjectsOverviewSection />
 
       {/* Stats grid */}
-      <div data-tour="stats-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+      <div
+        data-tour="stats-grid"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8"
+      >
         {stats.map(({ label, value, subtitle, icon: Icon, color, bg, to }) => (
           <Link key={label} to={to}>
-            <Card
-              hover
-            >
+            <Card hover>
               <div className="flex items-start gap-3">
                 <div
                   className={`w-11 h-11 ${bg} border-2 border-pencil flex items-center justify-center shrink-0`}
@@ -165,16 +180,8 @@ export default function DashboardPage() {
                   <Icon size={20} strokeWidth={2.5} className={color} />
                 </div>
                 <div className="min-w-0">
-                  <p
-                    className="text-sm text-pencil-light uppercase tracking-wider"
-                  >
-                    {label}
-                  </p>
-                  <p
-                    className="text-2xl font-bold text-pencil leading-tight"
-                  >
-                    {value}
-                  </p>
+                  <p className="text-sm text-pencil-light uppercase tracking-wider">{label}</p>
+                  <p className="text-2xl font-bold text-pencil leading-tight">{value}</p>
                   <p className="text-sm text-muted-dark">{subtitle}</p>
                 </div>
               </div>
@@ -185,16 +192,8 @@ export default function DashboardPage() {
 
       {/* Source path card */}
       <Card className="mb-8">
-        <h3
-          className="text-lg font-bold text-pencil mb-2"
-        >
-          Source Directory
-        </h3>
-        <p
-          className="font-mono text-base text-pencil-light break-all"
-        >
-          {data.source}
-        </p>
+        <h3 className="text-lg font-bold text-pencil mb-2">Source Directory</h3>
+        <p className="font-mono text-base text-pencil-light break-all">{data.source}</p>
         <p className="text-sm text-muted-dark mt-2">
           This is where your skills live. All targets sync from here.
         </p>
@@ -212,14 +211,9 @@ export default function DashboardPage() {
                 <Star size={18} strokeWidth={2.5} className="text-warning" />
               </div>
               <div>
-                <h3
-                  className="text-lg font-bold text-pencil"
-                >
-                  Enjoying skillshare?
-                </h3>
+                <h3 className="text-lg font-bold text-pencil">Enjoying skillshare?</h3>
                 <p className="text-sm text-pencil-light mt-1">
-                  If skillshare saved you time, please give us a star on GitHub:
-                  {' '}
+                  If skillshare saved you time, please give us a star on GitHub:{' '}
                   <a
                     href="https://github.com/runkids/skillshare"
                     target="_blank"
@@ -261,11 +255,7 @@ export default function DashboardPage() {
 
       {/* Quick actions */}
       <div data-tour="quick-actions" className="mb-4">
-        <h3
-          className="text-xl font-bold text-pencil mb-4"
-        >
-          Quick Actions
-        </h3>
+        <h3 className="text-xl font-bold text-pencil mb-4">Quick Actions</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Link to="/sync" className="h-full">
             <div
@@ -287,9 +277,7 @@ export default function DashboardPage() {
                 className="text-pencil group-hover:animate-spin"
               />
               <div className="flex-1">
-                <p className="font-medium text-pencil">
-                  Sync Now
-                </p>
+                <p className="font-medium text-pencil">Sync Now</p>
                 <p className="text-sm text-pencil-light">Push skills to all targets</p>
               </div>
               <ArrowRight size={16} className="text-pencil-light" />
@@ -310,11 +298,13 @@ export default function DashboardPage() {
                 (e.currentTarget as HTMLDivElement).style.boxShadow = shadows.md;
               }}
             >
-              <ShieldCheck size={22} strokeWidth={2.5} className="text-blue group-hover:animate-pulse" />
+              <ShieldCheck
+                size={22}
+                strokeWidth={2.5}
+                className="text-blue group-hover:animate-pulse"
+              />
               <div className="flex-1">
-                <p className="font-medium text-pencil">
-                  Security Audit
-                </p>
+                <p className="font-medium text-pencil">Security Audit</p>
                 <p className="text-sm text-pencil-light">Scan skills for threats</p>
               </div>
               <ArrowRight size={16} className="text-pencil-light" />
@@ -335,11 +325,13 @@ export default function DashboardPage() {
                 (e.currentTarget as HTMLDivElement).style.boxShadow = shadows.md;
               }}
             >
-              <Puzzle size={22} strokeWidth={2.5} className="text-success group-hover:animate-bounce" />
+              <Puzzle
+                size={22}
+                strokeWidth={2.5}
+                className="text-success group-hover:animate-bounce"
+              />
               <div className="flex-1">
-                <p className="font-medium text-pencil">
-                  Browse Skills
-                </p>
+                <p className="font-medium text-pencil">Browse Skills</p>
                 <p className="text-sm text-pencil-light">View and manage your skills</p>
               </div>
               <ArrowRight size={16} className="text-pencil-light" />
@@ -413,16 +405,16 @@ export default function DashboardPage() {
 
 /* -- Tracked Repositories Section --------------------- */
 
-function TrackedReposSection({ repos }: { repos: { name: string; skillCount: number; dirty: boolean }[] }) {
+function TrackedReposSection({
+  repos,
+}: {
+  repos: { name: string; skillCount: number; dirty: boolean }[];
+}) {
   return (
     <Card className="mb-8">
       <div className="flex items-center gap-2 mb-4">
         <GitBranch size={20} strokeWidth={2.5} className="text-blue" />
-        <h3
-          className="text-lg font-bold text-pencil"
-        >
-          Tracked Repositories
-        </h3>
+        <h3 className="text-lg font-bold text-pencil">Tracked Repositories</h3>
       </div>
       <div className="space-y-3">
         {repos.map((repo) => {
@@ -435,11 +427,7 @@ function TrackedReposSection({ repos }: { repos: { name: string; skillCount: num
             >
               <div className="flex items-center gap-2 min-w-0">
                 <GitBranch size={16} className="text-pencil-light shrink-0" />
-                <span
-                  className="font-medium text-pencil truncate"
-                >
-                  {displayName}
-                </span>
+                <span className="font-medium text-pencil truncate">{displayName}</span>
                 <Badge variant="info">{repo.skillCount} skills</Badge>
               </div>
               <div className="flex items-center gap-1 shrink-0 ml-2">
@@ -494,17 +482,11 @@ function SkillUpdatesSection() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Download size={20} strokeWidth={2.5} className="text-blue" />
-          <h3
-            className="text-lg font-bold text-pencil"
-          >
-            Skill Updates
-          </h3>
+          <h3 className="text-lg font-bold text-pencil">Skill Updates</h3>
           {checked && updatableCount > 0 && (
             <Badge variant="warning">{updatableCount} available</Badge>
           )}
-          {checked && updatableCount === 0 && (
-            <Badge variant="success">All up to date</Badge>
-          )}
+          {checked && updatableCount === 0 && <Badge variant="success">All up to date</Badge>}
         </div>
         <Button variant="link" onClick={handleCheck} disabled={checking}>
           {checking ? 'Checking...' : checked ? 'Re-check' : 'Run Check'}
@@ -534,9 +516,7 @@ function SkillUpdatesSection() {
             >
               <div className="flex items-center gap-2">
                 <GitBranch size={14} className="text-pencil-light" />
-                <span className="text-pencil text-sm">
-                  {repo.name.replace(/^_/, '')}
-                </span>
+                <span className="text-pencil text-sm">{repo.name.replace(/^_/, '')}</span>
               </div>
               {repo.status === 'up_to_date' && <Badge variant="success">Up to date</Badge>}
               {repo.status === 'behind' && <Badge variant="warning">{repo.behind} behind</Badge>}
@@ -552,15 +532,17 @@ function SkillUpdatesSection() {
             >
               <div className="flex items-center gap-2">
                 <Puzzle size={14} className="text-pencil-light" />
-                <span className="text-pencil text-sm">
-                  {skill.name}
-                </span>
+                <span className="text-pencil text-sm">{skill.name}</span>
                 {skill.source && (
-                  <span className="text-xs text-muted-dark truncate max-w-[200px]">{skill.source}</span>
+                  <span className="text-xs text-muted-dark truncate max-w-[200px]">
+                    {skill.source}
+                  </span>
                 )}
               </div>
               {skill.status === 'up_to_date' && <Badge variant="success">Up to date</Badge>}
-              {skill.status === 'update_available' && <Badge variant="warning">Update available</Badge>}
+              {skill.status === 'update_available' && (
+                <Badge variant="warning">Update available</Badge>
+              )}
               {skill.status === 'local' && <Badge variant="default">Local</Badge>}
               {skill.status === 'error' && <Badge variant="danger">Error</Badge>}
             </div>
@@ -604,21 +586,31 @@ function SecurityAuditSection() {
   };
 
   const hasCritical = scanned && auditData && auditData.summary.critical > 0;
-  const hasFindings = scanned && auditData && (
-    auditData.summary.critical + auditData.summary.high + auditData.summary.medium +
-    auditData.summary.low + auditData.summary.info
-  ) > 0;
+  const hasFindings =
+    scanned &&
+    auditData &&
+    auditData.summary.critical +
+      auditData.summary.high +
+      auditData.summary.medium +
+      auditData.summary.low +
+      auditData.summary.info >
+      0;
   const ShieldIcon = hasCritical ? ShieldAlert : ShieldCheck;
 
-  const severityCounts: { label: string; count: number; variant: 'danger' | 'warning' | 'info' | 'default' }[] = scanned && auditData
-    ? [
-        { label: 'CRITICAL', count: auditData.summary.critical, variant: 'danger' },
-        { label: 'HIGH', count: auditData.summary.high, variant: 'warning' },
-        { label: 'MEDIUM', count: auditData.summary.medium, variant: 'info' },
-        { label: 'LOW', count: auditData.summary.low, variant: 'default' },
-        { label: 'INFO', count: auditData.summary.info, variant: 'default' },
-      ]
-    : [];
+  const severityCounts: {
+    label: string;
+    count: number;
+    variant: 'danger' | 'warning' | 'info' | 'default';
+  }[] =
+    scanned && auditData
+      ? [
+          { label: 'CRITICAL', count: auditData.summary.critical, variant: 'danger' },
+          { label: 'HIGH', count: auditData.summary.high, variant: 'warning' },
+          { label: 'MEDIUM', count: auditData.summary.medium, variant: 'info' },
+          { label: 'LOW', count: auditData.summary.low, variant: 'default' },
+          { label: 'INFO', count: auditData.summary.info, variant: 'default' },
+        ]
+      : [];
 
   return (
     <Card variant={hasCritical ? 'accent' : 'default'} className="mb-8">
@@ -629,11 +621,7 @@ function SecurityAuditSection() {
             strokeWidth={2.5}
             className={hasCritical ? 'text-danger' : 'text-blue'}
           />
-          <h3
-            className="text-lg font-bold text-pencil"
-          >
-            Security Overview
-          </h3>
+          <h3 className="text-lg font-bold text-pencil">Security Overview</h3>
           {scanned && auditData && (
             <Badge variant={riskLabelVariant[auditData.summary.riskLabel] ?? 'default'}>
               {auditData.summary.riskLabel}
@@ -671,27 +659,21 @@ function SecurityAuditSection() {
               className="py-2 px-3 bg-paper-warm border border-muted text-center"
               style={{ borderRadius: radius.sm }}
             >
-              <p className="text-lg font-bold text-pencil">
-                {auditData.summary.total}
-              </p>
+              <p className="text-lg font-bold text-pencil">{auditData.summary.total}</p>
               <p className="text-xs text-pencil-light">Scanned</p>
             </div>
             <div
               className="py-2 px-3 bg-paper-warm border border-muted text-center"
               style={{ borderRadius: radius.sm }}
             >
-              <p className="text-lg font-bold text-success">
-                {auditData.summary.passed}
-              </p>
+              <p className="text-lg font-bold text-success">{auditData.summary.passed}</p>
               <p className="text-xs text-pencil-light">Passed</p>
             </div>
             <div
               className="py-2 px-3 bg-paper-warm border border-muted text-center"
               style={{ borderRadius: radius.sm }}
             >
-              <p className="text-lg font-bold text-warning">
-                {auditData.summary.warning}
-              </p>
+              <p className="text-lg font-bold text-warning">{auditData.summary.warning}</p>
               <p className="text-xs text-pencil-light">Warnings</p>
             </div>
             <div
@@ -710,9 +692,7 @@ function SecurityAuditSection() {
           {/* Severity breakdown */}
           {hasFindings ? (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-pencil-light">
-                Findings:
-              </span>
+              <span className="text-sm text-pencil-light">Findings:</span>
               {severityCounts
                 .filter((s) => s.count > 0)
                 .map((s) => (
@@ -724,9 +704,7 @@ function SecurityAuditSection() {
           ) : (
             <div className="flex items-center gap-2 text-success">
               <ShieldCheck size={16} strokeWidth={2.5} />
-              <span className="text-sm font-medium">
-                All Clear — no security findings detected
-              </span>
+              <span className="text-sm font-medium">All Clear — no security findings detected</span>
             </div>
           )}
         </div>
@@ -745,12 +723,14 @@ function TargetsHealthSection() {
   });
 
   const sourceSkillCount = data?.sourceSkillCount ?? 0;
-  const driftTargets = (data?.targets ?? []).filter(
-    (t) => {
-      const expected = t.expectedSkillCount || sourceSkillCount;
-      return (t.mode === 'merge' && t.status === 'merged' || t.mode === 'copy' && t.status === 'copied') && t.linkedCount < expected;
-    }
-  );
+  const driftTargets = (data?.targets ?? []).filter((t) => {
+    const expected = t.expectedSkillCount || sourceSkillCount;
+    return (
+      ((t.mode === 'merge' && t.status === 'merged') ||
+        (t.mode === 'copy' && t.status === 'copied')) &&
+      t.linkedCount < expected
+    );
+  });
   const maxDrift = driftTargets.reduce(
     (max, t) => Math.max(max, (t.expectedSkillCount || sourceSkillCount) - t.linkedCount),
     0
@@ -761,14 +741,8 @@ function TargetsHealthSection() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Target size={20} strokeWidth={2.5} className="text-success" />
-          <h3
-            className="text-lg font-bold text-pencil"
-          >
-            Targets Health
-          </h3>
-          {maxDrift > 0 && (
-            <Badge variant="warning">{maxDrift} not synced</Badge>
-          )}
+          <h3 className="text-lg font-bold text-pencil">Targets Health</h3>
+          {maxDrift > 0 && <Badge variant="warning">{maxDrift} not synced</Badge>}
         </div>
         <Link to="/targets" className="text-sm text-blue hover:underline">
           View all
@@ -785,7 +759,10 @@ function TargetsHealthSection() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {data.targets.map((t: TargetType) => {
               const expected = t.expectedSkillCount || sourceSkillCount;
-              const hasDrift = (t.mode === 'merge' && t.status === 'merged' || t.mode === 'copy' && t.status === 'copied') && t.linkedCount < expected;
+              const hasDrift =
+                ((t.mode === 'merge' && t.status === 'merged') ||
+                  (t.mode === 'copy' && t.status === 'copied')) &&
+                t.linkedCount < expected;
               return (
                 <Link key={t.name} to="/targets">
                   <div
@@ -794,18 +771,18 @@ function TargetsHealthSection() {
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <Target size={14} className="text-pencil-light shrink-0" />
-                      <span
-                        className="font-medium text-pencil truncate"
-                      >
-                        {t.name}
-                      </span>
+                      <span className="font-medium text-pencil truncate">{t.name}</span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-2">
                       <StatusBadge status={t.status} />
                       {hasDrift ? (
-                        <Badge variant="warning">{t.linkedCount}/{expected} synced</Badge>
+                        <Badge variant="warning">
+                          {t.linkedCount}/{expected} synced
+                        </Badge>
                       ) : t.linkedCount > 0 ? (
-                        <span className="text-xs text-muted-dark">{t.linkedCount} {t.mode === 'copy' ? 'managed' : 'linked'}</span>
+                        <span className="text-xs text-muted-dark">
+                          {t.linkedCount} {t.mode === 'copy' ? 'managed' : 'linked'}
+                        </span>
                       ) : null}
                     </div>
                   </div>
@@ -816,7 +793,12 @@ function TargetsHealthSection() {
           {maxDrift > 0 && (
             <div className="mt-3 flex items-center gap-2 text-warning text-sm">
               <AlertTriangle size={14} strokeWidth={2.5} />
-              <span>{maxDrift} skill(s) not synced — <Link to="/sync" className="underline hover:text-pencil">go to Sync page</Link></span>
+              <span>
+                {maxDrift} skill(s) not synced —{' '}
+                <Link to="/sync" className="underline hover:text-pencil">
+                  go to Sync page
+                </Link>
+              </span>
             </div>
           )}
         </>
@@ -840,11 +822,7 @@ function VersionStatusSection() {
     <Card className="mb-8">
       <div className="flex items-center gap-2 mb-4">
         <Package size={20} strokeWidth={2.5} className="text-pencil-light" />
-        <h3
-          className="text-lg font-bold text-pencil"
-        >
-          Version Status
-        </h3>
+        <h3 className="text-lg font-bold text-pencil">Version Status</h3>
       </div>
       {isPending ? (
         <div className="space-y-3">
@@ -860,13 +838,8 @@ function VersionStatusSection() {
           >
             <div className="flex items-center gap-2">
               <Zap size={14} className="text-pencil-light" />
-              <span className="text-pencil text-sm">
-                CLI
-              </span>
-              <span
-                className="font-mono font-medium text-pencil"
-                style={{ fontSize: '0.85rem' }}
-              >
+              <span className="text-pencil text-sm">CLI</span>
+              <span className="font-mono font-medium text-pencil" style={{ fontSize: '0.85rem' }}>
                 {data.cliVersion}
               </span>
             </div>
@@ -884,13 +857,8 @@ function VersionStatusSection() {
           >
             <div className="flex items-center gap-2">
               <Puzzle size={14} className="text-pencil-light" />
-              <span className="text-pencil text-sm">
-                Skill
-              </span>
-              <span
-                className="font-mono font-medium text-pencil"
-                style={{ fontSize: '0.85rem' }}
-              >
+              <span className="text-pencil text-sm">Skill</span>
+              <span className="font-mono font-medium text-pencil" style={{ fontSize: '0.85rem' }}>
                 {data.skillVersion || 'N/A'}
               </span>
             </div>
@@ -910,6 +878,80 @@ function VersionStatusSection() {
       ) : (
         <p className="text-pencil-light text-sm">Could not check versions.</p>
       )}
+    </Card>
+  );
+}
+
+/* -- Projects Overview Section (Tauri desktop) -------- */
+
+function ProjectsOverviewSection() {
+  const { projects, activeProject } = useProjects();
+  const [syncing, setSyncing] = useState(false);
+  const { toast } = useToast();
+
+  if (projects.length === 0) return null;
+
+  const handleSyncAll = async () => {
+    setSyncing(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    try {
+      const cliPath = await tauriBridge.detectCli();
+      if (!cliPath) {
+        toast('CLI not found. Please install or configure the Skillshare CLI.', 'error');
+        return;
+      }
+
+      for (const project of projects) {
+        try {
+          await tauriBridge.runCli(cliPath, ['sync'], project.path);
+          successCount++;
+        } catch {
+          errorCount++;
+        }
+      }
+
+      if (errorCount === 0) {
+        toast(`Synced ${successCount} project(s) successfully.`, 'success');
+      } else {
+        toast(`Synced ${successCount}, failed ${errorCount} project(s).`, 'warning');
+      }
+    } catch {
+      toast('Sync failed: could not connect to Tauri backend.', 'error');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  return (
+    <Card className="mb-8">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Layers size={20} strokeWidth={2.5} className="text-blue" />
+          <h3 className="text-lg font-bold text-pencil">Projects</h3>
+          <Badge variant="info">{projects.length}</Badge>
+        </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={handleSyncAll}
+          loading={syncing}
+          disabled={syncing}
+        >
+          <RefreshCw size={14} strokeWidth={2.5} />
+          {syncing ? 'Syncing...' : 'Sync All'}
+        </Button>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {projects.map((project) => (
+          <ProjectCard
+            key={project.id}
+            project={project}
+            isActive={project.id === activeProject?.id}
+          />
+        ))}
+      </div>
     </Card>
   );
 }
