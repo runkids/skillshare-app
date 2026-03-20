@@ -19,9 +19,15 @@ export default function AppearanceSettings() {
     setTheme(value);
     await tauriBridge.setPreferredTheme(value);
     // Apply to shell immediately
-    const resolved = value === 'system'
-      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-      : value;
+    // Resolve to CLI theme values: clean (light), dark
+    const resolved =
+      value === 'system'
+        ? window.matchMedia('(prefers-color-scheme: dark)').matches
+          ? 'dark'
+          : 'clean'
+        : value === 'light'
+          ? 'clean'
+          : value;
     document.documentElement.setAttribute('data-theme', resolved);
   };
 

@@ -25,12 +25,16 @@ export default function CliWebView() {
 
   useEffect(() => {
     tauriBridge.getPreferredTheme().then((theme) => {
+      // CLI supports: dark, light, playful, clean
+      // Map our settings to CLI theme values
       const resolved =
         theme === 'system'
           ? window.matchMedia('(prefers-color-scheme: dark)').matches
             ? 'dark'
-            : 'light'
-          : theme;
+            : 'clean'
+          : theme === 'light'
+            ? 'clean'
+            : theme;
       setResolvedTheme(resolved);
     });
   }, []);
@@ -38,7 +42,7 @@ export default function CliWebView() {
   // Try to start server if no port available on mount
   useEffect(() => {
     if (appInfo?.serverPort) {
-      setIframeUrl(`http://localhost:${appInfo.serverPort}?data-theme=${resolvedTheme}`);
+      setIframeUrl(`http://localhost:${appInfo.serverPort}?theme=${resolvedTheme}`);
       setStatus('ready');
       failCount.current = 0;
       startAttempted.current = false;
@@ -59,7 +63,7 @@ export default function CliWebView() {
         }
         const projectDir = activeProject?.path;
         const port = await tauriBridge.startServer(cliPath, projectDir);
-        setIframeUrl(`http://localhost:${port}?data-theme=${resolvedTheme}`);
+        setIframeUrl(`http://localhost:${port}?theme=${resolvedTheme}`);
         setStatus('ready');
         await refreshAppInfo();
       } catch (err) {
@@ -111,7 +115,7 @@ export default function CliWebView() {
       if (!cliPath) throw new Error('CLI not found');
       const projectDir = activeProject?.path;
       const port = await tauriBridge.startServer(cliPath, projectDir);
-      setIframeUrl(`http://localhost:${port}?data-theme=${resolvedTheme}`);
+      setIframeUrl(`http://localhost:${port}?theme=${resolvedTheme}`);
       setStatus('ready');
       failCount.current = 0;
       await refreshAppInfo();
