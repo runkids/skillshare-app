@@ -30,29 +30,23 @@ jobs:
 
       - name: Generate release notes
         id: notes
+        env:
+          GH_REF: ${{ github.ref }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          # Get the latest release tag (excluding current tag)
-          CURRENT_TAG=${GITHUB_REF#refs/tags/}
+          CURRENT_TAG=${GH_REF#refs/tags/}
           LAST_TAG=$(git tag --sort=-version:refname | grep -v "^${CURRENT_TAG}$" | head -1)
 
           if [ -z "$LAST_TAG" ]; then
-            echo "body=Initial release" >> $GITHUB_OUTPUT
+            echo "body=Initial release" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          # Generate release notes
-          BODY=$(cat << 'HEREDOC'
-          ## What's Changed
-
-          HEREDOC
-          )
-
-          # Get commits and categorize
           FEATURES=""
           FIXES=""
           DOCS=""
           CHORES=""
-          REPO_URL="https://github.com/${{ github.repository }}"
+          REPO_URL="https://github.com/${GH_REPO}"
 
           while IFS='|' read -r hash subject; do
             [ -z "$subject" ] && continue
@@ -83,12 +77,11 @@ jobs:
           [ -n "$DOCS" ] && BODY="${BODY}### 📚 Documentation\n\n${DOCS}\n"
           [ -n "$CHORES" ] && BODY="${BODY}### 🔧 Maintenance\n\n${CHORES}\n"
 
-          BODY="${BODY}---\n**Full Changelog**: https://github.com/${{ github.repository }}/compare/${LAST_TAG}...${CURRENT_TAG}"
+          BODY="${BODY}---\n**Full Changelog**: https://github.com/${GH_REPO}/compare/${LAST_TAG}...${CURRENT_TAG}"
 
-          # Use delimiter for multiline output
-          echo "body<<EOF" >> $GITHUB_OUTPUT
-          echo -e "$BODY" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo "body<<EOF" >> "$GITHUB_OUTPUT"
+          echo -e "$BODY" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
   build-macos:
     needs: generate-release-notes
@@ -127,47 +120,20 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Pre-build MCP server
-        run: |
-          # Build MCP separately (in its own crate, doesn't trigger Tauri build.rs)
-          cargo build -p specforge-mcp --release --target ${{ matrix.target }}
-          # Copy binary to expected location for Tauri resources
-          mkdir -p target/release
-          cp target/${{ matrix.target }}/release/specforge-mcp target/release/
-
       - name: Import Apple certificate
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
-          # Create a temporary keychain
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
-          # Import certificate
           echo "$APPLE_CERTIFICATE" | base64 --decode > $RUNNER_TEMP/certificate.p12
           security import $RUNNER_TEMP/certificate.p12 -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
           security list-keychain -d user -s $KEYCHAIN_PATH
-
-          # Allow codesign to access the certificate
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
-      - name: Sign MCP binary
-        env:
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-        run: |
-          # Sign the MCP binary with Developer ID, timestamp, and hardened runtime
-          codesign --sign "$APPLE_SIGNING_IDENTITY" \
-            --timestamp \
-            --options runtime \
-            --force \
-            target/release/specforge-mcp
-
-          # Verify the signature
-          codesign --verify --verbose target/release/specforge-mcp
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
@@ -179,13 +145,9 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # OAuth credentials for deploy feature
-          PACKAGEFLOW_VERCEL_CLIENT_ID: ${{ secrets.PACKAGEFLOW_VERCEL_CLIENT_ID }}
-          PACKAGEFLOW_VERCEL_CLIENT_SECRET: ${{ secrets.PACKAGEFLOW_VERCEL_CLIENT_SECRET }}
-          PACKAGEFLOW_NETLIFY_CLIENT_ID: ${{ secrets.PACKAGEFLOW_NETLIFY_CLIENT_ID }}
         with:
           tagName: v__VERSION__
-          releaseName: 'SpecForge v__VERSION__'
+          releaseName: 'skillshare App v__VERSION__'
           releaseBody: ${{ needs.generate-release-notes.outputs.release_body }}
           releaseDraft: true
           prerelease: false
@@ -196,3 +158,95 @@ jobs:
         run: |
           security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
 
+  build-windows:
+    needs: generate-release-notes
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-targets: true
+          cache-all-crates: true
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: v__VERSION__
+          releaseName: 'skillshare App v__VERSION__'
+          releaseBody: ${{ needs.generate-release-notes.outputs.release_body }}
+          releaseDraft: true
+          prerelease: false
+
+  build-linux:
+    needs: generate-release-notes
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-targets: true
+          cache-all-crates: true
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: v__VERSION__
+          releaseName: 'skillshare App v__VERSION__'
+          releaseBody: ${{ needs.generate-release-notes.outputs.release_body }}
+          releaseDraft: true
+          prerelease: false

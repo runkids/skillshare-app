@@ -10,7 +10,6 @@ permissions:
 jobs:
   update-homebrew:
     runs-on: ubuntu-latest
-    # Only run for releases with version tags
     if: startsWith(github.event.release.tag_name, 'v')
 
     steps:
@@ -19,14 +18,15 @@ jobs:
         env:
           TAG_NAME: ${{ github.event.release.tag_name }}
         run: |
-          echo "VERSION=${TAG_NAME#v}" >> $GITHUB_OUTPUT
+          echo "VERSION=${TAG_NAME#v}" >> "$GITHUB_OUTPUT"
 
       - name: Wait for release asset to be available
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.version.outputs.VERSION }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          ASSET_NAME="SpecForge_${VERSION}_aarch64.dmg"
+          ASSET_NAME="skillshare-app_${VERSION}_aarch64.dmg"
           MAX_ATTEMPTS=20
           ATTEMPT=0
 
@@ -36,11 +36,9 @@ jobs:
             ATTEMPT=$((ATTEMPT + 1))
             echo "Attempt $ATTEMPT/$MAX_ATTEMPTS..."
 
-            # Get release info via GitHub API
             RELEASE_INFO=$(curl -s -H "Authorization: token $GH_TOKEN" \
-              "https://api.github.com/repos/${{ github.repository }}/releases/tags/v${VERSION}" 2>/dev/null || echo "{}")
+              "https://api.github.com/repos/${GH_REPO}/releases/tags/v${VERSION}" 2>/dev/null || echo "{}")
 
-            # Check if asset exists and get its state
             ASSET_INFO=$(echo "$RELEASE_INFO" | jq -r ".assets[] | select(.name == \"$ASSET_NAME\")" 2>/dev/null || echo "")
 
             if [ -n "$ASSET_INFO" ]; then
@@ -49,10 +47,10 @@ jobs:
 
               if [ "$ASSET_STATE" = "uploaded" ] && [ "$ASSET_SIZE" -gt 0 ]; then
                 echo "Asset found and fully uploaded (size: $ASSET_SIZE bytes)"
-                echo "EXPECTED_SIZE=$ASSET_SIZE" >> $GITHUB_ENV
+                echo "EXPECTED_SIZE=$ASSET_SIZE" >> "$GITHUB_ENV"
                 break
               else
-                echo "Asset state: $ASSET_STATE, size: $ASSET_SIZE - waiting for upload to complete..."
+                echo "Asset state: $ASSET_STATE, size: $ASSET_SIZE - waiting..."
               fi
             else
               echo "Asset not found yet..."
@@ -70,8 +68,9 @@ jobs:
         id: sha
         env:
           VERSION: ${{ steps.version.outputs.VERSION }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          ASSET_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/SpecForge_${VERSION}_aarch64.dmg"
+          ASSET_URL="https://github.com/${GH_REPO}/releases/download/v${VERSION}/skillshare-app_${VERSION}_aarch64.dmg"
           MAX_RETRIES=5
           RETRY_DELAY=10
           ATTEMPT=0
@@ -82,23 +81,22 @@ jobs:
             ATTEMPT=$((ATTEMPT + 1))
             echo "Download attempt $ATTEMPT/$MAX_RETRIES..."
 
-            if curl -fSL --retry 3 --retry-delay 5 "$ASSET_URL" -o "specforge.dmg"; then
-              # Verify file size matches expected size from API
-              ACTUAL_SIZE=$(stat -c%s "specforge.dmg" 2>/dev/null || stat -f%z "specforge.dmg" 2>/dev/null)
+            if curl -fSL --retry 3 --retry-delay 5 "$ASSET_URL" -o "skillshare-app.dmg"; then
+              ACTUAL_SIZE=$(stat -c%s "skillshare-app.dmg" 2>/dev/null || stat -f%z "skillshare-app.dmg" 2>/dev/null)
 
               if [ "$ACTUAL_SIZE" -eq "$EXPECTED_SIZE" ]; then
                 echo "Download successful, size verified: $ACTUAL_SIZE bytes"
-                SHA256=$(shasum -a 256 specforge.dmg | cut -d ' ' -f 1)
+                SHA256=$(shasum -a 256 skillshare-app.dmg | cut -d ' ' -f 1)
                 echo "SHA256: $SHA256"
-                echo "SHA256_AARCH64=$SHA256" >> $GITHUB_OUTPUT
-                rm -f specforge.dmg
+                echo "SHA256_AARCH64=$SHA256" >> "$GITHUB_OUTPUT"
+                rm -f skillshare-app.dmg
                 exit 0
               else
                 echo "Size mismatch: expected $EXPECTED_SIZE, got $ACTUAL_SIZE"
               fi
             fi
 
-            echo "Download failed or verification failed, retrying in ${RETRY_DELAY}s..."
+            echo "Download failed, retrying in ${RETRY_DELAY}s..."
             sleep $RETRY_DELAY
             RETRY_DELAY=$((RETRY_DELAY * 2))
           done
@@ -117,31 +115,29 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.VERSION }}
           SHA256: ${{ steps.sha.outputs.SHA256_AARCH64 }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          cat > homebrew-tap/Casks/specforge.rb << 'EOF'
-          cask "specforge" do
-            version "VERSION_PLACEHOLDER"
-            sha256 "SHA256_PLACEHOLDER"
+          cat > homebrew-tap/Casks/skillshare-app.rb << CASKEOF
+          cask "skillshare-app" do
+            version "${VERSION}"
+            sha256 "${SHA256}"
 
-            url "https://github.com/runkids/PackageFlow/releases/download/v#{version}/SpecForge_#{version}_aarch64.dmg"
-            name "SpecForge"
-            desc "Developer workflow management tool for frontend and Node.js projects"
-            homepage "https://github.com/runkids/PackageFlow"
+            url "https://github.com/${GH_REPO}/releases/download/v#{version}/skillshare-app_#{version}_aarch64.dmg"
+            name "skillshare App"
+            desc "Desktop GUI for skillshare CLI"
+            homepage "https://github.com/${GH_REPO}"
 
             depends_on macos: ">= :catalina"
 
-            app "SpecForge.app"
+            app "skillshare App.app"
 
             zap trash: [
-              "~/Library/Application Support/com.specforge.SpecForge-macOS",
-              "~/Library/Caches/com.specforge.SpecForge-macOS",
-              "~/Library/Preferences/com.specforge.SpecForge-macOS.plist",
+              "~/Library/Application Support/com.skillshare.app",
+              "~/Library/Caches/com.skillshare.app",
+              "~/Library/Preferences/com.skillshare.app.plist",
             ]
           end
-          EOF
-
-          sed -i "s/VERSION_PLACEHOLDER/${VERSION}/g" homebrew-tap/Casks/specforge.rb
-          sed -i "s/SHA256_PLACEHOLDER/${SHA256}/g" homebrew-tap/Casks/specforge.rb
+          CASKEOF
 
       - name: Commit and push
         env:
@@ -150,6 +146,6 @@ jobs:
           cd homebrew-tap
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Casks/specforge.rb
-          git commit -m "Update specforge to ${VERSION}"
+          git add Casks/skillshare-app.rb
+          git commit -m "Update skillshare-app to ${VERSION}"
           git push
