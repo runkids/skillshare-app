@@ -1,6 +1,17 @@
 use crate::models::app_state::{AppInfo, OnboardingStatus};
+use crate::models::project::ProjectType;
 use crate::services::{cli_manager, project_store, server_manager::ServerManager};
 use tauri::State;
+
+/// Check if the Global project's config.yaml actually exists on disk.
+fn global_config_exists(store: &crate::models::project::ProjectStore) -> bool {
+    store
+        .projects
+        .iter()
+        .find(|p| p.project_type == ProjectType::Global)
+        .map(|p| std::path::Path::new(&p.path).join("config.yaml").exists())
+        .unwrap_or(false)
+}
 
 #[tauri::command]
 pub async fn get_app_state(server: State<'_, ServerManager>) -> Result<AppInfo, String> {
@@ -13,15 +24,18 @@ pub async fn get_app_state(server: State<'_, ServerManager>) -> Result<AppInfo, 
         None
     };
 
+    let cli_ready = meta.version.is_some();
+    let config_exists = global_config_exists(&store);
+
     Ok(AppInfo {
         cli_version: meta.version.clone(),
         cli_source: meta.source.clone(),
         server_running: running,
         server_port: port,
         onboarding: OnboardingStatus {
-            completed: meta.version.is_some() && !store.projects.is_empty(),
-            cli_ready: meta.version.is_some(),
-            first_project_created: !store.projects.is_empty(),
+            completed: cli_ready && config_exists,
+            cli_ready,
+            first_project_created: config_exists,
             first_sync_done: running,
         },
     })
@@ -32,10 +46,13 @@ pub fn get_onboarding_status() -> Result<OnboardingStatus, String> {
     let meta = cli_manager::load_meta();
     let store = project_store::load();
 
+    let cli_ready = meta.version.is_some();
+    let config_exists = global_config_exists(&store);
+
     Ok(OnboardingStatus {
-        completed: meta.version.is_some() && !store.projects.is_empty(),
-        cli_ready: meta.version.is_some(),
-        first_project_created: !store.projects.is_empty(),
+        completed: cli_ready && config_exists,
+        cli_ready,
+        first_project_created: config_exists,
         first_sync_done: false,
     })
 }

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Folder, Globe, Plus, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { open } from '@tauri-apps/plugin-dialog';
-import { homeDir } from '@tauri-apps/api/path';
 import Button from '../../../components/Button';
 import { useProjects } from '../../context/ProjectContext';
 import { tauriBridge } from '../../api/tauri-bridge';
@@ -12,30 +11,6 @@ export default function ProjectSettings() {
   const navigate = useNavigate();
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const hasGlobal = projects.some((p) => p.projectType === 'global');
-
-  const handleAddGlobal = async () => {
-    setAdding(true);
-    setError(null);
-    try {
-      const cliPath = await tauriBridge.detectCli();
-      if (!cliPath) throw new Error('CLI not found');
-      const home = await homeDir();
-      try {
-        await tauriBridge.runCli(cliPath, ['init'], home);
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        if (!msg.toLowerCase().includes('already initialized')) throw err;
-      }
-      const configDir = await tauriBridge.getGlobalConfigDir(cliPath);
-      await addProject('Global', configDir || home, 'global');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setAdding(false);
-    }
-  };
 
   const handleAddProject = async () => {
     const dir = await open({ directory: true, title: 'Select project directory' });
@@ -94,16 +69,9 @@ export default function ProjectSettings() {
         <h2 className="text-sm font-semibold text-pencil-light uppercase tracking-wider">
           Select Project
         </h2>
-        <div className="flex gap-2">
-          {!hasGlobal && (
-            <Button variant="secondary" size="sm" onClick={handleAddGlobal} loading={adding}>
-              Add Global
-            </Button>
-          )}
-          <Button size="sm" onClick={handleAddProject} loading={adding}>
-            Add Project
-          </Button>
-        </div>
+        <Button size="sm" onClick={handleAddProject} loading={adding}>
+          Add Project
+        </Button>
       </div>
 
       {/* Project cards — Codex style */}

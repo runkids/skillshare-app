@@ -5,6 +5,7 @@ import ProjectSetupStep from '../components/OnboardingSteps/ProjectSetupStep';
 import FirstSyncStep from '../components/OnboardingSteps/FirstSyncStep';
 import { tauriBridge } from '../api/tauri-bridge';
 import { useTauri } from '../context/TauriContext';
+import { useProjects } from '../context/ProjectContext';
 
 const STEPS = ['CLI Setup', 'Init', 'Sync'] as const;
 
@@ -13,6 +14,7 @@ export default function OnboardingPage() {
   const [cliPath, setCliPath] = useState<string | null>(null);
   const navigate = useNavigate();
   const { refresh } = useTauri();
+  const { refresh: refreshProjects } = useProjects();
 
   const handleWelcomeComplete = useCallback((path: string) => {
     setCliPath(path);
@@ -32,9 +34,9 @@ export default function OnboardingPage() {
         // Server start failure is non-fatal for onboarding
       }
     }
-    await refresh();
+    await Promise.all([refresh(), refreshProjects()]);
     navigate('/', { replace: true });
-  }, [cliPath, navigate, refresh]);
+  }, [cliPath, navigate, refresh, refreshProjects]);
 
   return (
     <div className="min-h-screen bg-paper flex flex-col items-center justify-center p-8">
