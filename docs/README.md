@@ -2,8 +2,6 @@
 
 Welcome to the Skillshare App documentation! This guide will help you get the most out of Skillshare App.
 
-**Other Languages**: [繁體中文](./zh-TW/README.md) | [简体中文](./zh-CN/README.md)
-
 ## Quick Links
 
 - [Getting Started](./getting-started.md) - Install, import a project, run your first script

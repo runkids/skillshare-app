@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Spinner from '../../components/Spinner';
 import Button from '../../components/Button';
 import { useProjects } from '../context/ProjectContext';
@@ -12,6 +13,7 @@ const HEALTH_FAIL_THRESHOLD = 3;
 type Status = 'loading' | 'ready' | 'error' | 'server-down';
 
 export default function CliWebView() {
+  const navigate = useNavigate();
   const { appInfo, refresh: refreshAppInfo } = useTauri();
   const { switching, activeProject } = useProjects();
   const { style, setStyle, resolvedMode, setModePreference } = useTheme();
@@ -183,9 +185,14 @@ export default function CliWebView() {
           {status === 'error' ? 'Server failed to start' : 'Server disconnected'}
         </p>
         {error && <p className="text-pencil-light text-sm max-w-md text-center">{error}</p>}
-        <Button onClick={handleRestart} loading={restarting}>
-          {status === 'error' ? 'Retry' : 'Restart Server'}
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button onClick={handleRestart} loading={restarting}>
+            {status === 'error' ? 'Retry' : 'Restart Server'}
+          </Button>
+          <Button variant="secondary" onClick={() => navigate('/settings?tab=general')}>
+            Settings
+          </Button>
+        </div>
       </div>
     );
   }
