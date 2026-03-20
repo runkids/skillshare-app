@@ -62,4 +62,7 @@ export const tauriBridge = {
   getNotifyUpdate: () => invoke<boolean>('get_notify_update'),
   setNotifyUpdate: (enabled: boolean) => invoke<void>('set_notify_update', { enabled }),
   resetAllData: () => invoke<void>('reset_all_data'),
+
+  // Terminal commands
+  getPtyEnv: () => invoke<Record<string, string>>('get_pty_env'),
 };

@@ -1,6 +1,7 @@
 mod commands;
 mod models;
 mod services;
+mod utils;
 
 use services::server_manager::ServerManager;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -14,6 +15,7 @@ static APP_QUITTING: AtomicBool = AtomicBool::new(false);
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_pty::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
@@ -52,6 +54,8 @@ pub fn run() {
             commands::app::get_notify_update,
             commands::app::set_notify_update,
             commands::app::reset_all_data,
+            // Terminal commands
+            commands::terminal::get_pty_env,
         ])
         .setup(|app| {
             setup_system_tray(app)?;
