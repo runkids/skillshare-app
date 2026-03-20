@@ -66,7 +66,10 @@ export default function GeneralSettings() {
               min={1024}
               max={65535}
               value={port}
-              onChange={(e) => { setPort(e.target.value); setSaved(false); }}
+              onChange={(e) => {
+                setPort(e.target.value);
+                setSaved(false);
+              }}
               className="w-24 px-2 py-1 text-sm border border-muted rounded-[var(--radius-sm)] bg-paper text-pencil focus:outline-none focus:border-pencil"
             />
             <Button size="sm" onClick={handleSave}>
@@ -83,40 +86,35 @@ export default function GeneralSettings() {
           Danger Zone
         </h2>
         <Card className="border-danger/30">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium text-pencil">Reset All Data</p>
-              <p className="text-xs text-pencil-light mt-0.5">
-                Clear all settings, projects, and CLI configuration. App will restart onboarding.
-              </p>
-            </div>
-            {!confirmReset ? (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-pencil">Reset All Data</p>
+                <p className="text-xs text-pencil-light mt-0.5">
+                  Clear all settings, projects, and CLI config.
+                </p>
+              </div>
               <Button
                 size="sm"
                 variant="secondary"
-                onClick={() => setConfirmReset(true)}
-                className="text-danger hover:text-danger"
+                onClick={confirmReset ? handleReset : () => setConfirmReset(true)}
+                loading={resetting}
+                className="text-danger hover:text-danger shrink-0"
               >
-                Reset
+                {confirmReset ? 'Confirm' : 'Reset'}
               </Button>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="secondary"
+            </div>
+            {confirmReset && (
+              <p className="text-xs text-danger">
+                This will erase everything and restart onboarding.{' '}
+                <button
+                  type="button"
                   onClick={() => setConfirmReset(false)}
+                  className="underline hover:no-underline"
                 >
                   Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleReset}
-                  loading={resetting}
-                  className="bg-danger text-paper hover:bg-danger/90"
-                >
-                  Confirm Reset
-                </Button>
-              </div>
+                </button>
+              </p>
             )}
           </div>
         </Card>
