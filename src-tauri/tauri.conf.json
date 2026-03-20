@@ -38,7 +38,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["app", "dmg"],
+    "targets": "all",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -53,6 +53,11 @@
         "windowSize": { "width": 540, "height": 380 },
         "appPosition": { "x": 140, "y": 180 },
         "applicationFolderPosition": { "x": 400, "y": 180 }
+      }
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "both"
       }
     }
   }

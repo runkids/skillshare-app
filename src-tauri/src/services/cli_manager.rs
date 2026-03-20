@@ -54,14 +54,21 @@ pub fn save_meta(meta: &CliMeta) -> Result<(), String> {
 
 /// Try to find the `skillshare` binary: first on PATH, then in the app bin dir.
 pub async fn detect_cli() -> Option<String> {
-    // Check PATH via `which`
-    if let Ok(output) = tokio::process::Command::new("which")
+    // Check PATH via `which` (Unix) or `where` (Windows)
+    let find_cmd = if cfg!(target_os = "windows") { "where" } else { "which" };
+    if let Ok(output) = tokio::process::Command::new(find_cmd)
         .arg("skillshare")
         .output()
         .await
     {
         if output.status.success() {
-            let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            // `where` on Windows may return multiple lines; take the first
+            let path = String::from_utf8_lossy(&output.stdout)
+                .lines()
+                .next()
+                .unwrap_or_default()
+                .trim()
+                .to_string();
             if !path.is_empty() {
                 return Some(path);
             }
@@ -69,7 +76,8 @@ pub async fn detect_cli() -> Option<String> {
     }
 
     // Check app bin directory
-    let bin = cli_dir().join("skillshare");
+    let bin_name = if cfg!(target_os = "windows") { "skillshare.exe" } else { "skillshare" };
+    let bin = cli_dir().join(bin_name);
     if bin.exists() {
         return Some(bin.to_string_lossy().to_string());
     }
@@ -216,7 +224,16 @@ pub async fn check_latest_release() -> Result<(String, String), String> {
         "amd64"
     };
 
-    let asset_prefix = format!("skillshare_darwin_{arch}");
+    let os = if cfg!(target_os = "windows") {
+        "windows"
+    } else if cfg!(target_os = "linux") {
+        "linux"
+    } else {
+        "darwin"
+    };
+
+    let asset_prefix = format!("skillshare_{os}_{arch}");
+    let ext = if cfg!(target_os = "windows") { ".zip" } else { ".tar.gz" };
 
     let assets = body["assets"]
         .as_array()
@@ -226,13 +243,13 @@ pub async fn check_latest_release() -> Result<(String, String), String> {
         .iter()
         .find_map(|a| {
             let name = a["name"].as_str().unwrap_or_default();
-            if name.starts_with(&asset_prefix) && name.ends_with(".tar.gz") {
+            if name.starts_with(&asset_prefix) && name.ends_with(ext) {
                 a["browser_download_url"].as_str().map(|s| s.to_string())
             } else {
                 None
             }
         })
-        .ok_or_else(|| format!("No matching asset for {asset_prefix}"))?;
+        .ok_or_else(|| format!("No matching asset for {asset_prefix}{ext}"))?;
 
     Ok((tag, download_url))
 }
@@ -268,31 +285,53 @@ pub async fn download_cli(url: &str) -> Result<String, String> {
         .await
         .map_err(|e| format!("Failed to read download body: {e}"))?;
 
-    let tarball_path = tmp_dir.join("skillshare.tar.gz");
-    std::fs::write(&tarball_path, &bytes).map_err(|e| {
+    let archive_name = if cfg!(target_os = "windows") { "skillshare.zip" } else { "skillshare.tar.gz" };
+    let archive_path = tmp_dir.join(archive_name);
+    std::fs::write(&archive_path, &bytes).map_err(|e| {
         std::fs::remove_dir_all(&tmp_dir).ok();
-        format!("Failed to write tarball: {e}")
+        format!("Failed to write archive: {e}")
     })?;
 
-    // Extract with tar
-    let extract_status = tokio::process::Command::new("tar")
-        .args(["xzf", "skillshare.tar.gz"])
-        .current_dir(&tmp_dir)
-        .status()
-        .await
-        .map_err(|e| {
+    // Extract
+    #[cfg(target_os = "windows")]
+    {
+        let extract_status = tokio::process::Command::new("powershell")
+            .args(["-Command", &format!(
+                "Expand-Archive -Path '{}' -DestinationPath '{}' -Force",
+                archive_path.display(), tmp_dir.display()
+            )])
+            .status()
+            .await
+            .map_err(|e| {
+                std::fs::remove_dir_all(&tmp_dir).ok();
+                format!("Failed to run PowerShell extract: {e}")
+            })?;
+        if !extract_status.success() {
             std::fs::remove_dir_all(&tmp_dir).ok();
-            format!("Failed to run tar: {e}")
-        })?;
-
-    if !extract_status.success() {
-        std::fs::remove_dir_all(&tmp_dir).ok();
-        return Err("tar extraction failed".to_string());
+            return Err("ZIP extraction failed".to_string());
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let extract_status = tokio::process::Command::new("tar")
+            .args(["xzf", archive_name])
+            .current_dir(&tmp_dir)
+            .status()
+            .await
+            .map_err(|e| {
+                std::fs::remove_dir_all(&tmp_dir).ok();
+                format!("Failed to run tar: {e}")
+            })?;
+        if !extract_status.success() {
+            std::fs::remove_dir_all(&tmp_dir).ok();
+            return Err("tar extraction failed".to_string());
+        }
     }
 
     // Move extracted binary to bin dir
-    let extracted = tmp_dir.join("skillshare");
-    let dest = bin_dir.join("skillshare");
+    let bin_name = if cfg!(target_os = "windows") { "skillshare.exe" } else { "skillshare" };
+    let extracted = tmp_dir.join(bin_name);
+    let dest = bin_dir.join(bin_name);
 
     if !extracted.exists() {
         std::fs::remove_dir_all(&tmp_dir).ok();
