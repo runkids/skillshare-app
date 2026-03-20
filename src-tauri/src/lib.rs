@@ -51,6 +51,7 @@ pub fn run() {
             commands::app::set_notify_sync,
             commands::app::get_notify_update,
             commands::app::set_notify_update,
+            commands::app::reset_all_data,
         ])
         .setup(|app| {
             setup_system_tray(app)?;

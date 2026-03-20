@@ -61,4 +61,5 @@ export const tauriBridge = {
   setNotifySync: (enabled: boolean) => invoke<void>('set_notify_sync', { enabled }),
   getNotifyUpdate: () => invoke<boolean>('get_notify_update'),
   setNotifyUpdate: (enabled: boolean) => invoke<void>('set_notify_update', { enabled }),
+  resetAllData: () => invoke<void>('reset_all_data'),
 };

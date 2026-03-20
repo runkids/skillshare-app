@@ -95,3 +95,19 @@ pub fn set_notify_update(enabled: bool) -> Result<(), String> {
     meta.notify_update = Some(enabled);
     cli_manager::save_meta(&meta)
 }
+
+#[tauri::command]
+pub async fn reset_all_data(server: State<'_, ServerManager>) -> Result<(), String> {
+    // Stop server if running
+    server.stop().await?;
+
+    // Reset CLI meta to default
+    let meta = crate::models::app_state::CliMeta::default();
+    cli_manager::save_meta(&meta)?;
+
+    // Reset project store to default
+    let store = crate::models::project::ProjectStore::default();
+    project_store::save(&store)?;
+
+    Ok(())
+}
