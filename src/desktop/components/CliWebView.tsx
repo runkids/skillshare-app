@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Spinner from '../../components/Spinner';
 import Button from '../../components/Button';
 import { useProjects } from '../context/ProjectContext';
 import { tauriBridge } from '../api/tauri-bridge';
 import { useTauri } from '../context/TauriContext';
+import { useTheme } from '../../context/ThemeContext';
 
 const HEALTH_POLL_INTERVAL = 30_000;
 const HEALTH_FAIL_THRESHOLD = 3;
@@ -13,36 +14,37 @@ type Status = 'loading' | 'ready' | 'error' | 'server-down';
 export default function CliWebView() {
   const { appInfo, refresh: refreshAppInfo } = useTauri();
   const { switching, activeProject } = useProjects();
+  const { style, resolvedMode } = useTheme();
   const [status, setStatus] = useState<Status>('loading');
   const [iframeUrl, setIframeUrl] = useState<string | null>(null);
   const [iframeKey, setIframeKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [restarting, setRestarting] = useState(false);
-  const [resolvedTheme, setResolvedTheme] = useState('light');
   const failCount = useRef(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const startAttempted = useRef(false);
 
+  // Derive CLI theme from shell's style + mode
+  // CLI values: dark, light, playful, clean
+  const cliTheme = useMemo(() => {
+    if (style === 'playful') return 'playful';
+    return resolvedMode === 'dark' ? 'dark' : 'clean';
+  }, [style, resolvedMode]);
+
+  // Reload iframe when theme changes
   useEffect(() => {
-    tauriBridge.getPreferredTheme().then((theme) => {
-      // CLI supports: dark, light, playful, clean
-      // Map our settings to CLI theme values
-      const resolved =
-        theme === 'system'
-          ? window.matchMedia('(prefers-color-scheme: dark)').matches
-            ? 'dark'
-            : 'clean'
-          : theme === 'light'
-            ? 'clean'
-            : theme;
-      setResolvedTheme(resolved);
-    });
-  }, []);
+    if (status === 'ready' && iframeUrl) {
+      // Update URL with new theme and force reload
+      const base = iframeUrl.split('?')[0];
+      setIframeUrl(`${base}?theme=${cliTheme}`);
+      setIframeKey((k) => k + 1);
+    }
+  }, [cliTheme]); // intentionally only depend on cliTheme
 
   // Try to start server if no port available on mount
   useEffect(() => {
     if (appInfo?.serverPort) {
-      setIframeUrl(`http://localhost:${appInfo.serverPort}?theme=${resolvedTheme}`);
+      setIframeUrl(`http://localhost:${appInfo.serverPort}?theme=${cliTheme}`);
       setStatus('ready');
       failCount.current = 0;
       startAttempted.current = false;
@@ -63,7 +65,7 @@ export default function CliWebView() {
         }
         const projectDir = activeProject?.path;
         const port = await tauriBridge.startServer(cliPath, projectDir);
-        setIframeUrl(`http://localhost:${port}?theme=${resolvedTheme}`);
+        setIframeUrl(`http://localhost:${port}?theme=${cliTheme}`);
         setStatus('ready');
         await refreshAppInfo();
       } catch (err) {
@@ -72,7 +74,7 @@ export default function CliWebView() {
         setStatus('error');
       }
     })();
-  }, [appInfo?.serverPort, switching, activeProject, refreshAppInfo, resolvedTheme]);
+  }, [appInfo?.serverPort, switching, activeProject, refreshAppInfo, cliTheme]);
 
   // Health check polling when server is ready
   useEffect(() => {
@@ -115,7 +117,7 @@ export default function CliWebView() {
       if (!cliPath) throw new Error('CLI not found');
       const projectDir = activeProject?.path;
       const port = await tauriBridge.startServer(cliPath, projectDir);
-      setIframeUrl(`http://localhost:${port}?theme=${resolvedTheme}`);
+      setIframeUrl(`http://localhost:${port}?theme=${cliTheme}`);
       setStatus('ready');
       failCount.current = 0;
       await refreshAppInfo();
@@ -126,7 +128,7 @@ export default function CliWebView() {
     } finally {
       setRestarting(false);
     }
-  }, [activeProject, refreshAppInfo, resolvedTheme]);
+  }, [activeProject, refreshAppInfo, cliTheme]);
 
   // Switching state
   if (switching) {
