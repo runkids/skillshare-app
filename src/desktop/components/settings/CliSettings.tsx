@@ -16,7 +16,7 @@ export default function CliSettings() {
     try {
       const cliPath = await tauriBridge.detectCli();
       if (!cliPath) throw new Error('CLI not found');
-      const result = await tauriBridge.runCli(cliPath, ['update', '--force']);
+      const result = await tauriBridge.runCli(cliPath, ['upgrade', '--force']);
       await refresh();
       setUpdateResult(result || 'Updated successfully');
       setTimeout(() => setUpdateResult(null), 5000);
