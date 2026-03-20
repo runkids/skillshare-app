@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Folder, Globe, CheckCircle } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
+import { homeDir } from '@tauri-apps/api/path';
 import Button from '../../../components/Button';
 import Spinner from '../../../components/Spinner';
 import { tauriBridge } from '../../api/tauri-bridge';
@@ -33,8 +34,9 @@ export default function ProjectSetupStep({ cliPath, onComplete }: ProjectSetupSt
     try {
       let result: string;
       if (choice === 'global') {
-        result = await tauriBridge.runCli(cliPath, ['init']);
-        await tauriBridge.addProject('Global', '~', 'global');
+        const home = await homeDir();
+        result = await tauriBridge.runCli(cliPath, ['init'], home);
+        await tauriBridge.addProject('Global', home, 'global');
       } else if (choice === 'project' && selectedDir) {
         result = await tauriBridge.runCli(cliPath, ['init', '-p'], selectedDir);
         const name = selectedDir.split('/').pop() || 'Project';
@@ -51,7 +53,8 @@ export default function ProjectSetupStep({ cliPath, onComplete }: ProjectSetupSt
       // "already initialized" is not a real error — treat as success
       if (msg.includes('already initialized')) {
         if (choice === 'global') {
-          await tauriBridge.addProject('Global', '~', 'global');
+          const home = await homeDir();
+          await tauriBridge.addProject('Global', home, 'global');
         } else if (choice === 'project' && selectedDir) {
           const name = selectedDir.split('/').pop() || 'Project';
           await tauriBridge.addProject(name, selectedDir, 'project');
