@@ -10,9 +10,11 @@ pub async fn detect_cli() -> Result<Option<String>, String> {
 pub async fn get_cli_version(cli_path: String) -> Result<String, String> {
     let version = cli_manager::get_version(&cli_path).await?;
 
-    // Persist CLI info so onboarding.completed can become true
+    // Always persist current version so app state stays in sync after upgrades
     let mut meta = cli_manager::load_meta();
-    if meta.version.is_none() || meta.path.as_deref() != Some(&cli_path) {
+    let version_changed = meta.version.as_deref() != Some(&version);
+    let path_changed = meta.path.as_deref() != Some(&cli_path);
+    if meta.version.is_none() || version_changed || path_changed {
         meta.version = Some(version.clone());
         meta.path = Some(cli_path);
         if meta.source.is_none() {

@@ -22,10 +22,11 @@ export default function CliSettings() {
 
       const oldVersion = appInfo?.cliVersion;
       await tauriBridge.runCli(cliPath, ['upgrade', '--force']);
+
+      // Re-detect version after upgrade and refresh app state
+      const updatedVersion = await tauriBridge.getCliVersion(cliPath);
       await refresh();
 
-      // Re-read version to check if it changed
-      const updatedVersion = await tauriBridge.getCliVersion(cliPath);
       if (updatedVersion && updatedVersion !== oldVersion) {
         setNewVersion(updatedVersion);
         setStatus('success');
@@ -87,13 +88,19 @@ export default function CliSettings() {
               </Button>
             )}
             {status === 'upgrading' && (
-              <Button size="sm" loading>Upgrading</Button>
+              <Button size="sm" loading>
+                Upgrading
+              </Button>
             )}
             {status === 'success' && (
-              <Button size="sm" variant="secondary" disabled>Updated</Button>
+              <Button size="sm" variant="secondary" disabled>
+                Updated
+              </Button>
             )}
             {status === 'up-to-date' && (
-              <Button size="sm" variant="secondary" disabled>Up to date</Button>
+              <Button size="sm" variant="secondary" disabled>
+                Up to date
+              </Button>
             )}
           </div>
         </div>
