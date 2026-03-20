@@ -11,6 +11,7 @@ interface ProjectContextValue {
   switchProject: (id: string) => Promise<void>;
   switchWithRestart: (id: string) => Promise<number | undefined>;
   removeProject: (id: string) => Promise<void>;
+  registerOnProjectRemoved: (callback: (projectId: string) => void) => () => void;
 }
 
 const ProjectContext = createContext<ProjectContextValue>({
@@ -22,6 +23,7 @@ const ProjectContext = createContext<ProjectContextValue>({
   switchProject: async () => {},
   switchWithRestart: async () => undefined,
   removeProject: async () => {},
+  registerOnProjectRemoved: () => () => {},
 });
 
 export function useProjects() {
@@ -33,6 +35,14 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [switching, setSwitching] = useState(false);
   const switchLock = useRef(false);
+  const projectRemovedCallbacks = useRef<Set<(projectId: string) => void>>(new Set());
+
+  const registerOnProjectRemoved = useCallback((callback: (projectId: string) => void) => {
+    projectRemovedCallbacks.current.add(callback);
+    return () => {
+      projectRemovedCallbacks.current.delete(callback);
+    };
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -95,6 +105,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     async (id: string) => {
       await tauriBridge.removeProject(id);
       await refresh();
+      for (const cb of projectRemovedCallbacks.current) {
+        cb(id);
+      }
     },
     [refresh]
   );
@@ -114,6 +127,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         switchProject,
         switchWithRestart,
         removeProject,
+        registerOnProjectRemoved,
       }}
     >
       {children}
