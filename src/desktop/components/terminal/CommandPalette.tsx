@@ -1,48 +1,90 @@
-// src/desktop/components/terminal/CommandPalette.tsx
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Search } from 'lucide-react';
-import { skillshareCommands, commandIconMap } from './skillshareCommands';
+import {
+  skillshareCommands,
+  commandIconMap,
+  categoryLabels,
+  type CommandCategory,
+} from './skillshareCommands';
+import type { SkillshareCommand } from './skillshareCommands';
 
 interface CommandPaletteProps {
   onExecute: (command: string) => void;
   onClose: () => void;
 }
 
+type PaletteItem =
+  | { type: 'header'; category: CommandCategory }
+  | { type: 'command'; command: SkillshareCommand; flatIndex: number };
+
 export default function CommandPalette({ onExecute, onClose }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selectedFlatIndex, setSelectedFlatIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
-  const filtered = useMemo(() => {
-    if (!query) return skillshareCommands;
+  const { items, flatCommands } = useMemo(() => {
     const lower = query.toLowerCase();
-    return skillshareCommands.filter(
-      (cmd) =>
-        cmd.name.includes(lower) ||
-        cmd.label.toLowerCase().includes(lower) ||
-        cmd.description.toLowerCase().includes(lower)
-    );
+    const filtered = query
+      ? skillshareCommands.filter(
+          (cmd) =>
+            cmd.name.includes(lower) ||
+            cmd.label.toLowerCase().includes(lower) ||
+            cmd.description.toLowerCase().includes(lower) ||
+            cmd.command.toLowerCase().includes(lower)
+        )
+      : skillshareCommands;
+
+    // Group by category, preserving order
+    const categoryOrder: CommandCategory[] = [
+      'core', 'sync', 'skill-mgmt', 'backup', 'security', 'extras', 'other',
+    ];
+    const grouped = new Map<CommandCategory, SkillshareCommand[]>();
+    for (const cmd of filtered) {
+      const existing = grouped.get(cmd.category) ?? [];
+      existing.push(cmd);
+      grouped.set(cmd.category, existing);
+    }
+
+    const result: PaletteItem[] = [];
+    const flat: SkillshareCommand[] = [];
+    for (const cat of categoryOrder) {
+      const cmds = grouped.get(cat);
+      if (!cmds?.length) continue;
+      result.push({ type: 'header', category: cat });
+      for (const cmd of cmds) {
+        result.push({ type: 'command', command: cmd, flatIndex: flat.length });
+        flat.push(cmd);
+      }
+    }
+    return { items: result, flatCommands: flat };
   }, [query]);
 
   useEffect(() => {
-    setSelectedIndex(0);
+    setSelectedFlatIndex(0);
   }, [query]);
+
+  // Scroll selected item into view
+  useEffect(() => {
+    const el = listRef.current?.querySelector('[data-selected="true"]');
+    el?.scrollIntoView({ block: 'nearest' });
+  }, [selectedFlatIndex]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Escape') {
       onClose();
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setSelectedIndex((i) => Math.min(i + 1, filtered.length - 1));
+      setSelectedFlatIndex((i) => Math.min(i + 1, flatCommands.length - 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setSelectedIndex((i) => Math.max(i - 1, 0));
-    } else if (e.key === 'Enter' && filtered[selectedIndex]) {
-      onExecute(filtered[selectedIndex].command);
+      setSelectedFlatIndex((i) => Math.max(i - 1, 0));
+    } else if (e.key === 'Enter' && flatCommands[selectedFlatIndex]) {
+      onExecute(flatCommands[selectedFlatIndex].command);
       onClose();
     }
   }
@@ -70,22 +112,32 @@ export default function CommandPalette({ onExecute, onClose }: CommandPalettePro
             placeholder="Type a skillshare command..."
           />
         </div>
-        <div className="max-h-[300px] overflow-y-auto py-1">
-          {filtered.length === 0 ? (
+        <div ref={listRef} className="max-h-[300px] overflow-y-auto py-1">
+          {items.length === 0 ? (
             <div className="px-3 py-4 text-center text-xs text-gray-500">No matching commands</div>
           ) : (
-            filtered.map((cmd, i) => {
+            items.map((item, i) => {
+              if (item.type === 'header') {
+                return (
+                  <div
+                    key={`header-${item.category}`}
+                    className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-600"
+                  >
+                    {categoryLabels[item.category]}
+                  </div>
+                );
+              }
+              const { command: cmd, flatIndex } = item;
               const Icon = commandIconMap[cmd.icon];
+              const isSelected = flatIndex === selectedFlatIndex;
               return (
                 <button
                   key={cmd.name}
                   type="button"
-                  onClick={() => {
-                    onExecute(cmd.command);
-                    onClose();
-                  }}
+                  data-selected={isSelected}
+                  onClick={() => { onExecute(cmd.command); onClose(); }}
                   className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
-                    i === selectedIndex ? 'bg-gray-800' : 'hover:bg-gray-800/50'
+                    isSelected ? 'bg-gray-800' : 'hover:bg-gray-800/50'
                   }`}
                 >
                   <span className="text-gray-400 shrink-0">{Icon && <Icon size={14} />}</span>
@@ -93,9 +145,7 @@ export default function CommandPalette({ onExecute, onClose }: CommandPalettePro
                     <div className="text-sm text-gray-200 font-medium">{cmd.label}</div>
                     <div className="text-xs text-gray-500 truncate">{cmd.description}</div>
                   </div>
-                  <span className="text-[10px] text-gray-600 font-mono shrink-0">
-                    {cmd.command}
-                  </span>
+                  <span className="text-[10px] text-gray-600 font-mono shrink-0">{cmd.command}</span>
                 </button>
               );
             })
