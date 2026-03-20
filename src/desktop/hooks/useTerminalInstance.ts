@@ -3,7 +3,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { WebglAddon } from '@xterm/addon-webgl';
-import { open } from '@tauri-apps/plugin-opener';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import { terminalOptions } from '../components/terminal/terminalTheme';
 import '@xterm/xterm/css/xterm.css';
 
@@ -26,7 +26,7 @@ export function createTerminalInstance(options?: {
   const fitAddon = new FitAddon();
   const searchAddon = new SearchAddon();
   const webLinksAddon = new WebLinksAddon((_, url) => {
-    void open(url);
+    void openUrl(url);
   });
 
   terminal.loadAddon(fitAddon);
