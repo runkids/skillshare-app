@@ -6,6 +6,47 @@ const DEFAULT_PORT: u16 = 19420;
 const HEALTH_POLL_INTERVAL_MS: u64 = 500;
 const HEALTH_POLL_MAX_RETRIES: u32 = 20;
 
+/// Kill orphaned `skillshare` processes listening on the given port range.
+/// This handles the case where a previous app instance was killed without
+/// graceful shutdown (e.g., dev mode restart, crash, SIGKILL).
+async fn kill_orphaned_servers(base_port: u16, end_port: u16) {
+    for port in base_port..=end_port {
+        if !is_port_in_use(port).await {
+            continue;
+        }
+        // Use lsof to find and kill the process on this port
+        let output = tokio::process::Command::new("lsof")
+            .args(["-ti", &format!("tcp:{port}")])
+            .output()
+            .await;
+
+        if let Ok(output) = output {
+            let pids = String::from_utf8_lossy(&output.stdout);
+            for pid_str in pids.trim().lines() {
+                if let Ok(pid) = pid_str.trim().parse::<i32>() {
+                    // Verify it's a skillshare process before killing
+                    let ps_output = tokio::process::Command::new("ps")
+                        .args(["-p", &pid.to_string(), "-o", "comm="])
+                        .output()
+                        .await;
+                    if let Ok(ps_out) = ps_output {
+                        let comm = String::from_utf8_lossy(&ps_out.stdout);
+                        if comm.trim().contains("skillshare") {
+                            log::info!("Killing orphaned skillshare process (pid={pid}) on port {port}");
+                            let _ = tokio::process::Command::new("kill")
+                                .args(["-TERM", &pid.to_string()])
+                                .output()
+                                .await;
+                            // Give it a moment to exit
+                            tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct ServerManager {
     process: Arc<Mutex<Option<Child>>>,
@@ -42,6 +83,9 @@ impl ServerManager {
         let meta = crate::services::cli_manager::load_meta();
         let base_port = meta.preferred_port.unwrap_or(DEFAULT_PORT);
         let end_port = base_port + 10;
+
+        // Kill any orphaned skillshare processes from a previous app instance
+        kill_orphaned_servers(base_port, end_port).await;
 
         let mut chosen_port = None;
 
