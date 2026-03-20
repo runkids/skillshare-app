@@ -13,20 +13,14 @@ pub fn save_release_meta(version: String, path: &str) -> Result<(), String> {
 
 /// Directory where the app stores its own copy of the CLI binary.
 pub fn cli_dir() -> PathBuf {
-    let dir = dirs::data_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("com.skillshare.app")
-        .join("bin");
+    let dir = crate::utils::paths::app_data_dir().join("bin");
     std::fs::create_dir_all(&dir).ok();
     dir
 }
 
 /// Path to the CLI metadata JSON file.
 fn meta_path() -> PathBuf {
-    dirs::data_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("com.skillshare.app")
-        .join("cli-meta.json")
+    crate::utils::paths::app_data_dir().join("cli-meta.json")
 }
 
 // ── Meta persistence ───────────────────────────────────────────────
@@ -52,12 +46,24 @@ pub fn save_meta(meta: &CliMeta) -> Result<(), String> {
 
 // ── CLI detection ──────────────────────────────────────────────────
 
-/// Try to find the `skillshare` binary: first on PATH, then in the app bin dir.
+/// Try to find the `skillshare` binary.
+///
+/// Search order:
+///   1. System PATH (enriched with Homebrew / Cargo / common dirs on macOS)
+///   2. Well-known install locations for each platform
+///   3. App-managed bin directory (in-app download)
+///
+/// GUI apps on macOS launched from Finder only inherit a minimal system PATH,
+/// so we inject the enriched PATH from `build_env_for_child()` to also cover
+/// Homebrew, Cargo, and other common install locations.
 pub async fn detect_cli() -> Option<String> {
-    // Check PATH via `which` (Unix) or `where` (Windows)
+    let env = crate::utils::env::build_env_for_child();
+
+    // 1. Check PATH via `which` (Unix) or `where` (Windows)
     let find_cmd = if cfg!(target_os = "windows") { "where" } else { "which" };
     if let Ok(output) = tokio::process::Command::new(find_cmd)
         .arg("skillshare")
+        .envs(&env)
         .output()
         .await
     {
@@ -75,7 +81,24 @@ pub async fn detect_cli() -> Option<String> {
         }
     }
 
-    // Check app bin directory
+    // 2. Check well-known install locations per platform
+    //    - curl|sh  → /usr/local/bin/skillshare  (covered by PATH above)
+    //    - brew     → /opt/homebrew/bin/skillshare (covered by PATH above)
+    //    - Windows  → %LOCALAPPDATA%\Programs\skillshare\skillshare.exe
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+            let bin = PathBuf::from(local_app_data)
+                .join("Programs")
+                .join("skillshare")
+                .join("skillshare.exe");
+            if bin.exists() {
+                return Some(bin.to_string_lossy().to_string());
+            }
+        }
+    }
+
+    // 3. Check app-managed bin directory (in-app download)
     let bin_name = if cfg!(target_os = "windows") { "skillshare.exe" } else { "skillshare" };
     let bin = cli_dir().join(bin_name);
     if bin.exists() {
@@ -83,6 +106,30 @@ pub async fn detect_cli() -> Option<String> {
     }
 
     None
+}
+
+/// Get the global config directory by running `skillshare status --json`
+/// and extracting the parent of `source.path`.
+/// e.g. source.path = `~/.config/skillshare/skills` → returns `~/.config/skillshare`
+pub async fn get_global_config_dir(cli_path: &str) -> Result<String, String> {
+    let output = exec(
+        cli_path,
+        &["status".to_string(), "--json".to_string()],
+        None,
+    )
+    .await?;
+
+    let status: serde_json::Value =
+        serde_json::from_str(&output).map_err(|e| format!("Failed to parse CLI status JSON: {e}"))?;
+
+    let source_path = status["source"]["path"]
+        .as_str()
+        .ok_or("CLI status JSON missing 'source.path' field")?;
+
+    Ok(std::path::Path::new(source_path)
+        .parent()
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_default())
 }
 
 /// Run `skillshare version` and extract the semver version string.

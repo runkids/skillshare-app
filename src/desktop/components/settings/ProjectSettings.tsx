@@ -28,7 +28,8 @@ export default function ProjectSettings() {
         const msg = err instanceof Error ? err.message : String(err);
         if (!msg.toLowerCase().includes('already initialized')) throw err;
       }
-      await addProject('Global', home, 'global');
+      const configDir = await tauriBridge.getGlobalConfigDir(cliPath);
+      await addProject('Global', configDir || home, 'global');
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -75,7 +76,10 @@ export default function ProjectSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-pencil" style={{ fontFamily: 'var(--font-heading)' }}>
+        <h1
+          className="text-2xl font-bold text-pencil"
+          style={{ fontFamily: 'var(--font-heading)' }}
+        >
           Projects
         </h1>
         <p className="text-sm text-pencil-light mt-1">
@@ -130,13 +134,14 @@ export default function ProjectSettings() {
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
-                {isActive && (
-                  <span className="text-xs text-pencil-light">Active</span>
-                )}
+                {isActive && <span className="text-xs text-pencil-light">Active</span>}
                 {!isGlobal && (
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); handleRemove(project.id); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemove(project.id);
+                    }}
                     className="p-1 rounded-[var(--radius-sm)] text-pencil-light hover:text-danger hover:bg-muted/30 transition-colors"
                     title="Remove project"
                   >

@@ -2,11 +2,7 @@ use crate::models::project::{Project, ProjectStore, ProjectType};
 use std::path::PathBuf;
 
 fn store_path() -> PathBuf {
-    let dir = dirs::data_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("com.skillshare.app");
-    std::fs::create_dir_all(&dir).ok();
-    dir.join("projects.json")
+    crate::utils::paths::app_data_dir().join("projects.json")
 }
 
 pub fn load() -> ProjectStore {

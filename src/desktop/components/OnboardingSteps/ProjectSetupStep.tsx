@@ -29,9 +29,11 @@ export default function ProjectSetupStep({ cliPath, onComplete }: ProjectSetupSt
           const msg = err instanceof Error ? err.message : String(err);
           if (!msg.includes('already initialized')) throw err;
         }
+        // Get actual config dir from CLI status
+        const configDir = await tauriBridge.getGlobalConfigDir(cliPath);
         // Add to store (ignore "already exists")
         try {
-          await tauriBridge.addProject('Global', home, 'global');
+          await tauriBridge.addProject('Global', configDir || home, 'global');
         } catch {
           // Global already in store — that's fine
         }
@@ -68,8 +70,9 @@ export default function ProjectSetupStep({ cliPath, onComplete }: ProjectSetupSt
         const msg = err instanceof Error ? err.message : String(err);
         if (!msg.includes('already initialized')) throw err;
       }
+      const configDir = await tauriBridge.getGlobalConfigDir(cliPath);
       try {
-        await tauriBridge.addProject('Global', home, 'global');
+        await tauriBridge.addProject('Global', configDir || home, 'global');
       } catch {
         // Already exists — fine
       }

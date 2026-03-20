@@ -76,3 +76,8 @@ pub async fn run_cli(
 ) -> Result<String, String> {
     cli_manager::exec(&cli_path, &args, working_dir.as_deref()).await
 }
+
+#[tauri::command]
+pub async fn get_global_config_dir(cli_path: String) -> Result<String, String> {
+    cli_manager::get_global_config_dir(&cli_path).await
+}

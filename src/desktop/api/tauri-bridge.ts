@@ -65,4 +65,7 @@ export const tauriBridge = {
 
   // Terminal commands
   getPtyEnv: () => invoke<Record<string, string>>('get_pty_env'),
+
+  // Utility commands
+  getGlobalConfigDir: (cliPath: string) => invoke<string>('get_global_config_dir', { cliPath }),
 };

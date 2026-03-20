@@ -30,6 +30,7 @@ pub fn run() {
             commands::cli::check_cli_update,
             commands::cli::upgrade_cli,
             commands::cli::run_cli,
+            commands::cli::get_global_config_dir,
             // Project commands
             commands::project::list_projects,
             commands::project::get_active_project,
@@ -267,6 +268,53 @@ async fn check_cli_update_background(app: &tauri::AppHandle) {
     }
 }
 
+// ── Global Project Path Sync ─────────────────────────────────────────
+
+/// Keep the Global project path in sync with the CLI's actual config directory.
+/// Returns the (potentially updated) store so the caller doesn't need to re-read.
+async fn sync_global_project_path(
+    cli_path: &str,
+    mut store: models::project::ProjectStore,
+) -> models::project::ProjectStore {
+    use models::project::ProjectType;
+
+    let global_idx = store
+        .projects
+        .iter()
+        .position(|p| p.project_type == ProjectType::Global);
+    let global_idx = match global_idx {
+        Some(i) => i,
+        None => return store,
+    };
+
+    let config_dir = match services::cli_manager::get_global_config_dir(cli_path).await {
+        Ok(dir) if !dir.is_empty() => dir,
+        Ok(_) => return store,
+        Err(e) => {
+            log::warn!("Failed to get global config dir for path sync: {e}");
+            return store;
+        }
+    };
+
+    if config_dir == store.projects[global_idx].path {
+        return store;
+    }
+
+    log::info!(
+        "Syncing Global project path: {} -> {}",
+        store.projects[global_idx].path,
+        config_dir
+    );
+
+    store.projects[global_idx].path = config_dir;
+
+    if let Err(e) = services::project_store::save(&store) {
+        log::warn!("Failed to save synced Global project path: {e}");
+    }
+
+    store
+}
+
 // ── Auto-Start Server ───────────────────────────────────────────────
 
 /// If onboarding is complete (CLI installed + project exists), start the
@@ -293,6 +341,9 @@ async fn auto_start_server(server: ServerManager) {
             return;
         }
     };
+
+    // Sync Global project path from CLI status (config dir may change across versions)
+    let store = sync_global_project_path(&cli_path, store).await;
 
     // Get active project path and determine mode
     let (project_dir, is_project_mode) = services::project_store::active_project_mode(&store);

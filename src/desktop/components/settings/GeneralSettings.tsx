@@ -4,9 +4,13 @@ import Button from '../../../components/Button';
 import Card from '../../../components/Card';
 import Input from '../../../components/Input';
 import { tauriBridge } from '../../api/tauri-bridge';
+import { useTauri } from '../../context/TauriContext';
+import { useProjects } from '../../context/ProjectContext';
 
 export default function GeneralSettings() {
   const navigate = useNavigate();
+  const { refresh: refreshAppInfo } = useTauri();
+  const { refresh: refreshProjects } = useProjects();
   const [port, setPort] = useState('19420');
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +48,8 @@ export default function GeneralSettings() {
     setResetting(true);
     try {
       await tauriBridge.resetAllData();
-      // Navigate to onboarding since all data is cleared
+      // Refresh cached React state so contexts reflect the cleared data
+      await Promise.all([refreshAppInfo(), refreshProjects()]);
       navigate('/onboarding');
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
