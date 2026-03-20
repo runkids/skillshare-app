@@ -4,7 +4,7 @@ Detect and manage Node.js versions, package managers, and resolve version confli
 
 ## Overview
 
-PackageFlow helps you manage your development toolchain:
+Skillshare App helps you manage your development toolchain:
 
 - Node.js version detection
 - Package manager detection
@@ -17,7 +17,7 @@ PackageFlow helps you manage your development toolchain:
 
 ### Node.js
 
-PackageFlow detects:
+Skillshare App detects:
 - Installed Node.js version
 - Project's required version (from `package.json` → `engines`)
 - Version manager configuration
@@ -43,7 +43,7 @@ Detection is based on lock files:
 
 ### Volta
 
-PackageFlow integrates deeply with Volta:
+Skillshare App integrates deeply with Volta:
 
 **Features:**
 - Read Volta config from `package.json`
@@ -77,7 +77,7 @@ Support for nvm configuration:
 
 ### Corepack
 
-PackageFlow detects Corepack status:
+Skillshare App detects Corepack status:
 
 **Features:**
 - Check if Corepack is enabled
@@ -86,7 +86,7 @@ PackageFlow detects Corepack status:
 
 ## Conflict Detection
 
-PackageFlow automatically detects common conflicts:
+Skillshare App automatically detects common conflicts:
 
 ### Volta + Corepack Conflict
 
@@ -97,7 +97,7 @@ Using both Volta and Corepack can cause issues:
 - Performance degradation
 
 **Resolution:**
-1. PackageFlow shows a warning
+1. Skillshare App shows a warning
 2. Choose one: Volta OR Corepack
 3. Follow the recommended steps
 
@@ -112,7 +112,7 @@ When `PNPM_HOME` conflicts with Volta:
 - Version mismatch errors
 
 **Resolution:**
-1. PackageFlow identifies the conflict
+1. Skillshare App identifies the conflict
 2. Shows environment variables involved
 3. Provides fix commands
 
@@ -170,7 +170,7 @@ Choose your preferred package manager:
 
 ### Per-Project Override
 
-PackageFlow respects project-specific settings:
+Skillshare App respects project-specific settings:
 - Lock file determines the package manager
 - Volta config takes precedence
 - Manual override available
@@ -189,7 +189,7 @@ Project cards show version status:
 
 ## Commands
 
-PackageFlow generates the correct commands based on your toolchain:
+Skillshare App generates the correct commands based on your toolchain:
 
 ### With Volta
 

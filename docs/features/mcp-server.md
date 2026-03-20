@@ -1,20 +1,20 @@
 # MCP Server
 
-Let AI tools control PackageFlow through the Model Context Protocol (MCP).
+Let AI tools control Skillshare App through the Model Context Protocol (MCP).
 
 ## What is MCP?
 
-The Model Context Protocol (MCP) is a standard for AI tools to interact with applications. PackageFlow can act as an MCP server, allowing AI assistants like:
+The Model Context Protocol (MCP) is a standard for AI tools to interact with applications. Skillshare App can act as an MCP server, allowing AI assistants like:
 
 - Claude Code
 - Codex CLI
 - Gemini CLI
 
-to query and control PackageFlow programmatically.
+to query and control Skillshare App programmatically.
 
 ## Overview
 
-PackageFlow ships a companion MCP server binary, `packageflow-mcp`, and exposes tools that AI assistants can call:
+Skillshare App ships a companion MCP server binary, `skillshare-mcp`, and exposes tools that AI assistants can call:
 
 - List projects
 - Run scripts
@@ -22,7 +22,7 @@ PackageFlow ships a companion MCP server binary, `packageflow-mcp`, and exposes 
 - Trigger deployments
 - And more
 
-The MCP server uses **stdio transport** (no network port required). PackageFlow can generate ready-to-paste client configs that point at the correct `packageflow-mcp` binary path.
+The MCP server uses **stdio transport** (no network port required). Skillshare App can generate ready-to-paste client configs that point at the correct `skillshare-mcp` binary path.
 
 ## Enabling MCP Server
 
@@ -31,7 +31,7 @@ The MCP server uses **stdio transport** (no network port required). PackageFlow 
 3. Configure the server settings
 4. Click **Start Server**
 
-Tip: In the same panel, PackageFlow shows the resolved `packageflow-mcp` path and provides config snippets for common MCP clients.
+Tip: In the same panel, Skillshare App shows the resolved `skillshare-mcp` path and provides config snippets for common MCP clients.
 
 <p align="center">
   <img src="../screenshots/mcp-setup.png" width="900" alt="MCP Integration settings" />
@@ -41,13 +41,13 @@ Tip: In the same panel, PackageFlow shows the resolved `packageflow-mcp` path an
 
 ### Claude Code / VS Code (JSON)
 
-PackageFlow generates a config like:
+Skillshare App generates a config like:
 
 ```json
 {
   "mcpServers": {
-    "packageflow": {
-      "command": "/Applications/PackageFlow.app/Contents/Resources/bin/packageflow-mcp"
+    "skillshare-app": {
+      "command": "/Applications/Skillshare App.app/Contents/Resources/bin/skillshare-mcp"
     }
   }
 }
@@ -55,11 +55,11 @@ PackageFlow generates a config like:
 
 ### Codex CLI (TOML)
 
-PackageFlow also generates:
+Skillshare App also generates:
 
 ```toml
-[mcp_servers.packageflow]
-command = "/Applications/PackageFlow.app/Contents/Resources/bin/packageflow-mcp"
+[mcp_servers.skillshare-app]
+command = "/Applications/Skillshare App.app/Contents/Resources/bin/skillshare-mcp"
 ```
 
 ## Permission Levels
@@ -97,11 +97,11 @@ Control how dev server commands (like `npm run dev`) are handled when called via
 - Dev servers run as background processes managed by MCP independently
 - Processes can be monitored via `list_background_processes`
 - Can be stopped via `stop_background_process`
-- **Note**: These processes won't appear in PackageFlow's UI process manager
+- **Note**: These processes won't appear in Skillshare App's UI process manager
 
 ### UI Integrated (Recommended)
 
-- Processes are tracked in PackageFlow UI via events
+- Processes are tracked in Skillshare App UI via events
 - Best of both worlds: AI can start processes, you see them in UI
 - Provides better visibility with port tracking and process management
 - **Use this if**: You want AI automation with full UI visibility
@@ -109,8 +109,8 @@ Control how dev server commands (like `npm run dev`) are handled when called via
 ### Reject with Hint
 
 - MCP will reject dev server commands
-- Returns a helpful message suggesting to use PackageFlow UI instead
-- Use this if you want all dev servers to be managed through PackageFlow's UI manually
+- Returns a helpful message suggesting to use Skillshare App UI instead
+- Use this if you want all dev servers to be managed through Skillshare App's UI manually
 
 **When to use each mode:**
 
@@ -135,7 +135,7 @@ Fine-grained control over individual tools:
 | `run_security_scan` | Run an audit scan (optional auto-fix) | Medium |
 | `trigger_webhook` | Trigger a configured webhook action | Medium |
 
-> Note: PackageFlow’s MCP server is designed to avoid “arbitrary shell execution” by default. Prefer higher-level tools like `run_npm_script`, `run_workflow`, and `run_package_manager_command`.
+> Note: Skillshare App’s MCP server is designed to avoid “arbitrary shell execution” by default. Prefer higher-level tools like `run_npm_script`, `run_workflow`, and `run_package_manager_command`.
 
 ### Customizing Tool Access
 
@@ -149,7 +149,7 @@ Fine-grained control over individual tools:
 
 ### Supported AI CLIs
 
-PackageFlow detects and integrates with:
+Skillshare App detects and integrates with:
 
 | CLI | Detection |
 |-----|-----------|
@@ -363,13 +363,13 @@ Use AI tools to manage deployments:
 
 ### Server Won't Start
 
-- Ensure MCP is enabled in PackageFlow settings
-- Make sure the bundled `packageflow-mcp` binary is available (Settings shows the resolved path)
+- Ensure MCP is enabled in Skillshare App settings
+- Make sure the bundled `skillshare-mcp` binary is available (Settings shows the resolved path)
 - Check the MCP logs for startup errors
 
 ### AI Can't Connect
 
-- Verify your MCP client is pointing at the `packageflow-mcp` command path
+- Verify your MCP client is pointing at the `skillshare-mcp` command path
 - Start with Read Only mode to validate basic connectivity
 - Re-check the generated JSON/TOML snippet in Settings (it includes the correct path)
 

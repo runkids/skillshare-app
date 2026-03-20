@@ -4,7 +4,7 @@ Automate actions with incoming and outgoing webhooks.
 
 ## Overview
 
-PackageFlow supports two types of webhooks:
+Skillshare App supports two types of webhooks:
 
 - **Outgoing**: Send notifications when events occur
 - **Incoming**: Trigger workflows from external services
@@ -19,7 +19,7 @@ PackageFlow supports two types of webhooks:
 
 ### What are Outgoing Webhooks?
 
-Send HTTP requests when PackageFlow events happen:
+Send HTTP requests when Skillshare App events happen:
 
 - Workflow completes
 - Script finishes
@@ -69,14 +69,14 @@ Customize the JSON payload sent:
 ### Testing Webhooks
 
 1. Click **Test** on a webhook
-2. PackageFlow sends a test payload
+2. Skillshare App sends a test payload
 3. See the response status
 
 ## Incoming Webhooks
 
 ### What are Incoming Webhooks?
 
-URLs that trigger PackageFlow actions when called:
+URLs that trigger Skillshare App actions when called:
 
 - Start a workflow
 - Run a script
@@ -87,7 +87,7 @@ URLs that trigger PackageFlow actions when called:
 1. Open a workflow
 2. Click **Settings** → **Triggers**
 3. Click **Add Webhook Trigger**
-4. PackageFlow generates a unique URL
+4. Skillshare App generates a unique URL
 5. Copy the URL
 
 <!-- TODO: Add screenshot of incoming webhook URL -->
@@ -117,20 +117,20 @@ Incoming webhooks use token authentication:
 
 ### CI/CD Integration
 
-Trigger PackageFlow workflows from CI:
+Trigger Skillshare App workflows from CI:
 
 **GitHub Actions:**
 ```yaml
-- name: Trigger PackageFlow
+- name: Trigger Skillshare App
   run: |
     curl -X POST https://your-webhook-url
 ```
 
 **GitLab CI:**
 ```yaml
-trigger_packageflow:
+trigger_skillshare-app:
   script:
-    - curl -X POST $PACKAGEFLOW_WEBHOOK_URL
+    - curl -X POST $SKILLSHARE_WEBHOOK_URL
 ```
 
 ### Slack Notifications
@@ -138,7 +138,7 @@ trigger_packageflow:
 Send workflow results to Slack:
 
 1. Create a Slack Incoming Webhook
-2. Add as outgoing webhook in PackageFlow
+2. Add as outgoing webhook in Skillshare App
 3. Customize the payload for Slack format
 
 **Slack Payload:**

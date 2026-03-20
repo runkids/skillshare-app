@@ -57,7 +57,7 @@ Triggers another workflow, enabling nested automation.
 - **Workflow**: Select the workflow to trigger
 - **Wait for completion**: Whether to wait before proceeding
 
-> Note: PackageFlow detects circular references and prevents infinite loops.
+> Note: Skillshare App detects circular references and prevents infinite loops.
 
 ## Connecting Nodes
 

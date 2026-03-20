@@ -1,12 +1,12 @@
 # 專案管理
 
-PackageFlow 自動偵測並管理您的 JavaScript/TypeScript 專案，為所有開發任務提供視覺化介面。
+Skillshare App 自動偵測並管理您的 JavaScript/TypeScript 專案，為所有開發任務提供視覺化介面。
 
 ## 匯入專案
 
 ### 拖放
 
-新增專案最快的方式是將資料夾拖曳到 PackageFlow 中。
+新增專案最快的方式是將資料夾拖曳到 Skillshare App 中。
 
 <!-- TODO: Add gif of drag and drop import -->
 
@@ -17,11 +17,11 @@ PackageFlow 自動偵測並管理您的 JavaScript/TypeScript 專案，為所有
 ### 需求
 
 - 資料夾必須包含 `package.json` 檔案
-- PackageFlow 將掃描目錄以取得專案元資料
+- Skillshare App 將掃描目錄以取得專案元資料
 
 ## 自動框架偵測
 
-PackageFlow 自動識別您專案的框架和工具：
+Skillshare App 自動識別您專案的框架和工具：
 
 ### 支援的框架
 
@@ -43,7 +43,7 @@ PackageFlow 自動識別您專案的框架和工具：
 
 ### UI 函式庫
 
-PackageFlow 也會偵測 UI 框架：
+Skillshare App 也會偵測 UI 框架：
 
 - React
 - Vue
@@ -55,7 +55,7 @@ PackageFlow 也會偵測 UI 框架：
 
 ## 專案資訊
 
-對於每個專案，PackageFlow 顯示：
+對於每個專案，Skillshare App 顯示：
 
 ### 基本資訊
 - **專案名稱** - 來自 `package.json`
@@ -78,13 +78,13 @@ PackageFlow 也會偵測 UI 框架：
 
 ### 移除專案
 
-從 PackageFlow 移除專案：
+從 Skillshare App 移除專案：
 
 1. 在側邊欄右鍵點擊專案
 2. 選擇**移除專案**
 3. 確認操作
 
-> 注意：這只會從 PackageFlow 移除專案，您的檔案不會被刪除。
+> 注意：這只會從 Skillshare App 移除專案，您的檔案不會被刪除。
 
 ### 刪除 node_modules
 
@@ -100,7 +100,7 @@ PackageFlow 也會偵測 UI 框架：
 
 ## 工作區套件（Monorepo）
 
-如果您的專案使用工作區（npm、yarn 或 pnpm），PackageFlow 將：
+如果您的專案使用工作區（npm、yarn 或 pnpm），Skillshare App 將：
 
 1. 偵測工作區設定
 2. 列出工作區中的所有套件
@@ -110,7 +110,7 @@ PackageFlow 也會偵測 UI 框架：
 
 ## 專案重新整理
 
-PackageFlow 監控 `package.json` 的變更。當偵測到變更時：
+Skillshare App 監控 `package.json` 的變更。當偵測到變更時：
 
 - 腳本自動更新
 - 重新計算依賴

@@ -1,6 +1,6 @@
 # Time Machine & Security Guardian
 
-PackageFlow's Time Machine feature automatically captures dependency snapshots when your lockfile changes, enabling you to track dependency evolution, detect security issues, and compare states over time.
+Skillshare App's Time Machine feature automatically captures dependency snapshots when your lockfile changes, enabling you to track dependency evolution, detect security issues, and compare states over time.
 
 ## Overview
 
@@ -27,7 +27,7 @@ You can also use the **Snapshots** quick-access button in the project header (cy
 
 ### 1. Automatic Snapshot Capture
 
-When a project's lockfile changes, PackageFlow automatically:
+When a project's lockfile changes, Skillshare App automatically:
 - Detects lockfile modification (package-lock.json, pnpm-lock.yaml, yarn.lock, bun.lockb)
 - Waits for debounce period (2 seconds by default)
 - Parses lockfile and extracts dependency tree
@@ -103,7 +103,7 @@ Search across all snapshots:
 Configure Time Machine in **Settings > Storage**:
 
 ### Auto-Watch
-Toggle automatic lockfile monitoring for all projects. When enabled, PackageFlow watches lockfiles and captures snapshots on changes.
+Toggle automatic lockfile monitoring for all projects. When enabled, Skillshare App watches lockfiles and captures snapshots on changes.
 
 ### Debounce
 Set the debounce period (default: 2000ms) to prevent rapid successive captures during install operations.
@@ -112,7 +112,7 @@ Set the debounce period (default: 2000ms) to prevent rapid successive captures d
 
 Snapshots are stored in:
 ```
-~/Library/Application Support/com.packageflow.app/time-machine/snapshots/
+~/Library/Application Support/com.skillshare.app/time-machine/snapshots/
 ```
 
 Each snapshot includes:

@@ -1,20 +1,20 @@
 # MCP 伺服器
 
-讓 AI 工具透過 Model Context Protocol（MCP）控制 PackageFlow。
+讓 AI 工具透過 Model Context Protocol（MCP）控制 Skillshare App。
 
 ## 什麼是 MCP？
 
-Model Context Protocol（MCP）是 AI 工具與應用程式互動的標準。PackageFlow 可以作為 MCP 伺服器，允許 AI 助手如：
+Model Context Protocol（MCP）是 AI 工具與應用程式互動的標準。Skillshare App 可以作為 MCP 伺服器，允許 AI 助手如：
 
 - Claude Code
 - Codex CLI
 - Gemini CLI
 
-以程式化方式查詢和控制 PackageFlow。
+以程式化方式查詢和控制 Skillshare App。
 
 ## 概覽
 
-啟用後，PackageFlow 公開 AI 助手可以呼叫的工具：
+啟用後，Skillshare App 公開 AI 助手可以呼叫的工具：
 
 - 列出專案
 - 執行腳本
@@ -90,7 +90,7 @@ AI 可以無需確認執行任何操作：
 | `run_security_scan` | 執行安全稽核（可選擇自動修復） | 中 |
 | `trigger_webhook` | 觸發已設定的 webhook action | 中 |
 
-> 提醒：PackageFlow 的 MCP 設計上會避免「任意 shell 執行」的預設暴露，建議優先使用 `run_npm_script` / `run_workflow` / `run_package_manager_command` 等高階工具。
+> 提醒：Skillshare App 的 MCP 設計上會避免「任意 shell 執行」的預設暴露，建議優先使用 `run_npm_script` / `run_workflow` / `run_package_manager_command` 等高階工具。
 
 ### 自訂工具存取
 
@@ -106,7 +106,7 @@ AI 可以無需確認執行任何操作：
 
 ### 支援的 AI CLI
 
-PackageFlow 偵測並整合：
+Skillshare App 偵測並整合：
 
 | CLI | 偵測 |
 |-----|------|
@@ -139,7 +139,7 @@ PackageFlow 偵測並整合：
 
 ## MCP 工具參考
 
-PackageFlow 透過 `packageflow-mcp` 提供多個工具給 AI 呼叫。工具清單會隨版本調整，建議以 App 內的 **Settings → MCP → Tool Permissions** 為準。
+Skillshare App 透過 `skillshare-mcp` 提供多個工具給 AI 呼叫。工具清單會隨版本調整，建議以 App 內的 **Settings → MCP → Tool Permissions** 為準。
 
 常見工具（節錄）：
 
@@ -217,7 +217,7 @@ PackageFlow 透過 `packageflow-mcp` 提供多個工具給 AI 呼叫。工具清
 
 - 檢查連接埠是否被使用
 - 嘗試不同的連接埠
-- 確保 PackageFlow 有網路權限
+- 確保 Skillshare App 有網路權限
 
 ### AI 無法連接
 

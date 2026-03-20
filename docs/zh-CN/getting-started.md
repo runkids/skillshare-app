@@ -1,37 +1,37 @@
 # 快速入门
 
-本指南将帮助您安装 PackageFlow 并开始使用您的第一个项目。
+本指南将帮助您安装 Skillshare App 并开始使用您的第一个项目。
 
-PackageFlow 是一个 AI 驱动的 `package.json` 项目管理工具：导入一次项目文件夹后，就能一键运行 scripts、管理 Git/worktree、创建工作流自动化，并且（可选）通过 MCP 让你的 AI 工具安全地调用动作。
+Skillshare App 是一个 AI 驱动的 `package.json` 项目管理工具：导入一次项目文件夹后，就能一键运行 scripts、管理 Git/worktree、创建工作流自动化，并且（可选）通过 MCP 让你的 AI 工具安全地调用动作。
 
 ## 安装
 
 ### Homebrew（推荐）
 
-在 macOS 上安装 PackageFlow 最简单的方式：
+在 macOS 上安装 Skillshare App 最简单的方式：
 
 ```bash
 brew tap runkids/tap
-brew install --cask packageflow
+brew install --cask skillshare-app
 ```
 
 #### 升级
 
 ```bash
 brew update
-brew upgrade --cask packageflow
+brew upgrade --cask skillshare-app
 ```
 
 ### 手动下载
 
-1. 前往 [Releases](https://github.com/runkids/PackageFlow/releases) 页面
+1. 前往 [Releases](https://github.com/runkids/skillshare-app/releases) 页面
 2. 下载最新的 `.dmg` 文件
-3. 打开 DMG 并将 PackageFlow 拖到应用程序文件夹
-4. 从应用程序启动 PackageFlow
+3. 打开 DMG 并将 Skillshare App 拖到应用程序文件夹
+4. 从应用程序启动 Skillshare App
 
 ## 首次启动
 
-首次打开 PackageFlow 时，您会看到空白的项目列表。
+首次打开 Skillshare App 时，您会看到空白的项目列表。
 
 <!-- TODO: Add screenshot of empty project list / welcome screen -->
 
@@ -41,7 +41,7 @@ brew upgrade --cask packageflow
 
 ### 方法 1：拖放
 
-只需将包含 `package.json` 的文件夹拖到 PackageFlow 窗口中。
+只需将包含 `package.json` 的文件夹拖到 Skillshare App 窗口中。
 
 <!-- TODO: Add screenshot/gif of drag and drop import -->
 
@@ -49,7 +49,7 @@ brew upgrade --cask packageflow
 
 1. 点击**导入项目**按钮
 2. 选择包含 `package.json` 的文件夹
-3. PackageFlow 将扫描并导入项目
+3. Skillshare App 将扫描并导入项目
 
 ## 了解界面
 

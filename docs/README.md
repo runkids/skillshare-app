@@ -1,23 +1,23 @@
-# PackageFlow Documentation
+# Skillshare App Documentation
 
-Welcome to the PackageFlow documentation! This guide will help you get the most out of PackageFlow.
+Welcome to the Skillshare App documentation! This guide will help you get the most out of Skillshare App.
 
 **Other Languages**: [繁體中文](./zh-TW/README.md) | [简体中文](./zh-CN/README.md)
 
 ## Quick Links
 
 - [Getting Started](./getting-started.md) - Install, import a project, run your first script
-- [MCP Server](./features/mcp-server.md) - Let AI tools control PackageFlow safely
+- [MCP Server](./features/mcp-server.md) - Let AI tools control Skillshare App safely
 - [Time Machine](./features/time-machine.md) - Dependency snapshots, integrity, security insights
 - [Security & Privacy](./security-and-privacy.md) - Local-first storage, encryption, permissions
 - [Troubleshooting](./troubleshooting.md) - Common issues and fixes
 - [Feature Guides](#features) - Deep dives for each feature area
 
-## What is PackageFlow?
+## What is Skillshare App?
 
 **Stop juggling terminal tabs. Start clicking.**
 
-PackageFlow is a visual DevOps hub for Node.js projects — one app to run scripts, manage Git, and deploy. The killer feature? **Your AI assistant can control it via MCP.**
+Skillshare App is a visual DevOps hub for Node.js projects — one app to run scripts, manage Git, and deploy. The killer feature? **Your AI assistant can control it via MCP.**
 
 **Built for the modern frontend workflow:**
 
@@ -32,7 +32,7 @@ PackageFlow is a visual DevOps hub for Node.js projects — one app to run scrip
 - Secrets (tokens / API keys) are encrypted at rest (AES-256-GCM)
 - MCP access is permissioned (read-only → confirm → full access)
 
-## Who is PackageFlow for?
+## Who is Skillshare App for?
 
 - **Frontend developers** tired of juggling terminal windows
 - **Vibe coders** who want to stay in flow, not memorize CLI commands
@@ -81,7 +81,7 @@ Use the docs below based on what you’re trying to do:
 | Feature | Description | Documentation |
 |---------|-------------|---------------|
 | **AI Integration** | Multi-provider AI (OpenAI, Anthropic, Gemini, Ollama) | [Read more](./features/ai-integration.md) |
-| **MCP Server** | Let Claude Code, Codex, Gemini CLI control PackageFlow | [Read more](./features/mcp-server.md) |
+| **MCP Server** | Let Claude Code, Codex, Gemini CLI control Skillshare App | [Read more](./features/mcp-server.md) |
 | **Webhooks** | Incoming/outgoing webhook automation | [Read more](./features/webhooks.md) |
 
 ### Tools & Settings
@@ -120,5 +120,5 @@ OpenAI, Anthropic, Google, Ollama, LM Studio
 
 ## Support
 
-- [GitHub Issues](https://github.com/runkids/PackageFlow/issues) - Bug reports and feature requests
-- [Releases](https://github.com/runkids/PackageFlow/releases) - Download latest version
+- [GitHub Issues](https://github.com/runkids/skillshare-app/issues) - Bug reports and feature requests
+- [Releases](https://github.com/runkids/skillshare-app/releases) - Download latest version

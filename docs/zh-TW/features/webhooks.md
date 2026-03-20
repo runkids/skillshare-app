@@ -4,7 +4,7 @@
 
 ## 概覽
 
-PackageFlow 支援兩種類型的 webhook：
+Skillshare App 支援兩種類型的 webhook：
 
 - **傳出**：事件發生時發送通知
 - **傳入**：從外部服務觸發工作流程
@@ -15,7 +15,7 @@ PackageFlow 支援兩種類型的 webhook：
 
 ### 什麼是傳出 Webhook？
 
-在 PackageFlow 事件發生時發送 HTTP 請求：
+在 Skillshare App 事件發生時發送 HTTP 請求：
 
 - 工作流程完成
 - 腳本結束
@@ -65,14 +65,14 @@ PackageFlow 支援兩種類型的 webhook：
 ### 測試 Webhook
 
 1. 點擊 webhook 上的**測試**
-2. PackageFlow 發送測試 payload
+2. Skillshare App 發送測試 payload
 3. 查看回應狀態
 
 ## 傳入 Webhooks
 
 ### 什麼是傳入 Webhook？
 
-呼叫時觸發 PackageFlow 操作的 URL：
+呼叫時觸發 Skillshare App 操作的 URL：
 
 - 啟動工作流程
 - 執行腳本
@@ -83,7 +83,7 @@ PackageFlow 支援兩種類型的 webhook：
 1. 開啟工作流程
 2. 點擊**設定** → **觸發器**
 3. 點擊**新增 Webhook 觸發器**
-4. PackageFlow 產生唯一 URL
+4. Skillshare App 產生唯一 URL
 5. 複製 URL
 
 <!-- TODO: Add screenshot of incoming webhook URL -->
@@ -113,20 +113,20 @@ http://localhost:{port}/webhook/{token}
 
 ### CI/CD 整合
 
-從 CI 觸發 PackageFlow 工作流程：
+從 CI 觸發 Skillshare App 工作流程：
 
 **GitHub Actions：**
 ```yaml
-- name: Trigger PackageFlow
+- name: Trigger Skillshare App
   run: |
     curl -X POST https://your-webhook-url
 ```
 
 **GitLab CI：**
 ```yaml
-trigger_packageflow:
+trigger_skillshare-app:
   script:
-    - curl -X POST $PACKAGEFLOW_WEBHOOK_URL
+    - curl -X POST $SKILLSHARE_WEBHOOK_URL
 ```
 
 ### Slack 通知
@@ -134,7 +134,7 @@ trigger_packageflow:
 將工作流程結果發送到 Slack：
 
 1. 建立 Slack 傳入 Webhook
-2. 在 PackageFlow 中新增為傳出 webhook
+2. 在 Skillshare App 中新增為傳出 webhook
 3. 自訂 Slack 格式的 payload
 
 **Slack Payload：**

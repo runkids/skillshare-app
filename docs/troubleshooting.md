@@ -6,7 +6,7 @@ Common issues and quick fixes.
 
 ### Homebrew install fails
 
-- Run `brew update` then retry `brew install --cask packageflow`
+- Run `brew update` then retry `brew install --cask skillshare-app`
 - If the tap is missing: `brew tap runkids/tap`
 
 ### macOS blocks the app (Gatekeeper)
@@ -24,7 +24,7 @@ If macOS warns the app is from an unidentified developer:
 ### Project won’t import
 
 - Ensure the folder contains a `package.json` at its root
-- Make sure PackageFlow has permission to access that folder (System Settings → Privacy & Security)
+- Make sure Skillshare App has permission to access that folder (System Settings → Privacy & Security)
 - Try importing a smaller repo first to validate basic behavior
 
 ### Scripts don’t show up / outdated
@@ -50,13 +50,13 @@ If macOS warns the app is from an unidentified developer:
 
 ### AI client can’t connect
 
-- In PackageFlow, open **Settings → MCP → MCP Integration** and copy the generated config
-- Ensure your MCP client points to the exact `packageflow-mcp` path shown in Settings
+- In Skillshare App, open **Settings → MCP → MCP Integration** and copy the generated config
+- Ensure your MCP client points to the exact `skillshare-mcp` path shown in Settings
 - Start with **Read Only** mode to validate connectivity
 
 ### Claude Desktop / VS Code config path confusion
 
-PackageFlow shows the correct file path hints in the MCP quick setup UI.
+Skillshare App shows the correct file path hints in the MCP quick setup UI.
 
 <!-- TODO: Add screenshot of MCP quick setup section (paths + copy buttons). -->
 
@@ -71,10 +71,10 @@ PackageFlow shows the correct file path hints in the MCP quick setup UI.
 ## Still Stuck?
 
 - Check `docs/getting-started.md`
-- Search existing issues: https://github.com/runkids/PackageFlow/issues
+- Search existing issues: https://github.com/runkids/skillshare-app/issues
 - Open a new issue with:
   - macOS version
-  - PackageFlow version
+  - Skillshare App version
   - Steps to reproduce
   - Screenshots/logs (redact secrets)
 

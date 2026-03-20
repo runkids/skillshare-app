@@ -4,7 +4,7 @@
 
 ## 概覽
 
-PackageFlow 幫助您管理開發工具鏈：
+Skillshare App 幫助您管理開發工具鏈：
 
 - Node.js 版本偵測
 - 套件管理器偵測
@@ -17,7 +17,7 @@ PackageFlow 幫助您管理開發工具鏈：
 
 ### Node.js
 
-PackageFlow 偵測：
+Skillshare App 偵測：
 - 已安裝的 Node.js 版本
 - 專案需要的版本（來自 `package.json` → `engines`）
 - 版本管理器設定
@@ -43,7 +43,7 @@ PackageFlow 偵測：
 
 ### Volta
 
-PackageFlow 與 Volta 深度整合：
+Skillshare App 與 Volta 深度整合：
 
 **功能：**
 - 從 `package.json` 讀取 Volta 設定
@@ -77,7 +77,7 @@ PackageFlow 與 Volta 深度整合：
 
 ### Corepack
 
-PackageFlow 偵測 Corepack 狀態：
+Skillshare App 偵測 Corepack 狀態：
 
 **功能：**
 - 檢查 Corepack 是否啟用
@@ -86,7 +86,7 @@ PackageFlow 偵測 Corepack 狀態：
 
 ## 衝突偵測
 
-PackageFlow 自動偵測常見衝突：
+Skillshare App 自動偵測常見衝突：
 
 ### Volta + Corepack 衝突
 
@@ -97,7 +97,7 @@ PackageFlow 自動偵測常見衝突：
 - 效能下降
 
 **解決方案：**
-1. PackageFlow 顯示警告
+1. Skillshare App 顯示警告
 2. 選擇其一：Volta 或 Corepack
 3. 按照建議的步驟
 
@@ -112,7 +112,7 @@ PackageFlow 自動偵測常見衝突：
 - 版本不匹配錯誤
 
 **解決方案：**
-1. PackageFlow 識別衝突
+1. Skillshare App 識別衝突
 2. 顯示涉及的環境變數
 3. 提供修復指令
 
@@ -170,7 +170,7 @@ PackageFlow 自動偵測常見衝突：
 
 ### 每個專案覆寫
 
-PackageFlow 尊重專案特定設定：
+Skillshare App 尊重專案特定設定：
 - Lock 檔案決定套件管理器
 - Volta 設定優先
 - 可手動覆寫
@@ -189,7 +189,7 @@ PackageFlow 尊重專案特定設定：
 
 ## 指令
 
-PackageFlow 根據您的工具鏈產生正確的指令：
+Skillshare App 根據您的工具鏈產生正確的指令：
 
 ### 使用 Volta
 

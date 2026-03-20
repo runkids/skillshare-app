@@ -4,7 +4,7 @@
 
 ## 概览
 
-PackageFlow 集成热门托管平台，支持：
+Skillshare App 集成热门托管平台，支持：
 
 - 一键部署
 - 即时预览链接
@@ -28,7 +28,7 @@ PackageFlow 集成热门托管平台，支持：
 1. 前往**设置** → **部署账户**
 2. 点击**添加账户** → **Netlify**
 3. 点击**连接 Netlify**
-4. 在浏览器中授权 PackageFlow
+4. 在浏览器中授权 Skillshare App
 5. 账户已连接
 
 <!-- TODO: Add screenshot of Netlify OAuth flow -->
@@ -61,7 +61,7 @@ PackageFlow 集成热门托管平台，支持：
 
 ### 自动检测
 
-PackageFlow 自动检测您的框架并建议：
+Skillshare App 自动检测您的框架并建议：
 
 - 构建命令（例如 `npm run build`）
 - 输出目录（例如 `dist`、`.next`、`build`）
@@ -169,7 +169,7 @@ PackageFlow 自动检测您的框架并建议：
 
 ## GitHub Pages
 
-GitHub Pages 运作方式不同 — PackageFlow 生成 GitHub Actions 工作流。
+GitHub Pages 运作方式不同 — Skillshare App 生成 GitHub Actions 工作流。
 
 ### 设置
 

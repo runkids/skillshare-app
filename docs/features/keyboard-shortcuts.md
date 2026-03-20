@@ -1,10 +1,10 @@
 # Keyboard Shortcuts
 
-Complete reference for all keyboard shortcuts in PackageFlow.
+Complete reference for all keyboard shortcuts in Skillshare App.
 
 ## Overview
 
-PackageFlow is designed for keyboard-first workflows. Learn these shortcuts to navigate faster.
+Skillshare App is designed for keyboard-first workflows. Learn these shortcuts to navigate faster.
 
 <p align="center">
   <img src="../screenshots/custom-keyboard-shortcuts.png" width="900" alt="Keyboard shortcuts" />
@@ -101,7 +101,7 @@ Press <kbd>Cmd</kbd> + <kbd>/</kbd> at any time to see all available shortcuts.
 
 ### Conflict Detection
 
-PackageFlow warns you when:
+Skillshare App warns you when:
 - A shortcut conflicts with another
 - A shortcut may conflict with system shortcuts
 
@@ -156,7 +156,7 @@ The floating shortcut button (bottom right) shows context-specific shortcuts.
 
 ### Focus Management
 
-PackageFlow maintains proper focus order for keyboard navigation.
+Skillshare App maintains proper focus order for keyboard navigation.
 
 ### Screen Reader Support
 
@@ -191,7 +191,7 @@ Some system shortcuts take precedence:
 - <kbd>Cmd</kbd> + <kbd>Space</kbd> (Spotlight)
 - <kbd>Cmd</kbd> + <kbd>Tab</kbd> (App switcher)
 
-PackageFlow cannot override these.
+Skillshare App cannot override these.
 
 ### Custom Shortcut Not Saving
 

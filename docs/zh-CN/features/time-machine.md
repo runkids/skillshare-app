@@ -1,6 +1,6 @@
 # 时间机器与安全守护
 
-PackageFlow 的「时间机器（Time Machine）」会在 lockfile 变更时自动捕获依赖快照，让你追踪依赖演进、检测潜在风险，并在不同状态之间对比差异。
+Skillshare App 的「时间机器（Time Machine）」会在 lockfile 变更时自动捕获依赖快照，让你追踪依赖演进、检测潜在风险，并在不同状态之间对比差异。
 
 ## 概览
 
@@ -28,7 +28,7 @@ Scripts | Workspaces | Workflows | Git | Builds | Security | Deploy | Snapshots
 
 ### 1) 自动捕获快照
 
-当项目的 lockfile 发生变更时，PackageFlow 会自动：
+当项目的 lockfile 发生变更时，Skillshare App 会自动：
 
 - 检测 lockfile 变更（package-lock.json、pnpm-lock.yaml、yarn.lock、bun.lockb）
 - 等待 debounce（默认 2 秒）
@@ -116,7 +116,7 @@ Scripts | Workspaces | Workflows | Git | Builds | Security | Deploy | Snapshots
 
 ### Auto-Watch
 
-控制是否对所有项目启用 lockfile 自动监控。启用后，PackageFlow 会监视 lockfile 并在变更时捕获快照。
+控制是否对所有项目启用 lockfile 自动监控。启用后，Skillshare App 会监视 lockfile 并在变更时捕获快照。
 
 ### Debounce
 
@@ -127,7 +127,7 @@ Scripts | Workspaces | Workflows | Git | Builds | Security | Deploy | Snapshots
 快照存放在：
 
 ```
-~/Library/Application Support/com.packageflow.app/time-machine/snapshots/
+~/Library/Application Support/com.skillshare.app/time-machine/snapshots/
 ```
 
 每个快照包含：

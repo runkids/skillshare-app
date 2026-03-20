@@ -1,10 +1,10 @@
 # AI 整合
 
-連接多個 AI 供應商，並在整個 PackageFlow 中使用智慧輔助。
+連接多個 AI 供應商，並在整個 Skillshare App 中使用智慧輔助。
 
 ## 概覽
 
-PackageFlow 支援多個 AI 供應商用於智慧功能，如：
+Skillshare App 支援多個 AI 供應商用於智慧功能，如：
 
 - 提交訊息產生
 - 程式碼審查分析
@@ -115,7 +115,7 @@ AI 驅動的程式碼審查：
 
 ## AI CLI 整合
 
-PackageFlow 整合 AI CLI 工具以增強功能。
+Skillshare App 整合 AI CLI 工具以增強功能。
 
 ### 支援的 CLI 工具
 
@@ -127,7 +127,7 @@ PackageFlow 整合 AI CLI 工具以增強功能。
 
 ### 自動偵測
 
-PackageFlow 自動偵測已安裝的 CLI 工具：
+Skillshare App 自動偵測已安裝的 CLI 工具：
 
 1. 前往**設定** → **AI 服務**
 2. 檢視 **CLI 工具** 區段
@@ -155,7 +155,7 @@ PackageFlow 自動偵測已安裝的 CLI 工具：
 
 ### 預設範本
 
-PackageFlow 包含以下範本：
+Skillshare App 包含以下範本：
 
 - Git 提交訊息
 - Pull request 描述
@@ -238,7 +238,7 @@ Diff：
 
 ## AI 執行模式
 
-PackageFlow 支援兩種執行模式：
+Skillshare App 支援兩種執行模式：
 
 ### API 模式（預設）
 
@@ -269,7 +269,7 @@ PackageFlow 支援兩種執行模式：
 驗證您的 API key 有效：
 
 1. 點擊服務上的**測試連接**
-2. PackageFlow 發送簡單請求
+2. Skillshare App 發送簡單請求
 3. 顯示成功或錯誤詳情
 
 ### 模型探測

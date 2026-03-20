@@ -4,7 +4,7 @@
 
 ## 概览
 
-您 `package.json` 中的每个脚本都会成为 PackageFlow 中可点击的卡片。不再需要输入命令 — 只需点击并观看。
+您 `package.json` 中的每个脚本都会成为 Skillshare App 中可点击的卡片。不再需要输入命令 — 只需点击并观看。
 
 <!-- TODO: Add screenshot of script cards -->
 
@@ -33,7 +33,7 @@
 
 ### PTY（伪终端）
 
-PackageFlow 使用 PTY 实现真正的终端模拟：
+Skillshare App 使用 PTY 实现真正的终端模拟：
 
 - **颜色**：完整 ANSI 颜色支持
 - **交互**：支持交互式提示
@@ -60,13 +60,13 @@ PackageFlow 使用 PTY 实现真正的终端模拟：
 
 ## 端口管理
 
-PackageFlow 自动检测脚本使用的端口。
+Skillshare App 自动检测脚本使用的端口。
 
 ### 端口冲突检测
 
 如果脚本尝试使用已被占用的端口：
 
-1. PackageFlow 检测到冲突
+1. Skillshare App 检测到冲突
 2. 显示哪个进程正在使用该端口
 3. 提供终止冲突进程的选项
 
@@ -108,7 +108,7 @@ PackageFlow 自动检测脚本使用的端口。
 脚本使用您系统的环境变量运行。要自定义：
 
 1. 在项目根目录创建 `.env` 文件
-2. PackageFlow 会自动加载这些变量
+2. Skillshare App 会自动加载这些变量
 
 ## 运行多个脚本
 

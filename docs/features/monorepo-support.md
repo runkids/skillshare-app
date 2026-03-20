@@ -1,10 +1,10 @@
 # Monorepo Support
 
-PackageFlow provides first-class support for monorepo tools including Nx, Turborepo, Lerna, and native workspaces.
+Skillshare App provides first-class support for monorepo tools including Nx, Turborepo, Lerna, and native workspaces.
 
 ## Overview
 
-Monorepos are automatically detected when you import a project. PackageFlow identifies:
+Monorepos are automatically detected when you import a project. Skillshare App identifies:
 
 - Workspace configuration
 - All packages in the monorepo
@@ -25,7 +25,7 @@ Monorepos are automatically detected when you import a project. PackageFlow iden
 
 ### Detection
 
-PackageFlow detects Nx projects by:
+Skillshare App detects Nx projects by:
 - `nx.json` in the root
 - `@nx/*` packages in dependencies
 
@@ -64,7 +64,7 @@ View the project dependency graph:
 
 ### Detection
 
-PackageFlow detects Turbo projects by:
+Skillshare App detects Turbo projects by:
 - `turbo.json` in the root
 - `turbo` in dependencies
 
@@ -101,7 +101,7 @@ Run tasks on specific packages:
 
 ### Detection
 
-PackageFlow detects Lerna projects by:
+Skillshare App detects Lerna projects by:
 - `lerna.json` in the root
 - `lerna` in dependencies
 
@@ -113,7 +113,7 @@ PackageFlow detects Lerna projects by:
 
 ## Native Workspaces
 
-PackageFlow supports workspaces from:
+Skillshare App supports workspaces from:
 
 | Package Manager | Config Location |
 |-----------------|-----------------|
@@ -176,7 +176,7 @@ Filter packages by various criteria:
 1. **Use the dependency graph**: Understand relationships before making changes
 2. **Clear cache when stuck**: Stale cache can cause confusing issues
 3. **Filter for speed**: Run tasks only on affected packages
-4. **Check before publish**: Use Lerna's version commands through PackageFlow
+4. **Check before publish**: Use Lerna's version commands through Skillshare App
 
 ## Troubleshooting
 

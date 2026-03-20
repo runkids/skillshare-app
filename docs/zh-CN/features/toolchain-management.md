@@ -4,7 +4,7 @@
 
 ## 概览
 
-PackageFlow 帮助您管理开发工具链：
+Skillshare App 帮助您管理开发工具链：
 
 - Node.js 版本检测
 - 包管理器检测
@@ -17,7 +17,7 @@ PackageFlow 帮助您管理开发工具链：
 
 ### Node.js
 
-PackageFlow 检测：
+Skillshare App 检测：
 - 已安装的 Node.js 版本
 - 项目需要的版本（来自 `package.json` → `engines`）
 - 版本管理器配置
@@ -43,7 +43,7 @@ PackageFlow 检测：
 
 ### Volta
 
-PackageFlow 与 Volta 深度集成：
+Skillshare App 与 Volta 深度集成：
 
 **功能：**
 - 从 `package.json` 读取 Volta 配置
@@ -77,7 +77,7 @@ PackageFlow 与 Volta 深度集成：
 
 ### Corepack
 
-PackageFlow 检测 Corepack 状态：
+Skillshare App 检测 Corepack 状态：
 
 **功能：**
 - 检查 Corepack 是否启用
@@ -86,7 +86,7 @@ PackageFlow 检测 Corepack 状态：
 
 ## 冲突检测
 
-PackageFlow 自动检测常见冲突：
+Skillshare App 自动检测常见冲突：
 
 ### Volta + Corepack 冲突
 
@@ -97,7 +97,7 @@ PackageFlow 自动检测常见冲突：
 - 性能下降
 
 **解决方案：**
-1. PackageFlow 显示警告
+1. Skillshare App 显示警告
 2. 选择其一：Volta 或 Corepack
 3. 按照建议的步骤
 
@@ -112,7 +112,7 @@ PackageFlow 自动检测常见冲突：
 - 版本不匹配错误
 
 **解决方案：**
-1. PackageFlow 识别冲突
+1. Skillshare App 识别冲突
 2. 显示涉及的环境变量
 3. 提供修复命令
 
@@ -170,7 +170,7 @@ PackageFlow 自动检测常见冲突：
 
 ### 每个项目覆盖
 
-PackageFlow 尊重项目特定设置：
+Skillshare App 尊重项目特定设置：
 - Lock 文件决定包管理器
 - Volta 配置优先
 - 可手动覆盖
@@ -189,7 +189,7 @@ PackageFlow 尊重项目特定设置：
 
 ## 命令
 
-PackageFlow 根据您的工具链生成正确的命令：
+Skillshare App 根据您的工具链生成正确的命令：
 
 ### 使用 Volta
 

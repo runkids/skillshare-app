@@ -1,12 +1,12 @@
 # 项目管理
 
-PackageFlow 自动检测并管理您的 JavaScript/TypeScript 项目，为所有开发任务提供可视化界面。
+Skillshare App 自动检测并管理您的 JavaScript/TypeScript 项目，为所有开发任务提供可视化界面。
 
 ## 导入项目
 
 ### 拖放
 
-添加项目最快的方式是将文件夹拖到 PackageFlow 中。
+添加项目最快的方式是将文件夹拖到 Skillshare App 中。
 
 <!-- TODO: Add gif of drag and drop import -->
 
@@ -17,11 +17,11 @@ PackageFlow 自动检测并管理您的 JavaScript/TypeScript 项目，为所有
 ### 要求
 
 - 文件夹必须包含 `package.json` 文件
-- PackageFlow 将扫描目录以获取项目元数据
+- Skillshare App 将扫描目录以获取项目元数据
 
 ## 自动框架检测
 
-PackageFlow 自动识别您项目的框架和工具：
+Skillshare App 自动识别您项目的框架和工具：
 
 ### 支持的框架
 
@@ -43,7 +43,7 @@ PackageFlow 自动识别您项目的框架和工具：
 
 ### UI 库
 
-PackageFlow 也会检测 UI 框架：
+Skillshare App 也会检测 UI 框架：
 
 - React
 - Vue
@@ -55,7 +55,7 @@ PackageFlow 也会检测 UI 框架：
 
 ## 项目信息
 
-对于每个项目，PackageFlow 显示：
+对于每个项目，Skillshare App 显示：
 
 ### 基本信息
 - **项目名称** - 来自 `package.json`
@@ -78,13 +78,13 @@ PackageFlow 也会检测 UI 框架：
 
 ### 移除项目
 
-从 PackageFlow 移除项目：
+从 Skillshare App 移除项目：
 
 1. 在侧边栏右键点击项目
 2. 选择**移除项目**
 3. 确认操作
 
-> 注意：这只会从 PackageFlow 移除项目，您的文件不会被删除。
+> 注意：这只会从 Skillshare App 移除项目，您的文件不会被删除。
 
 ### 删除 node_modules
 
@@ -100,7 +100,7 @@ PackageFlow 也会检测 UI 框架：
 
 ## 工作区包（Monorepo）
 
-如果您的项目使用工作区（npm、yarn 或 pnpm），PackageFlow 将：
+如果您的项目使用工作区（npm、yarn 或 pnpm），Skillshare App 将：
 
 1. 检测工作区配置
 2. 列出工作区中的所有包
@@ -110,7 +110,7 @@ PackageFlow 也会检测 UI 框架：
 
 ## 项目刷新
 
-PackageFlow 监控 `package.json` 的变更。当检测到变更时：
+Skillshare App 监控 `package.json` 的变更。当检测到变更时：
 
 - 脚本自动更新
 - 重新计算依赖

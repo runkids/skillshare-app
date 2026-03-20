@@ -1,10 +1,10 @@
 # AI Integration
 
-Connect multiple AI providers and use intelligent assistance throughout PackageFlow.
+Connect multiple AI providers and use intelligent assistance throughout Skillshare App.
 
 ## Overview
 
-PackageFlow supports multiple AI providers for intelligent features like:
+Skillshare App supports multiple AI providers for intelligent features like:
 
 - Commit message generation
 - Code review analysis
@@ -102,7 +102,7 @@ Click a chip to send that prompt instantly.
 
 ### MCP Operations
 
-The AI can execute PackageFlow operations with your approval:
+The AI can execute Skillshare App operations with your approval:
 
 1. Ask the AI to perform an action (e.g., "run the test script")
 2. AI proposes the action with details
@@ -233,7 +233,7 @@ Generate a comprehensive overview of all vulnerabilities:
 
 ## AI CLI Integration
 
-PackageFlow integrates with AI CLI tools for enhanced functionality.
+Skillshare App integrates with AI CLI tools for enhanced functionality.
 
 ### Supported CLI Tools
 
@@ -245,7 +245,7 @@ PackageFlow integrates with AI CLI tools for enhanced functionality.
 
 ### Auto-Detection
 
-PackageFlow automatically detects installed CLI tools:
+Skillshare App automatically detects installed CLI tools:
 
 1. Go to **Settings** → **AI Services**
 2. View **CLI Tools** section
@@ -273,7 +273,7 @@ Customize how AI generates content with templates.
 
 ### Default Templates
 
-PackageFlow includes templates for:
+Skillshare App includes templates for:
 
 - Git commit messages
 - Pull request descriptions
@@ -357,7 +357,7 @@ Override templates for specific projects:
 
 ## AI Execution Modes
 
-PackageFlow supports two execution modes:
+Skillshare App supports two execution modes:
 
 ### API Mode (Default)
 
@@ -388,7 +388,7 @@ Uses installed AI CLI tools:
 Verify your API key works:
 
 1. Click **Test Connection** on a service
-2. PackageFlow sends a simple request
+2. Skillshare App sends a simple request
 3. Shows success or error details
 
 ### Model Probe

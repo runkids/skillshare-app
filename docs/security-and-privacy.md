@@ -1,10 +1,10 @@
 # Security & Privacy
 
-PackageFlow is designed to be **local-first**: your projects stay on your machine, and AI/MCP features are opt-in and permissioned.
+Skillshare App is designed to be **local-first**: your projects stay on your machine, and AI/MCP features are opt-in and permissioned.
 
 <!-- TODO: Add screenshot of Settings → Security / Permissions (if you have one). -->
 
-## What PackageFlow Stores
+## What Skillshare App Stores
 
 ### On Your Machine
 
@@ -16,9 +16,9 @@ PackageFlow is designed to be **local-first**: your projects stay on your machin
 
 ### Where It’s Stored (macOS)
 
-PackageFlow stores app data under the OS app data directory (typically):
+Skillshare App stores app data under the OS app data directory (typically):
 
-- `~/Library/Application Support/com.packageflow.PackageFlow-macOS/`
+- `~/Library/Application Support/com.skillshare-app.Skillshare App-macOS/`
 
 > Note: the exact folder name may change between platforms/build variants.
 
@@ -41,7 +41,7 @@ Recommendations:
 
 ## MCP Security Model
 
-PackageFlow exposes an MCP server (`packageflow-mcp`) so AI tools can call actions.
+Skillshare App exposes an MCP server (`skillshare-mcp`) so AI tools can call actions.
 
 ### Permission Levels
 
@@ -55,13 +55,13 @@ You can allow/confirm/block individual tools (e.g. `run_workflow`, `run_npm_scri
 
 ### Request Logging
 
-PackageFlow can log MCP requests (tool name, parameters, duration, result) so you can audit what your AI tool did.
+Skillshare App can log MCP requests (tool name, parameters, duration, result) so you can audit what your AI tool did.
 
 <!-- TODO: Add screenshot of MCP logs panel. -->
 
 ## No Telemetry by Default
 
-PackageFlow is built to avoid “phone home” analytics by default. Network access is primarily used for:
+Skillshare App is built to avoid “phone home” analytics by default. Network access is primarily used for:
 
 - AI provider calls (if enabled)
 - Deployment providers (if enabled)
@@ -69,9 +69,9 @@ PackageFlow is built to avoid “phone home” analytics by default. Network acc
 
 ## Reset / Data Removal
 
-- Remove a project from PackageFlow to forget it (your files are not deleted)
+- Remove a project from Skillshare App to forget it (your files are not deleted)
 - Disable AI/MCP if you don’t want any integrations
-- To fully reset: delete the app data directory for PackageFlow
+- To fully reset: delete the app data directory for Skillshare App
 
 ## Reporting Security Issues
 

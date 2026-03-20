@@ -4,7 +4,7 @@
 
 ## 概覽
 
-您 `package.json` 中的每個腳本都會成為 PackageFlow 中可點擊的卡片。不再需要輸入指令 — 只需點擊並觀看。
+您 `package.json` 中的每個腳本都會成為 Skillshare App 中可點擊的卡片。不再需要輸入指令 — 只需點擊並觀看。
 
 <!-- TODO: Add screenshot of script cards -->
 
@@ -33,7 +33,7 @@
 
 ### PTY（偽終端）
 
-PackageFlow 使用 PTY 實現真正的終端機模擬：
+Skillshare App 使用 PTY 實現真正的終端機模擬：
 
 - **顏色**：完整 ANSI 顏色支援
 - **互動**：支援互動式提示
@@ -60,13 +60,13 @@ PackageFlow 使用 PTY 實現真正的終端機模擬：
 
 ## 連接埠管理
 
-PackageFlow 自動偵測腳本使用的連接埠。
+Skillshare App 自動偵測腳本使用的連接埠。
 
 ### 連接埠衝突偵測
 
 如果腳本嘗試使用已被佔用的連接埠：
 
-1. PackageFlow 偵測到衝突
+1. Skillshare App 偵測到衝突
 2. 顯示哪個程序正在使用該連接埠
 3. 提供終止衝突程序的選項
 
@@ -108,7 +108,7 @@ PackageFlow 自動偵測腳本使用的連接埠。
 腳本使用您系統的環境變數執行。要自訂：
 
 1. 在專案根目錄建立 `.env` 檔案
-2. PackageFlow 會自動載入這些變數
+2. Skillshare App 會自動載入這些變數
 
 ## 執行多個腳本
 

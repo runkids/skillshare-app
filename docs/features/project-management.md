@@ -1,12 +1,12 @@
 # Project Management
 
-PackageFlow automatically detects and manages your JavaScript/TypeScript projects, providing a visual interface for all your development tasks.
+Skillshare App automatically detects and manages your JavaScript/TypeScript projects, providing a visual interface for all your development tasks.
 
 ## Importing Projects
 
 ### Drag and Drop
 
-The quickest way to add a project is to drag a folder into PackageFlow.
+The quickest way to add a project is to drag a folder into Skillshare App.
 
 <p align="center">
   <img src="../screenshots/scripts.png" width="900" alt="Projects list and script cards" />
@@ -21,11 +21,11 @@ Click the **Import Project** button in the sidebar to browse and select a projec
 ### Requirements
 
 - The folder must contain a `package.json` file
-- PackageFlow will scan the directory for project metadata
+- Skillshare App will scan the directory for project metadata
 
 ## Automatic Framework Detection
 
-PackageFlow automatically identifies your project's framework and tools:
+Skillshare App automatically identifies your project's framework and tools:
 
 ### Supported Frameworks
 
@@ -47,7 +47,7 @@ PackageFlow automatically identifies your project's framework and tools:
 
 ### UI Libraries
 
-PackageFlow also detects UI frameworks:
+Skillshare App also detects UI frameworks:
 
 - React
 - Vue
@@ -59,7 +59,7 @@ PackageFlow also detects UI frameworks:
 
 ## Project Information
 
-For each project, PackageFlow displays:
+For each project, Skillshare App displays:
 
 ### Basic Info
 - **Project name** - From `package.json`
@@ -82,13 +82,13 @@ For each project, PackageFlow displays:
 
 ### Remove a Project
 
-To remove a project from PackageFlow:
+To remove a project from Skillshare App:
 
 1. Right-click on the project in the sidebar
 2. Select **Remove Project**
 3. Confirm the action
 
-> Note: This only removes the project from PackageFlow. Your files are not deleted.
+> Note: This only removes the project from Skillshare App. Your files are not deleted.
 
 ### Delete node_modules
 
@@ -104,7 +104,7 @@ This is useful for cleaning up projects you're not actively working on.
 
 ## Workspace Packages (Monorepo)
 
-If your project uses workspaces (npm, yarn, or pnpm), PackageFlow will:
+If your project uses workspaces (npm, yarn, or pnpm), Skillshare App will:
 
 1. Detect the workspace configuration
 2. List all packages in the workspace
@@ -114,7 +114,7 @@ See [Monorepo Support](./monorepo-support.md) for more details.
 
 ## Project Refresh
 
-PackageFlow watches for changes to `package.json`. When changes are detected:
+Skillshare App watches for changes to `package.json`. When changes are detected:
 
 - Scripts are automatically updated
 - Dependencies are recalculated

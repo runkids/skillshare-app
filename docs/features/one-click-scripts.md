@@ -4,7 +4,7 @@ Turn your npm scripts into clickable buttons with live terminal output.
 
 ## Overview
 
-Every script in your `package.json` becomes a clickable card in PackageFlow. No more typing commands — just click and watch.
+Every script in your `package.json` becomes a clickable card in Skillshare App. No more typing commands — just click and watch.
 
 <p align="center">
   <img src="../screenshots/scripts.png" width="900" alt="Script cards" />
@@ -37,7 +37,7 @@ The terminal panel opens automatically, showing live output.
 
 ### PTY (Pseudo-Terminal)
 
-PackageFlow uses PTY for true terminal emulation:
+Skillshare App uses PTY for true terminal emulation:
 
 - **Colors**: Full ANSI color support
 - **Interactive**: Supports interactive prompts
@@ -64,13 +64,13 @@ Use the **Stop All** button in the status bar to terminate all running scripts a
 
 ## Port Management
 
-PackageFlow automatically detects ports used by your scripts.
+Skillshare App automatically detects ports used by your scripts.
 
 ### Port Conflict Detection
 
 If a script tries to use a port that's already in use:
 
-1. PackageFlow detects the conflict
+1. Skillshare App detects the conflict
 2. Shows which process is using the port
 3. Offers to kill the conflicting process
 
@@ -112,7 +112,7 @@ Scripts are automatically organized by common patterns:
 Scripts run with your system's environment variables. To customize:
 
 1. Create a `.env` file in your project root
-2. PackageFlow will load these variables automatically
+2. Skillshare App will load these variables automatically
 
 ## Running Multiple Scripts
 

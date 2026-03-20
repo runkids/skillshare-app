@@ -14,7 +14,7 @@ You can have multiple branches open simultaneously.
 
 ## Overview
 
-PackageFlow makes worktrees visual and easy to manage:
+Skillshare App makes worktrees visual and easy to manage:
 
 <p align="center">
   <img src="../screenshots/worktree.png" width="900" alt="Worktree list" />
@@ -104,7 +104,7 @@ Save common worktree configurations as templates for quick creation.
 
 ## Worktree Sessions
 
-PackageFlow tracks your worktree sessions, remembering:
+Skillshare App tracks your worktree sessions, remembering:
 
 - Open terminals
 - Running scripts
@@ -118,7 +118,7 @@ PackageFlow tracks your worktree sessions, remembering:
 
 When switching back to a worktree:
 
-1. PackageFlow detects the previous session
+1. Skillshare App detects the previous session
 2. Offers to restore your context
 3. Reopens terminals and restores state
 
@@ -153,7 +153,7 @@ The worktree card shows if you're behind the main branch.
 
 If conflicts occur during sync:
 
-1. PackageFlow shows conflicted files
+1. Skillshare App shows conflicted files
 2. Resolve conflicts in the Git panel
 3. Continue the rebase/merge
 
@@ -185,7 +185,7 @@ Open a worktree in your preferred terminal:
 
 1. Right-click a worktree
 2. Select **Delete**
-3. PackageFlow checks for:
+3. Skillshare App checks for:
    - Uncommitted changes
    - Unpushed commits
 4. Confirm deletion
@@ -201,7 +201,7 @@ If you have uncommitted changes, you can force delete:
 
 ## Health Check
 
-PackageFlow monitors worktree health:
+Skillshare App monitors worktree health:
 
 ### Checks Performed
 
@@ -215,7 +215,7 @@ PackageFlow monitors worktree health:
 If problems are detected:
 
 1. Click **Fix Issues** on the worktree
-2. PackageFlow attempts automatic repair
+2. Skillshare App attempts automatic repair
 3. Manual steps are shown if needed
 
 <!-- TODO: Add screenshot of health check warnings -->
@@ -226,7 +226,7 @@ If problems are detected:
 2. **Create templates**: Save time on repetitive patterns
 3. **Sync regularly**: Avoid large merge conflicts
 4. **Clean up old worktrees**: Delete worktrees for merged branches
-5. **Use sessions**: Let PackageFlow remember your context
+5. **Use sessions**: Let Skillshare App remember your context
 
 ## Common Workflows
 

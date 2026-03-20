@@ -4,7 +4,7 @@ Deploy your projects to Netlify, Cloudflare Pages, or GitHub Pages with a single
 
 ## Overview
 
-PackageFlow integrates with popular hosting platforms, enabling:
+Skillshare App integrates with popular hosting platforms, enabling:
 
 - One-click deployments
 - Instant preview links
@@ -32,7 +32,7 @@ PackageFlow integrates with popular hosting platforms, enabling:
 1. Go to **Settings** → **Deploy Accounts**
 2. Click **Add Account** → **Netlify**
 3. Click **Connect with Netlify**
-4. Authorize PackageFlow in the browser
+4. Authorize Skillshare App in the browser
 5. Account is now connected
 
 <!-- TODO: Add screenshot of Netlify OAuth flow -->
@@ -65,7 +65,7 @@ Set a default account for each platform in Settings.
 
 ### Automatic Detection
 
-PackageFlow automatically detects your framework and suggests:
+Skillshare App automatically detects your framework and suggests:
 
 - Build command (e.g., `npm run build`)
 - Output directory (e.g., `dist`, `.next`, `build`)
@@ -173,7 +173,7 @@ To rollback to a previous deploy:
 
 ## GitHub Pages
 
-GitHub Pages works differently — PackageFlow generates a GitHub Actions workflow.
+GitHub Pages works differently — Skillshare App generates a GitHub Actions workflow.
 
 ### Setup
 

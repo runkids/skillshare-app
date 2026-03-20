@@ -4,7 +4,7 @@ Visual npm audit with vulnerability details and one-click fixes.
 
 ## Overview
 
-PackageFlow integrates npm audit to help you identify and fix security vulnerabilities in your dependencies.
+Skillshare App integrates npm audit to help you identify and fix security vulnerabilities in your dependencies.
 
 <p align="center">
   <img src="../screenshots/security.png" width="900" alt="Security audit dashboard" />
@@ -24,13 +24,13 @@ PackageFlow integrates npm audit to help you identify and fix security vulnerabi
 2. Open the **Security** tab
 3. Click **Scan Now**
 
-PackageFlow runs `npm audit` and displays the results.
+Skillshare App runs `npm audit` and displays the results.
 
 <!-- TODO: Add gif of running a security scan -->
 
 ### Automatic Reminders
 
-PackageFlow can remind you to scan regularly:
+Skillshare App can remind you to scan regularly:
 
 1. Go to **Settings** → **Security**
 2. Enable **Scan Reminders**
@@ -93,7 +93,7 @@ Links to:
 For vulnerabilities with available fixes:
 
 1. Click **Fix** on the vulnerability card
-2. PackageFlow runs the appropriate command:
+2. Skillshare App runs the appropriate command:
    - `npm audit fix` for safe fixes
    - Shows manual steps for breaking changes
 
@@ -110,7 +110,7 @@ For complex cases:
 
 ### Breaking Changes
 
-Some fixes may introduce breaking changes. PackageFlow warns you when:
+Some fixes may introduce breaking changes. Skillshare App warns you when:
 
 - The fix requires a major version bump
 - The fix may affect other dependencies
@@ -148,7 +148,7 @@ Track your progress in reducing vulnerabilities over time.
 
 ## Monorepo Support
 
-For monorepos, PackageFlow scans each workspace:
+For monorepos, Skillshare App scans each workspace:
 
 1. Click **Scan All Workspaces**
 2. Results are grouped by package
@@ -219,7 +219,7 @@ If no fix is available:
 
 ## Lockfile Validation
 
-PackageFlow includes supply chain security validation for lockfiles. This feature detects potential security issues before they become problems.
+Skillshare App includes supply chain security validation for lockfiles. This feature detects potential security issues before they become problems.
 
 ### Configuring Validation
 
@@ -259,7 +259,7 @@ Maintain a blocklist of packages:
 
 ### Typosquatting Detection
 
-PackageFlow detects three types of typosquatting:
+Skillshare App detects three types of typosquatting:
 
 - **Name similarity**: Levenshtein distance analysis against popular packages
 - **Scope confusion**: Detects `@scope/pkg` vs `scope-pkg` patterns
@@ -277,7 +277,7 @@ Each insight shows severity (critical, high, medium, low, info) and recommended 
 
 ## Security Audit Log
 
-PackageFlow maintains a comprehensive audit log of security-relevant events across the application.
+Skillshare App maintains a comprehensive audit log of security-relevant events across the application.
 
 ### Accessing the Audit Log
 

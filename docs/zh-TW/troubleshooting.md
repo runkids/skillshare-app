@@ -6,7 +6,7 @@
 
 ### Homebrew 安裝失敗
 
-- 先執行 `brew update`，再重試 `brew install --cask packageflow`
+- 先執行 `brew update`，再重試 `brew install --cask skillshare-app`
 - 若 tap 不存在：`brew tap runkids/tap`
 
 ### macOS 擋住 App（Gatekeeper）
@@ -24,7 +24,7 @@
 ### 專案匯入失敗
 
 - 確認資料夾根目錄有 `package.json`
-- 確認 PackageFlow 有該資料夾的存取權（系統設定 → 隱私權與安全性）
+- 確認 Skillshare App 有該資料夾的存取權（系統設定 → 隱私權與安全性）
 - 先嘗試匯入較小的 repo 以確認基本流程
 
 ### Scripts 沒顯示 / 沒更新
@@ -50,13 +50,13 @@
 
 ### AI 客戶端連不上
 
-- 在 PackageFlow 打開 **Settings → MCP → MCP Integration**，複製產生的設定
-- 確認你的 MCP 客戶端指向 Settings 顯示的 `packageflow-mcp` 路徑
+- 在 Skillshare App 打開 **Settings → MCP → MCP Integration**，複製產生的設定
+- 確認你的 MCP 客戶端指向 Settings 顯示的 `skillshare-mcp` 路徑
 - 建議先用 **Read Only** 模式驗證連線
 
 ### Claude Desktop / VS Code 設定檔位置搞不清楚
 
-PackageFlow 的 MCP 快速設定區會顯示正確路徑提示。
+Skillshare App 的 MCP 快速設定區會顯示正確路徑提示。
 
 <!-- TODO: Add screenshot of MCP quick setup section (paths + copy buttons). -->
 
@@ -71,10 +71,10 @@ PackageFlow 的 MCP 快速設定區會顯示正確路徑提示。
 ## 還是卡住？
 
 - 先看：`docs/zh-TW/getting-started.md`
-- 搜尋既有 issues：https://github.com/runkids/PackageFlow/issues
+- 搜尋既有 issues：https://github.com/runkids/skillshare-app/issues
 - 開新 issue 時請提供：
   - macOS 版本
-  - PackageFlow 版本
+  - Skillshare App 版本
   - 重現步驟
   - 截圖/日誌（請先遮蔽敏感資訊）
 

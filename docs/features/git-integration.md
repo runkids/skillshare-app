@@ -1,6 +1,6 @@
 # Git Integration
 
-Visual Git operations without leaving PackageFlow. Stage, commit, branch, and diff — all without CLI gymnastics.
+Visual Git operations without leaving Skillshare App. Stage, commit, branch, and diff — all without CLI gymnastics.
 
 ## Overview
 
@@ -73,7 +73,7 @@ For more control:
 
 ### AI-Generated Messages
 
-PackageFlow can generate commit messages using AI:
+Skillshare App can generate commit messages using AI:
 
 1. Stage your changes
 2. Click the **AI** button next to the message input
@@ -86,7 +86,7 @@ See [AI Integration](./ai-integration.md) for setup.
 
 ### Commit Guidelines
 
-PackageFlow shows a character count and warns if your message:
+Skillshare App shows a character count and warns if your message:
 - Is too short (less than 10 characters)
 - Has a very long first line (over 72 characters)
 
@@ -117,7 +117,7 @@ Diffs are syntax-highlighted based on file type for easier reading.
 
 ### Large Files
 
-PackageFlow uses virtualization for large diffs, keeping performance smooth even with thousands of lines.
+Skillshare App uses virtualization for large diffs, keeping performance smooth even with thousands of lines.
 
 ## Branch Operations
 
@@ -136,7 +136,7 @@ See all local and remote branches in the branch panel.
 
 ### Switch Branch
 
-Click on any branch to switch to it. PackageFlow will:
+Click on any branch to switch to it. Skillshare App will:
 - Warn if you have uncommitted changes
 - Offer to stash or discard changes
 
@@ -178,7 +178,7 @@ Click on any branch to switch to it. PackageFlow will:
 
 Click **Pull** to fetch and merge remote changes.
 
-- PackageFlow shows if you're behind the remote
+- Skillshare App shows if you're behind the remote
 - Conflicts are highlighted in the status view
 
 ### Push Changes
