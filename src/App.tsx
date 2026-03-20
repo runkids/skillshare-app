@@ -5,9 +5,9 @@ import { ToastProvider } from './components/Toast';
 import { ThemeProvider } from './context/ThemeContext';
 import { TauriProvider, useTauri } from './desktop/context/TauriContext';
 import { ProjectProvider } from './desktop/context/ProjectContext';
+import { TerminalProvider } from './desktop/context/TerminalContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import TitleBar from './desktop/components/TitleBar';
-import CliWebView from './desktop/components/CliWebView';
+import MainView from './desktop/components/MainView';
 import OnboardingPage from './desktop/pages/OnboardingPage';
 import SettingsPage from './desktop/pages/SettingsPage';
 
@@ -22,12 +22,6 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function ConditionalTitleBar() {
-  const location = useLocation();
-  if (location.pathname === '/onboarding' || location.pathname === '/settings') return null;
-  return <TitleBar />;
-}
-
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -35,20 +29,21 @@ export default function App() {
         <ToastProvider>
           <TauriProvider>
             <ProjectProvider>
-              <BrowserRouter>
-                <ErrorBoundary>
-                  <div className="h-screen flex flex-col">
-                    <ConditionalTitleBar />
-                    <OnboardingGuard>
-                      <Routes>
-                        <Route path="/onboarding" element={<OnboardingPage />} />
-                        <Route path="/settings" element={<SettingsPage />} />
-                        <Route path="/*" element={<CliWebView />} />
-                      </Routes>
-                    </OnboardingGuard>
-                  </div>
-                </ErrorBoundary>
-              </BrowserRouter>
+              <TerminalProvider>
+                <BrowserRouter>
+                  <ErrorBoundary>
+                    <div className="h-screen flex flex-col">
+                      <OnboardingGuard>
+                        <Routes>
+                          <Route path="/onboarding" element={<OnboardingPage />} />
+                          <Route path="/settings" element={<SettingsPage />} />
+                          <Route path="/*" element={<MainView />} />
+                        </Routes>
+                      </OnboardingGuard>
+                    </div>
+                  </ErrorBoundary>
+                </BrowserRouter>
+              </TerminalProvider>
             </ProjectProvider>
           </TauriProvider>
         </ToastProvider>
