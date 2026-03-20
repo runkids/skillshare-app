@@ -6,7 +6,15 @@ import Card from '../../../components/Card';
 import Button from '../../../components/Button';
 import { useTauri } from '../../context/TauriContext';
 
-type UpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'installing' | 'complete' | 'up-to-date' | 'error';
+type UpdateStatus =
+  | 'idle'
+  | 'checking'
+  | 'available'
+  | 'downloading'
+  | 'installing'
+  | 'complete'
+  | 'up-to-date'
+  | 'error';
 
 export default function AboutSettings() {
   const { appInfo } = useTauri();
@@ -18,7 +26,9 @@ export default function AboutSettings() {
   const [updateObj, setUpdateObj] = useState<Update | null>(null);
 
   useEffect(() => {
-    getVersion().then(setAppVersion).catch(() => {});
+    getVersion()
+      .then(setAppVersion)
+      .catch(() => {});
   }, []);
 
   const handleCheck = useCallback(async () => {
@@ -121,30 +131,44 @@ export default function AboutSettings() {
                 {status === 'installing' && 'Installing update...'}
                 {status === 'complete' && 'Update installed. Restart to apply.'}
                 {status === 'error' && (error || 'Update check failed')}
-                {status === 'idle' && 'Check for new versions of Skillshare App'}
+                {status === 'idle' && 'Check for new versions of skillshare App'}
               </p>
             </div>
             <div className="shrink-0">
               {status === 'idle' && (
-                <Button size="sm" onClick={handleCheck}>Check for Updates</Button>
+                <Button size="sm" onClick={handleCheck}>
+                  Check for Updates
+                </Button>
               )}
               {status === 'checking' && (
-                <Button size="sm" loading>Checking</Button>
+                <Button size="sm" loading>
+                  Checking
+                </Button>
               )}
               {status === 'up-to-date' && (
-                <Button size="sm" variant="secondary" disabled>Up to date</Button>
+                <Button size="sm" variant="secondary" disabled>
+                  Up to date
+                </Button>
               )}
               {status === 'available' && (
-                <Button size="sm" onClick={handleDownload}>Update Now</Button>
+                <Button size="sm" onClick={handleDownload}>
+                  Update Now
+                </Button>
               )}
               {(status === 'downloading' || status === 'installing') && (
-                <Button size="sm" loading>{progress}%</Button>
+                <Button size="sm" loading>
+                  {progress}%
+                </Button>
               )}
               {status === 'complete' && (
-                <Button size="sm" onClick={handleRestart}>Restart</Button>
+                <Button size="sm" onClick={handleRestart}>
+                  Restart
+                </Button>
               )}
               {status === 'error' && (
-                <Button size="sm" onClick={handleCheck}>Retry</Button>
+                <Button size="sm" onClick={handleCheck}>
+                  Retry
+                </Button>
               )}
             </div>
           </div>

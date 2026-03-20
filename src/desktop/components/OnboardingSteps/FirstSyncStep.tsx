@@ -81,7 +81,7 @@ export default function FirstSyncStep({ cliPath, onComplete }: FirstSyncStepProp
                 {output}
               </pre>
             )}
-            <Button onClick={onComplete}>Enter Skillshare App</Button>
+            <Button onClick={onComplete}>Enter skillshare App</Button>
           </>
         )}
 

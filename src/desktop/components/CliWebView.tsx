@@ -196,7 +196,7 @@ export default function CliWebView() {
       src={iframeUrl!}
       className="flex-1 w-full border-0"
       allow="clipboard-write"
-      title="Skillshare UI"
+      title="skillshare UI"
     />
   );
 }

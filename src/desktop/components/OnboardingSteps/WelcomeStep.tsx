@@ -63,10 +63,10 @@ export default function WelcomeStep({ onComplete }: WelcomeStepProps) {
   return (
     <div className="text-center space-y-6">
       <h2 className="text-3xl font-bold text-pencil" style={{ fontFamily: 'var(--font-heading)' }}>
-        Welcome to Skillshare
+        Welcome to skillshare
       </h2>
       <p className="text-pencil-light mx-auto">
-        Let&apos;s get you set up. First, we need the Skillshare CLI to manage your dotfiles.
+        Let&apos;s get you set up. First, we need the skillshare CLI to manage your dotfiles.
       </p>
 
       <div className="min-h-[120px] flex items-center justify-center">
@@ -89,9 +89,9 @@ export default function WelcomeStep({ onComplete }: WelcomeStepProps) {
 
         {phase === 'not-found' && (
           <div className="space-y-4">
-            <p className="text-pencil-light text-sm">No Skillshare CLI detected on this system.</p>
+            <p className="text-pencil-light text-sm">No skillshare CLI detected on this system.</p>
             {error && <p className="text-danger text-sm">{error}</p>}
-            <Button onClick={handleDownload}>Download Skillshare CLI</Button>
+            <Button onClick={handleDownload}>Download skillshare CLI</Button>
           </div>
         )}
 
