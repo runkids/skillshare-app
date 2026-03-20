@@ -1,25 +1,25 @@
 <p align="center">
-  <img src="src-tauri/icons/128x128@2x.png" alt="PackageFlow Logo" width="120" height="120">
+  <img src="src-tauri/icons/128x128@2x.png" alt="Skillshare App Logo" width="120" height="120">
 </p>
 
-<h1 align="center">PackageFlow</h1>
+<h1 align="center">Skillshare App</h1>
 
 <p align="center">
-  <strong>Stop juggling terminal tabs. Start clicking.</strong><br/>
-  <sub>A visual DevOps hub for npm scripts, Git, workflows, and deploy — <b>controllable by AI via MCP</b>.</sub>
+  <strong>Your dotfiles, beautifully managed.</strong><br/>
+  <sub>A desktop companion for the skillshare CLI — manage dotfiles, sync configurations, and let AI help via MCP.</sub>
 </p>
 
 <p align="center">
-  <a href="https://github.com/runkids/PackageFlow/releases">
-    <img src="https://img.shields.io/github/v/release/runkids/PackageFlow?style=for-the-badge&color=blue" alt="Release">
+  <a href="https://github.com/runkids/skillshare-app/releases">
+    <img src="https://img.shields.io/github/v/release/runkids/skillshare-app?style=for-the-badge&color=blue" alt="Release">
   </a>
-  <a href="https://github.com/runkids/PackageFlow/stargazers">
-    <img src="https://img.shields.io/github/stars/runkids/PackageFlow?style=for-the-badge&color=yellow" alt="Stars">
+  <a href="https://github.com/runkids/skillshare-app/stargazers">
+    <img src="https://img.shields.io/github/stars/runkids/skillshare-app?style=for-the-badge&color=yellow" alt="Stars">
   </a>
-  <a href="https://github.com/runkids/PackageFlow/blob/main/LICENSE">
-    <img src="https://img.shields.io/github/license/runkids/PackageFlow?style=for-the-badge" alt="License">
+  <a href="https://github.com/runkids/skillshare-app/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/runkids/skillshare-app?style=for-the-badge" alt="License">
   </a>
-  <img src="https://img.shields.io/badge/platform-macOS-lightgrey?style=for-the-badge&logo=apple" alt="macOS">
+  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey?style=for-the-badge" alt="Platform">
 </p>
 
 <p align="center">
@@ -27,7 +27,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/runkids/PackageFlow/releases"><strong>📥 Download</strong></a> •
+  <a href="https://github.com/runkids/skillshare-app/releases"><strong>📥 Download</strong></a> •
   <a href="#-features"><strong>✨ Features</strong></a> •
   <a href="#-ai--mcp-integration"><strong>🤖 AI & MCP</strong></a> •
   <a href="#-documentation"><strong>📚 Docs</strong></a> •
@@ -39,33 +39,33 @@
 
 
 <p align="center">
-  <img src="docs/screenshots/packageflow-ai.png" width="720" alt="PackageFlow AI" />
+  <img src="docs/screenshots/skillshare-ai.png" width="720" alt="Skillshare App AI" />
   <br/>
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/chat-with-ai.gif" width="720" alt="PackageFlow Hero" />
+  <img src="docs/screenshots/chat-with-ai.gif" width="720" alt="Skillshare App" />
 </p>
 
 <!-- TODO: Add a 20–40s product demo video link (YouTube/X) and/or a thumbnail image here. -->
 
 ---
 
-## Why PackageFlow?
+## Why Skillshare App?
 
-> **"Claude, deploy my feature branch."**
-> **"Run tests and fix any failures."**
-> **"Switch to the main branch and start the dev server."**
+> **"Claude, sync my dotfiles across machines."**
+> **"Show me what changed in my configs."**
+> **"Switch to my work setup and apply those settings."**
 
-**One app to run scripts, manage Git, and deploy — across all your Node.js projects.**
+**One app to manage dotfiles, track configurations, and keep everything in sync — across all your projects.**
 **The killer feature? Your AI assistant can control it via MCP.**
 
 | Before | After |
 |--------|-------|
-| `cd project-a && npm run dev` × 5 tabs | Click once. Done. |
-| Manual deploy, copy preview URL | One-click deploy → instant link |
-| "What was that command again?" | Visual workflows, zero memorization |
-| AI can only read your code | **AI runs your scripts, deploys, switches branches** |
+| Manually copying dotfiles between machines | One-click sync. Done. |
+| Losing track of config changes | Visual diff, instant snapshots |
+| "Where did I put that config?" | All dotfiles in one place |
+| AI can only read your code | **AI manages your dotfiles, syncs configs, switches setups** |
 
 Built with **Tauri + Rust** — fast, lightweight, 100% local.
 
@@ -73,27 +73,27 @@ Built with **Tauri + Rust** — fast, lightweight, 100% local.
 
 ```bash
 # Install via Homebrew
-brew tap runkids/tap && brew install --cask packageflow
+brew tap runkids/tap && brew install --cask skillshare-app
 ```
 
-Or [download directly](https://github.com/runkids/PackageFlow/releases) → Drag a project folder → Start clicking.
+Or [download directly](https://github.com/runkids/skillshare-app/releases) → Launch the app → Follow the onboarding wizard.
 
 > 💡 Press <kbd>Cmd</kbd> + <kbd>K</kbd> for instant worktree switching
 
 ### Try It in 60 Seconds
 
-1. Import a project (drag a folder with `package.json`)
-2. Click a script card like `dev` / `build` / `test`
-3. Create a workflow for your repetitive tasks (dev → test → deploy)
-4. (Optional) Enable MCP so your AI tool can run actions for you
+1. Launch the app — it will detect or install the skillshare CLI
+2. Choose your dotfiles scope (home directory or project-specific)
+3. Run the initial sync to create your first snapshot
+4. (Optional) Enable MCP so your AI tool can manage dotfiles for you
 
 ### Common Use Cases
 
-- One-click “dev / build / test” across many repos
-- Worktree switching without losing context
-- Repeatable release pipelines (test → build → deploy)
-- Fast security audits with AI explanations
-- “AI as teammate” via MCP tool calls (safe + permissioned)
+- Dotfiles management with visual diff and snapshots
+- Multi-project configuration management
+- Git integration with worktree switching
+- Keep configs in sync across machines
+- "AI as teammate" via MCP tool calls (safe + permissioned)
 
 ---
 
@@ -103,32 +103,32 @@ Or [download directly](https://github.com/runkids/PackageFlow/releases) → Drag
 <tr>
 <td width="50%">
 
-### 🎯 One-Click Everything
-Run scripts, workflows, deploys — no commands to memorize.
+### 📁 Dotfiles Management
+Track, sync, and manage your dotfiles — visually.
 
-### ⚡ Visual Workflow Builder
-Drag-and-drop automation with conditional steps.
+### 🔄 Multi-Project Support
+Manage dotfiles per project or globally from your home directory.
 
-### 🚀 Instant Deploy
-One click → live preview link on Netlify or Cloudflare.
+### 🤖 CLI Wrapper
+Full GUI for the skillshare CLI — no terminal needed.
 
-### 📦 Monorepo-Native
-Nx, Turborepo, Lerna — auto-detected and ready.
+### 🔀 Git Integration
+Commit, branch, stash, diff — all visual, all easy.
 
 </td>
 <td width="50%">
 
-### 🔀 Git Without CLI
-Commit, branch, stash, diff — all visual, all easy.
-
 ### 🌳 Worktree Superpowers
 See all worktrees, switch instantly, resume sessions.
 
-### 🛡️ Security Scanner
-Visual npm audit with AI-powered analysis.
+### 🛡️ Security & Privacy
+All data stays local. API keys encrypted with AES-256-GCM.
 
-### 🔧 Toolchain Detective
-Auto-detect Volta, Corepack, nvm conflicts.
+### ⌨️ Keyboard Shortcuts
+Customizable shortcuts for power users.
+
+### 🔧 AI-Powered
+Multi-provider AI support with MCP integration.
 
 </td>
 </tr>
@@ -156,12 +156,12 @@ Auto-detect Volta, Corepack, nvm conflicts.
 
 ### MCP Server — Let AI Control Your Dev Environment
 
-PackageFlow exposes a **Model Context Protocol (MCP) server** that AI assistants can use:
+Skillshare App exposes a **Model Context Protocol (MCP) server** that AI assistants can use:
 
 ```
-"Claude, deploy my feature branch to staging."
-"Run tests for all projects and report failures."
-"Switch to the payment-fix worktree and start the dev server."
+"Claude, sync my dotfiles and show what changed."
+"List all my projects and their status."
+"Switch to the payment-fix worktree and start working."
 ```
 
 **Works with:**
@@ -172,29 +172,29 @@ PackageFlow exposes a **Model Context Protocol (MCP) server** that AI assistants
 
 ### What AI Actually Does (MCP Tool Chains)
 
-PackageFlow is “AI-driven” because the AI can call real tools (not just generate text). Example flows:
+Skillshare App is "AI-driven" because the AI can call real tools (not just generate text). Example flows:
 
 **1) Understand a project**
-- You: “List my projects and show scripts for the frontend repo”
+- You: "List my projects and show the current status"
 - Tools: `list_projects` → `get_project`
 
-**2) Run a script with context**
-- You: “Run tests for the `packages/web` project and summarize failures”
-- Tools: `get_project` → `run_npm_script`
+**2) Manage configurations**
+- You: "Sync my dotfiles and summarize changes"
+- Tools: `get_project` → `sync_dotfiles`
 
 **3) Generate a commit message from staged changes**
-- You: “Write a conventional commit message for what I staged”
+- You: "Write a conventional commit message for what I staged"
 - Tools: `get_git_diff` → (AI drafts message)
 
 ### MCP Setup (Copy/Paste)
 
-PackageFlow ships a companion MCP server binary: `packageflow-mcp` (stdio transport).
+Skillshare App ships a companion MCP server binary: `skillshare-mcp` (stdio transport).
 
-In PackageFlow, open **Settings → MCP → MCP Integration** and copy the generated config for:
+In Skillshare App, open **Settings → MCP → MCP Integration** and copy the generated config for:
 - **Claude Code / VS Code** (JSON)
 - **Codex CLI** (TOML)
 
-Then your AI tool can call actions like `list_projects`, `run_npm_script`, `run_workflow`, and more.
+Then your AI tool can call actions like `list_projects`, `sync_dotfiles`, and more.
 
 <p align="center">
   <img src="docs/screenshots/mcp-setup.png" width="720" alt="MCP Integration Setup" />
@@ -202,11 +202,11 @@ Then your AI tool can call actions like `list_projects`, `run_npm_script`, `run_
 
 ### AI CLI Integration
 
-Run AI commands directly from PackageFlow:
+Run AI commands directly from Skillshare App:
 
 ```
-You: "Analyze the security audit results and suggest fixes"
-AI: Analyzing 3 high-severity vulnerabilities...
+You: "Analyze the config changes and suggest improvements"
+AI: Analyzing 3 modified configuration files...
 ```
 
 **Security First:**
@@ -217,7 +217,7 @@ AI: Analyzing 3 high-severity vulnerabilities...
 
 ### Security & Privacy (Local-First)
 
-PackageFlow is designed to keep your projects and secrets on your machine.
+Skillshare App is designed to keep your dotfiles and secrets on your machine.
 
 - Data stays local; AI features are opt-in
 - Keys/tokens encrypted at rest
@@ -240,9 +240,9 @@ Documentation home: [English](./docs/README.md) • [繁體中文](./docs/zh-TW/
 | [Security & Privacy](./docs/security-and-privacy.md) | Local-first storage and permissions |
 | [Troubleshooting](./docs/troubleshooting.md) | Common issues and fixes |
 | [Project Management](./docs/features/project-management.md) | Import and manage projects |
-| [One-Click Scripts](./docs/features/one-click-scripts.md) | Run npm scripts with live terminal |
+| [One-Click Scripts](./docs/features/one-click-scripts.md) | Run scripts with live terminal |
 | [Visual Workflow](./docs/features/visual-workflow.md) | Drag-and-drop automation |
-| [Monorepo Support](./docs/features/monorepo-support.md) | Nx, Turbo, Lerna integration |
+| [Monorepo Support](./docs/features/monorepo-support.md) | Multi-project workspace integration |
 | [Git Integration](./docs/features/git-integration.md) | Visual Git operations |
 | [Worktree Management](./docs/features/worktree-management.md) | Quick worktree switching |
 | [One-Click Deploy](./docs/features/one-click-deploy.md) | Deploy to Netlify/Cloudflare |
@@ -271,7 +271,6 @@ Documentation home: [English](./docs/README.md) • [繁體中文](./docs/zh-TW/
 <summary><strong>🌳 Worktrees</strong></summary>
 <br/>
 <img src="docs/screenshots/worktree.png" width="800" alt="Worktree Management" />
-<!-- TODO: Add a short gif of Cmd+K quick switcher for worktrees. -->
 </details>
 
 <details>
@@ -340,30 +339,30 @@ Documentation home: [English](./docs/README.md) • [繁體中文](./docs/zh-TW/
 
 ```bash
 brew tap runkids/tap
-brew install --cask packageflow
+brew install --cask skillshare-app
 ```
 
 #### Upgrade
 
 ```bash
-brew update && brew upgrade --cask packageflow
+brew update && brew upgrade --cask skillshare-app
 ```
 
 #### Troubleshooting
 
-If you see an error like `It seems the App source '/Applications/PackageFlow.app' is not there`:
+If you see an error like `It seems the App source '/Applications/Skillshare App.app' is not there`:
 
 ```bash
 # Force uninstall the old cask record
-brew uninstall --cask --force packageflow
+brew uninstall --cask --force skillshare-app
 
 # Reinstall
-brew install --cask runkids/tap/packageflow
+brew install --cask runkids/tap/skillshare-app
 ```
 
 ### Direct Download
 
-[Download the latest release](https://github.com/runkids/PackageFlow/releases) → Open the `.dmg` → Drag to Applications.
+[Download the latest release](https://github.com/runkids/skillshare-app/releases) → Open the `.dmg` → Drag to Applications.
 
 ---
 
@@ -372,35 +371,28 @@ brew install --cask runkids/tap/packageflow
 ### Recently Shipped
 
 - [x] **Multi-Provider AI** — OpenAI, Anthropic, Google, Ollama, LM Studio
-- [x] **MCP Server** — Let AI assistants control PackageFlow
+- [x] **MCP Server** — Let AI assistants control Skillshare App
 - [x] **AI CLI Integration** — Claude Code, Codex, Gemini CLI
-- [x] **AI Security Analysis** — Intelligent vulnerability explanations
+- [x] **Windows Support** — Cross-platform expansion
 - [x] **Notification Center** — Background task monitoring
 - [x] **System Theme** — Auto light/dark mode
 
 ### Coming Soon
 
-- [ ] 🪟 **Windows Support** — Cross-platform expansion
 - [ ] 🐧 **Linux Support** — Complete desktop coverage
 - [ ] 📦 **Plugin System** — Community extensions
 - [ ] 🔄 **MCP Actions** — Custom AI-triggered workflows
-- [ ] 🌐 **Remote Collaboration** — Team workflow sharing
+- [ ] 🌐 **Remote Collaboration** — Team config sharing
 
-> 💡 [Request a feature](https://github.com/runkids/PackageFlow/issues) or vote on existing ones!
+> 💡 [Request a feature](https://github.com/runkids/skillshare-app/issues) or vote on existing ones!
 
 ## ❓ FAQ
 
 <details>
-<summary><strong>How is this different from VS Code terminal?</strong></summary>
+<summary><strong>What is skillshare?</strong></summary>
 <br/>
 
-PackageFlow is about **flow**, not terminals:
-
-- One-click actions for everything
-- Visual workflow builder
-- Built-in deploy with preview links
-- **AI assistants can control it via MCP**
-- No extension sprawl — everything integrated
+**skillshare** is a CLI tool for managing dotfiles and configurations. Skillshare App is the desktop companion that provides a visual interface for skillshare CLI operations, plus AI integration via MCP.
 
 </details>
 
@@ -425,7 +417,7 @@ PackageFlow is about **flow**, not terminals:
 **Cloud:** OpenAI, Anthropic (Claude), Google (Gemini)
 **Local:** Ollama, LM Studio — unlimited, private, free
 
-Use local models for sensitive code. Use cloud for convenience.
+Use local models for sensitive configs. Use cloud for convenience.
 
 </details>
 
@@ -435,12 +427,12 @@ Use local models for sensitive code. Use cloud for convenience.
 
 **Model Context Protocol (MCP)** is how AI assistants talk to tools.
 
-With PackageFlow's MCP server:
-- Claude Code can deploy your projects
-- AI can run scripts and workflows
+With Skillshare App's MCP server:
+- Claude Code can manage your dotfiles
+- AI can sync configurations across projects
 - Voice-controlled development becomes possible
 
-It's like giving AI hands to help you code.
+It's like giving AI hands to help you manage configs.
 
 </details>
 
@@ -456,8 +448,8 @@ It's like giving AI hands to help you code.
 
 ```bash
 # Clone the repository
-git clone https://github.com/runkids/PackageFlow.git
-cd PackageFlow
+git clone https://github.com/runkids/skillshare-app.git
+cd skillshare-app
 
 # Install dependencies
 pnpm install
@@ -485,10 +477,10 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ### Ways to Contribute
 
-- 🐛 Report bugs and request features via [Issues](https://github.com/runkids/PackageFlow/issues)
+- 🐛 Report bugs and request features via [Issues](https://github.com/runkids/skillshare-app/issues)
 - 🔧 Submit pull requests for bug fixes or new features
 - 📝 Improve documentation
-- 🔄 Share your workflow templates
+- 🔄 Share your configuration templates
 
 ### Development Guidelines
 
@@ -509,17 +501,17 @@ Built with amazing open-source tools:
 ---
 
 <p align="center">
-  <a href="https://star-history.com/#runkids/PackageFlow&Date">
-    <img src="https://api.star-history.com/svg?repos=runkids/PackageFlow&type=Date" alt="Star History Chart" width="600" />
+  <a href="https://star-history.com/#runkids/skillshare-app&Date">
+    <img src="https://api.star-history.com/svg?repos=runkids/skillshare-app&type=Date" alt="Star History Chart" width="600" />
   </a>
 </p>
 
 ---
 
 <p align="center">
-  <strong>If PackageFlow saves you time, give us a star!</strong><br/><br/>
-  <a href="https://github.com/runkids/PackageFlow">
-    <img src="https://img.shields.io/github/stars/runkids/PackageFlow?style=for-the-badge&logo=github&color=yellow" alt="GitHub stars" />
+  <strong>If Skillshare App saves you time, give us a star!</strong><br/><br/>
+  <a href="https://github.com/runkids/skillshare-app">
+    <img src="https://img.shields.io/github/stars/runkids/skillshare-app?style=for-the-badge&logo=github&color=yellow" alt="GitHub stars" />
   </a>
 </p>
 

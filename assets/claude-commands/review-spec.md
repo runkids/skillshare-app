@@ -1,7 +1,7 @@
 ---
 description: Review a spec and provide feedback
 ---
-Review a spec through the SpecForge workflow.
+Review a spec through the Skillshare App workflow.
 
 1. If $ARGUMENTS contains a spec ID, use it. Otherwise call `list_specs` with `project_dir` "." and `status` "review" to find specs needing review
 2. Call `get_spec` to read the full spec content

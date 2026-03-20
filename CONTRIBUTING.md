@@ -1,6 +1,6 @@
-# Contributing to PackageFlow
+# Contributing to Skillshare App
 
-Thank you for your interest in contributing to PackageFlow! This document provides guidelines and instructions for contributing.
+Thank you for your interest in contributing to Skillshare App! This document provides guidelines and instructions for contributing.
 
 ## Table of Contents
 
@@ -38,8 +38,8 @@ By participating in this project, you agree to maintain a respectful and inclusi
 
 ```bash
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/PackageFlow.git
-cd PackageFlow
+git clone https://github.com/YOUR_USERNAME/skillshare-app.git
+cd skillshare-app
 
 # Install dependencies
 pnpm install
@@ -77,7 +77,7 @@ pnpm dev:tauri
 
 ### Before You Start
 
-1. Check [existing issues](https://github.com/runkids/PackageFlow/issues) to avoid duplicates
+1. Check [existing issues](https://github.com/runkids/skillshare-app/issues) to avoid duplicates
 2. For new features, open an issue first to discuss the proposal
 3. For bug fixes, check if there's an existing issue or create one
 
@@ -160,7 +160,7 @@ When reporting a bug, please include:
 1. **Title**: Clear, concise description of the issue
 2. **Environment**:
    - OS and version (e.g., macOS 14.0)
-   - PackageFlow version
+   - Skillshare App version
    - Node.js version
 3. **Steps to Reproduce**: Detailed steps to reproduce the issue
 4. **Expected Behavior**: What you expected to happen
@@ -176,7 +176,7 @@ When reporting a bug, please include:
 
 ## Environment
 - OS: [e.g., macOS 14.0]
-- PackageFlow Version: [e.g., 1.0.0]
+- Skillshare App Version: [e.g., 1.0.0]
 - Node.js Version: [e.g., 20.10.0]
 
 ## Steps to Reproduce
@@ -230,7 +230,7 @@ When requesting a feature, please include:
 
 If you have questions about contributing, feel free to:
 
-1. Open a [Discussion](https://github.com/runkids/PackageFlow/discussions)
+1. Open a [Discussion](https://github.com/runkids/skillshare-app/discussions)
 2. Check existing issues and discussions
 
-Thank you for contributing to PackageFlow!
+Thank you for contributing to Skillshare App!

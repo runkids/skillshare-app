@@ -1,7 +1,7 @@
 ---
-description: Create a new spec using SpecForge
+description: Create a new spec using Skillshare App
 ---
-Use the specforge MCP to create a new spec.
+Use the skillshare MCP to create a new spec.
 
 1. Call `list_schemas` with `project_dir` set to the current working directory to show available schemas
 2. Ask the user which schema to use if not specified in $ARGUMENTS

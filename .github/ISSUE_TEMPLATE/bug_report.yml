@@ -69,7 +69,7 @@ body:
   - type: input
     id: app-version
     attributes:
-      label: SpecForge Version
+      label: Skillshare App Version
       description: You can find this in the app's About section
       placeholder: "1.0.0"
     validations:

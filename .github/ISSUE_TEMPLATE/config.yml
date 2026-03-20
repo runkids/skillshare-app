@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Documentation
-    url: https://github.com/runkids/PackageFlow#readme
+    url: https://github.com/runkids/skillshare-app#readme
     about: Check out the README for usage information
   - name: Discussions
-    url: https://github.com/runkids/PackageFlow/discussions
+    url: https://github.com/runkids/skillshare-app/discussions
     about: Ask questions and share ideas in Discussions
