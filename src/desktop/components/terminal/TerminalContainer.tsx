@@ -43,10 +43,8 @@ export default function TerminalContainer({ showSearch, onCloseSearch }: Termina
 
   return (
     <div className="flex-1 relative bg-[#030712] overflow-hidden">
-      {showSearch && (
-        <TerminalSearchBar searchAddon={searchAddon} onClose={onCloseSearch} />
-      )}
-      <div ref={containerRef} className="absolute inset-0" />
+      {showSearch && <TerminalSearchBar searchAddon={searchAddon} onClose={onCloseSearch} />}
+      <div ref={containerRef} className="absolute inset-0 p-4 pt-4" />
       {!activeSessionId && (
         <div className="absolute inset-0 flex items-center justify-center text-gray-500 text-sm">
           Press + to start a new terminal session

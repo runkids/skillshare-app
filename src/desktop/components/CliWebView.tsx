@@ -22,6 +22,8 @@ export default function CliWebView() {
   const [iframeKey, setIframeKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [restarting, setRestarting] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const pushingThemeRef = useRef(false);
   const failCount = useRef(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const startAttempted = useRef(false);
@@ -37,6 +39,7 @@ export default function CliWebView() {
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.data?.type !== 'theme-change') return;
+      if (pushingThemeRef.current) return; // Ignore echoes from our own push
       const theme = event.data.theme as string;
       // CLI theme values: dark, light, playful, clean
       // Map back to shell's style + mode
@@ -56,20 +59,30 @@ export default function CliWebView() {
     return () => window.removeEventListener('message', handler);
   }, [setStyle, setModePreference]);
 
-  // Reload iframe when theme changes
+  // Push theme to iframe via postMessage (no reload needed)
   useEffect(() => {
-    if (status === 'ready' && iframeUrl) {
-      // Update URL with new theme and force reload
-      const base = iframeUrl.split('?')[0];
-      setIframeUrl(`${base}?theme=${cliTheme}`);
-      setIframeKey((k) => k + 1);
-    }
+    if (status !== 'ready') return;
+    const win = iframeRef.current?.contentWindow;
+    if (!win) return;
+    pushingThemeRef.current = true;
+    win.postMessage({ type: 'theme-push', mode: resolvedMode, style }, '*');
+    // Also persist for next launch
+    tauriBridge.setPreferredTheme(cliTheme);
+    // Allow echoes to settle before accepting theme-change messages again
+    const timer = setTimeout(() => {
+      pushingThemeRef.current = false;
+    }, 500);
+    return () => clearTimeout(timer);
   }, [cliTheme]); // intentionally only depend on cliTheme
+
+  // Ref to capture current cliTheme for the initial URL without re-triggering server start
+  const cliThemeRef = useRef(cliTheme);
+  cliThemeRef.current = cliTheme;
 
   // Try to start server if no port available on mount
   useEffect(() => {
     if (appInfo?.serverPort) {
-      setIframeUrl(`http://localhost:${appInfo.serverPort}?theme=${cliTheme}`);
+      setIframeUrl(`http://localhost:${appInfo.serverPort}?theme=${cliThemeRef.current}`);
       setStatus('ready');
       failCount.current = 0;
       startAttempted.current = false;
@@ -90,7 +103,7 @@ export default function CliWebView() {
         }
         const projectDir = activeProject?.path;
         const port = await tauriBridge.startServer(cliPath, projectDir);
-        setIframeUrl(`http://localhost:${port}?theme=${cliTheme}`);
+        setIframeUrl(`http://localhost:${port}?theme=${cliThemeRef.current}`);
         setStatus('ready');
         await refreshAppInfo();
       } catch (err) {
@@ -99,7 +112,7 @@ export default function CliWebView() {
         setStatus('error');
       }
     })();
-  }, [appInfo?.serverPort, switching, activeProject, refreshAppInfo, cliTheme]);
+  }, [appInfo?.serverPort, switching, activeProject, refreshAppInfo]);
 
   // Health check polling when server is ready
   useEffect(() => {
@@ -142,7 +155,7 @@ export default function CliWebView() {
       if (!cliPath) throw new Error('CLI not found');
       const projectDir = activeProject?.path;
       const port = await tauriBridge.startServer(cliPath, projectDir);
-      setIframeUrl(`http://localhost:${port}?theme=${cliTheme}`);
+      setIframeUrl(`http://localhost:${port}?theme=${cliThemeRef.current}`);
       setStatus('ready');
       failCount.current = 0;
       await refreshAppInfo();
@@ -153,7 +166,7 @@ export default function CliWebView() {
     } finally {
       setRestarting(false);
     }
-  }, [activeProject, refreshAppInfo, cliTheme]);
+  }, [activeProject, refreshAppInfo]);
 
   // Switching state
   if (switching) {
@@ -199,6 +212,7 @@ export default function CliWebView() {
 
   return (
     <iframe
+      ref={iframeRef}
       key={`${iframeUrl}-${iframeKey}`}
       src={iframeUrl!}
       className="flex-1 w-full border-0"
