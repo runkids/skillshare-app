@@ -1,15 +1,7 @@
 // src/desktop/components/terminal/CommandPalette.tsx
 import { useState, useRef, useEffect, useMemo } from 'react';
-import {
-  RefreshCw, ShieldCheck, Activity, Stethoscope, Target, List,
-  FolderPlus, Plus, Minus, GitCompare, History, Settings, Search,
-} from 'lucide-react';
-import { skillshareCommands } from './skillshareCommands';
-
-const iconMap: Record<string, React.ComponentType<{ size?: number }>> = {
-  RefreshCw, ShieldCheck, Activity, Stethoscope, Target, List,
-  FolderPlus, Plus, Minus, GitCompare, History, Settings,
-};
+import { Search } from 'lucide-react';
+import { skillshareCommands, commandIconMap } from './skillshareCommands';
 
 interface CommandPaletteProps {
   onExecute: (command: string) => void;
@@ -29,7 +21,10 @@ export default function CommandPalette({ onExecute, onClose }: CommandPalettePro
     if (!query) return skillshareCommands;
     const lower = query.toLowerCase();
     return skillshareCommands.filter(
-      cmd => cmd.name.includes(lower) || cmd.label.toLowerCase().includes(lower) || cmd.description.toLowerCase().includes(lower)
+      (cmd) =>
+        cmd.name.includes(lower) ||
+        cmd.label.toLowerCase().includes(lower) ||
+        cmd.description.toLowerCase().includes(lower)
     );
   }, [query]);
 
@@ -42,10 +37,10 @@ export default function CommandPalette({ onExecute, onClose }: CommandPalettePro
       onClose();
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setSelectedIndex(i => Math.min(i + 1, filtered.length - 1));
+      setSelectedIndex((i) => Math.min(i + 1, filtered.length - 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setSelectedIndex(i => Math.max(i - 1, 0));
+      setSelectedIndex((i) => Math.max(i - 1, 0));
     } else if (e.key === 'Enter' && filtered[selectedIndex]) {
       onExecute(filtered[selectedIndex].command);
       onClose();
@@ -60,7 +55,6 @@ export default function CommandPalette({ onExecute, onClose }: CommandPalettePro
     <div
       className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] bg-black/50"
       onClick={handleBackdropClick}
-      onKeyDown={() => {}}
       role="presentation"
     >
       <div className="w-[420px] bg-[#0f0f1a] border border-gray-700 rounded-lg shadow-2xl overflow-hidden">
@@ -81,24 +75,27 @@ export default function CommandPalette({ onExecute, onClose }: CommandPalettePro
             <div className="px-3 py-4 text-center text-xs text-gray-500">No matching commands</div>
           ) : (
             filtered.map((cmd, i) => {
-              const Icon = iconMap[cmd.icon];
+              const Icon = commandIconMap[cmd.icon];
               return (
                 <button
                   key={cmd.name}
                   type="button"
-                  onClick={() => { onExecute(cmd.command); onClose(); }}
+                  onClick={() => {
+                    onExecute(cmd.command);
+                    onClose();
+                  }}
                   className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
                     i === selectedIndex ? 'bg-gray-800' : 'hover:bg-gray-800/50'
                   }`}
                 >
-                  <span className="text-gray-400 shrink-0">
-                    {Icon && <Icon size={14} />}
-                  </span>
+                  <span className="text-gray-400 shrink-0">{Icon && <Icon size={14} />}</span>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm text-gray-200 font-medium">{cmd.label}</div>
                     <div className="text-xs text-gray-500 truncate">{cmd.description}</div>
                   </div>
-                  <span className="text-[10px] text-gray-600 font-mono shrink-0">{cmd.command}</span>
+                  <span className="text-[10px] text-gray-600 font-mono shrink-0">
+                    {cmd.command}
+                  </span>
                 </button>
               );
             })

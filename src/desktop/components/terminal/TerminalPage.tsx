@@ -19,23 +19,26 @@ export default function TerminalPage() {
   const [showSearch, setShowSearch] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
 
-  const activeSession = sessions.find(s => s.id === activeSessionId) ?? null;
+  const activeSession = sessions.find((s) => s.id === activeSessionId) ?? null;
 
   const handleNewSession = useCallback(async () => {
     await spawnSession();
   }, [spawnSession]);
 
-  const handleExecuteCommand = useCallback(async (command: string) => {
-    if (activeSessionId) {
-      const session = sessions.find(s => s.id === activeSessionId);
-      if (session?.status === 'running') {
-        executeInSession(activeSessionId, command);
-        return;
+  const handleExecuteCommand = useCallback(
+    async (command: string) => {
+      if (activeSessionId) {
+        const session = sessions.find((s) => s.id === activeSessionId);
+        if (session?.status === 'running') {
+          executeInSession(activeSessionId, command);
+          return;
+        }
       }
-    }
-    // No active session or session dead -- spawn new one with command
-    await spawnSession(command, undefined, command.split(' ').pop());
-  }, [activeSessionId, sessions, executeInSession, spawnSession]);
+      // No active session or session dead -- spawn new one with command
+      await spawnSession(command);
+    },
+    [activeSessionId, sessions, executeInSession, spawnSession]
+  );
 
   // Keyboard shortcuts (only active when terminal view is shown)
   useEffect(() => {
@@ -44,7 +47,7 @@ export default function TerminalPage() {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.metaKey && e.key === 'k') {
         e.preventDefault();
-        setShowPalette(prev => !prev);
+        setShowPalette((prev) => !prev);
       } else if (e.metaKey && e.key === 't') {
         e.preventDefault();
         handleNewSession();
@@ -53,7 +56,7 @@ export default function TerminalPage() {
         if (activeSessionId) killSession(activeSessionId);
       } else if (e.metaKey && e.shiftKey && e.key.toLowerCase() === 'f') {
         e.preventDefault();
-        setShowSearch(prev => !prev);
+        setShowSearch((prev) => !prev);
       }
     }
 
@@ -72,16 +75,10 @@ export default function TerminalPage() {
         onExecuteCommand={handleExecuteCommand}
         onOpenPalette={() => setShowPalette(true)}
       />
-      <TerminalContainer
-        showSearch={showSearch}
-        onCloseSearch={() => setShowSearch(false)}
-      />
+      <TerminalContainer showSearch={showSearch} onCloseSearch={() => setShowSearch(false)} />
       <TerminalStatusBar session={activeSession} />
       {showPalette && (
-        <CommandPalette
-          onExecute={handleExecuteCommand}
-          onClose={() => setShowPalette(false)}
-        />
+        <CommandPalette onExecute={handleExecuteCommand} onClose={() => setShowPalette(false)} />
       )}
     </div>
   );

@@ -1,12 +1,6 @@
 // src/desktop/components/terminal/QuickActions.tsx
-import {
-  RefreshCw, ShieldCheck, Activity, Stethoscope, Target, List, Command,
-} from 'lucide-react';
-import { quickActionCommands } from './skillshareCommands';
-
-const iconMap: Record<string, React.ComponentType<{ size?: number }>> = {
-  RefreshCw, ShieldCheck, Activity, Stethoscope, Target, List,
-};
+import { Command } from 'lucide-react';
+import { quickActionCommands, commandIconMap } from './skillshareCommands';
 
 interface QuickActionsProps {
   onExecute: (command: string) => void;
@@ -17,7 +11,7 @@ export default function QuickActions({ onExecute, onOpenPalette }: QuickActionsP
   return (
     <div className="flex items-center gap-1">
       {quickActionCommands.map((cmd) => {
-        const Icon = iconMap[cmd.icon];
+        const Icon = commandIconMap[cmd.icon];
         return (
           <button
             key={cmd.name}

@@ -1,5 +1,13 @@
 // src/desktop/context/TerminalContext.tsx
-import { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  useMemo,
+} from 'react';
 import type { ReactNode } from 'react';
 import type { IPty } from 'tauri-pty';
 import { useProjects } from './ProjectContext';
@@ -33,6 +41,7 @@ interface TerminalSessionLive {
   bufferedWriter: BufferedWriter | null;
   cleanupMount: (() => void) | null;
   projectPath: string; // cached here to avoid stale sessionStore closures
+  hasUnread: boolean;
 }
 
 // --- Context interface ---
@@ -88,15 +97,17 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     visibleSessionRef.current = activeView === 'terminal' ? activeSessionId : null;
   }, [activeView, activeSessionId]);
 
-  // Unread tracking
-  const hasUnreadByProject = new Map<string, boolean>();
-  for (const [pid, ss] of sessionStore) {
-    hasUnreadByProject.set(
-      pid,
-      ss.some((s) => s.hasUnread)
-    );
-  }
-  const hasUnreadAny = Array.from(hasUnreadByProject.values()).some(Boolean);
+  // Unread tracking (memoized to avoid recomputing on every render)
+  const { hasUnreadByProject, hasUnreadAny } = useMemo(() => {
+    const byProject = new Map<string, boolean>();
+    let any = false;
+    for (const [pid, ss] of sessionStore) {
+      const unread = ss.some((s) => s.hasUnread);
+      byProject.set(pid, unread);
+      if (unread) any = true;
+    }
+    return { hasUnreadByProject: byProject, hasUnreadAny: any };
+  }, [sessionStore]);
 
   // --- Helpers ---
 
@@ -125,7 +136,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
         name ??
         (command
           ? command.split(' ').pop()!
-          : `Shell ${(sessionStore.get(currentProjectId)?.length ?? 0) + 1}`);
+          : `Shell ${(sessionStoreRef.current.get(currentProjectId)?.length ?? 0) + 1}`);
 
       const state: TerminalSessionState = {
         id,
@@ -154,6 +165,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
         bufferedWriter,
         cleanupMount: null,
         projectPath: currentProjectPath,
+        hasUnread: false,
       };
       liveStoreRef.current.set(id, live);
 
@@ -168,7 +180,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
 
       return id;
     },
-    [currentProjectId, currentProjectPath, sessionStore]
+    [currentProjectId, currentProjectPath]
   );
 
   const mountSession = useCallback(
@@ -194,8 +206,9 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
         rows,
         onData: (data) => {
           live.bufferedWriter?.write(data);
-          // Mark unread if not visible (read from ref to avoid stale closure)
-          if (visibleSessionRef.current !== id) {
+          // Mark unread only when flipping false→true to avoid redundant re-renders
+          if (visibleSessionRef.current !== id && !live.hasUnread) {
+            live.hasUnread = true;
             updateSession(id, { hasUnread: true });
           }
         },
@@ -262,6 +275,8 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const switchSession = useCallback(
     (id: string) => {
       setActiveSessionIds((prev) => new Map(prev).set(currentProjectId, id));
+      const live = liveStoreRef.current.get(id);
+      if (live) live.hasUnread = false;
       updateSession(id, { hasUnread: false });
     },
     [currentProjectId, updateSession]

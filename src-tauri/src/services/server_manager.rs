@@ -14,9 +14,10 @@ async fn kill_orphaned_servers(base_port: u16, end_port: u16) {
         if !is_port_in_use(port).await {
             continue;
         }
-        // Use lsof to find and kill the process on this port
+        // lsof -ti filters by both port and command name in one step,
+        // eliminating the need for a separate ps verification pass.
         let output = tokio::process::Command::new("lsof")
-            .args(["-ti", &format!("tcp:{port}")])
+            .args(["-ti", &format!("tcp:{port}"), "-c", "skillshare"])
             .output()
             .await;
 
@@ -24,23 +25,13 @@ async fn kill_orphaned_servers(base_port: u16, end_port: u16) {
             let pids = String::from_utf8_lossy(&output.stdout);
             for pid_str in pids.trim().lines() {
                 if let Ok(pid) = pid_str.trim().parse::<i32>() {
-                    // Verify it's a skillshare process before killing
-                    let ps_output = tokio::process::Command::new("ps")
-                        .args(["-p", &pid.to_string(), "-o", "comm="])
+                    log::info!("Killing orphaned skillshare process (pid={pid}) on port {port}");
+                    let _ = tokio::process::Command::new("kill")
+                        .args(["-TERM", &pid.to_string()])
                         .output()
                         .await;
-                    if let Ok(ps_out) = ps_output {
-                        let comm = String::from_utf8_lossy(&ps_out.stdout);
-                        if comm.trim().contains("skillshare") {
-                            log::info!("Killing orphaned skillshare process (pid={pid}) on port {port}");
-                            let _ = tokio::process::Command::new("kill")
-                                .args(["-TERM", &pid.to_string()])
-                                .output()
-                                .await;
-                            // Give it a moment to exit
-                            tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
-                        }
-                    }
+                    // Give it a moment to exit
+                    tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
                 }
             }
         }
