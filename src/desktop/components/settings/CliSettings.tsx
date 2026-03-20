@@ -10,31 +10,16 @@ export default function CliSettings() {
   const [updating, setUpdating] = useState(false);
   const [updateResult, setUpdateResult] = useState<string | null>(null);
 
-  const handleCheckUpdate = async () => {
+  const handleUpdate = async () => {
     setUpdating(true);
     setUpdateResult(null);
     try {
-      const available = await tauriBridge.checkCliUpdate();
-      if (available) {
-        setUpdateResult(`Update available: ${available}`);
-      } else {
-        setUpdateResult('Already up to date');
-        setTimeout(() => setUpdateResult(null), 3000);
-      }
-    } catch (err) {
-      setUpdateResult(err instanceof Error ? err.message : String(err));
-    } finally {
-      setUpdating(false);
-    }
-  };
-
-  const handleUpgrade = async () => {
-    setUpdating(true);
-    try {
-      await tauriBridge.upgradeCli();
+      const cliPath = await tauriBridge.detectCli();
+      if (!cliPath) throw new Error('CLI not found');
+      const result = await tauriBridge.runCli(cliPath, ['update', '--force']);
       await refresh();
-      setUpdateResult('Updated successfully');
-      setTimeout(() => setUpdateResult(null), 3000);
+      setUpdateResult(result || 'Updated successfully');
+      setTimeout(() => setUpdateResult(null), 5000);
     } catch (err) {
       setUpdateResult(err instanceof Error ? err.message : String(err));
     } finally {
@@ -67,21 +52,14 @@ export default function CliSettings() {
 
         <div className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
           <div>
-            <p className="text-sm font-medium text-pencil">Updates</p>
+            <p className="text-sm font-medium text-pencil">Update</p>
             {updateResult && (
-              <p className="text-xs text-pencil-light mt-0.5">{updateResult}</p>
+              <p className="text-xs text-pencil-light mt-0.5 max-w-xs">{updateResult}</p>
             )}
           </div>
-          <div className="flex gap-2">
-            <Button size="sm" variant="secondary" onClick={handleCheckUpdate} loading={updating}>
-              Check Update
-            </Button>
-            {updateResult?.includes('available') && (
-              <Button size="sm" onClick={handleUpgrade} loading={updating}>
-                Update Now
-              </Button>
-            )}
-          </div>
+          <Button size="sm" onClick={handleUpdate} loading={updating}>
+            Update CLI
+          </Button>
         </div>
       </Card>
     </div>
