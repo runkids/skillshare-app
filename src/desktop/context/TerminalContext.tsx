@@ -42,6 +42,8 @@ interface TerminalSessionLive {
   cleanupMount: (() => void) | null;
   projectPath: string; // cached here to avoid stale sessionStore closures
   hasUnread: boolean;
+  command?: string;
+  args?: string[];
 }
 
 // --- Context interface ---
@@ -166,6 +168,8 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
         cleanupMount: null,
         projectPath: currentProjectPath,
         hasUnread: false,
+        command,
+        args,
       };
       liveStoreRef.current.set(id, live);
 
@@ -201,6 +205,8 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
 
       // Use projectPath from live store (avoids stale sessionStore closure)
       spawnPty({
+        command: live.command,
+        args: live.args,
         cwd: live.projectPath,
         cols,
         rows,
