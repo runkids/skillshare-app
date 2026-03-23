@@ -9,6 +9,10 @@
 </p>
 
 <p align="center">
+  <strong>🚧 This project is under active development.</strong>
+</p>
+
+<p align="center">
   <a href="https://github.com/runkids/skillshare-app/releases">
     <img src="https://img.shields.io/github/v/release/runkids/skillshare-app?style=for-the-badge&color=blue" alt="Release">
   </a>
