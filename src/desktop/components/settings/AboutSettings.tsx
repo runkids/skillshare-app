@@ -107,12 +107,12 @@ export default function AboutSettings() {
         <div className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
           <p className="text-sm font-medium text-pencil">GitHub</p>
           <a
-            href="https://github.com/runkids/skillshare-app"
+            href="https://github.com/runkids/skillshare"
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-pencil-light hover:text-pencil underline"
           >
-            runkids/skillshare-app
+            runkids/skillshare
           </a>
         </div>
       </Card>

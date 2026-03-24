@@ -135,8 +135,10 @@ pub async fn get_global_config_dir(cli_path: &str) -> Result<String, String> {
 /// Run `skillshare version` and extract the semver version string.
 /// The CLI outputs ASCII art with ANSI codes; we strip those and find the version.
 pub async fn get_version(cli_path: &str) -> Result<String, String> {
+    let env = crate::utils::env::build_env_for_child();
     let output = tokio::process::Command::new(cli_path)
         .arg("version")
+        .envs(&env)
         .output()
         .await
         .map_err(|e| format!("Failed to run CLI: {e}"))?;
@@ -210,8 +212,9 @@ pub async fn exec(
     args: &[String],
     working_dir: Option<&str>,
 ) -> Result<String, String> {
+    let env = crate::utils::env::build_env_for_child();
     let mut cmd = tokio::process::Command::new(cli_path);
-    cmd.args(args);
+    cmd.args(args).envs(&env);
     if let Some(dir) = working_dir {
         cmd.current_dir(dir);
     }
