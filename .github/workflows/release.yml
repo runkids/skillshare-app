@@ -147,7 +147,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: v__VERSION__
-          releaseName: 'Skillshare v__VERSION__'
+          releaseName: 'Skillshare App v__VERSION__'
           releaseBody: ${{ needs.generate-release-notes.outputs.release_body }}
           releaseDraft: true
           prerelease: false
@@ -197,7 +197,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: v__VERSION__
-          releaseName: 'Skillshare v__VERSION__'
+          releaseName: 'Skillshare App v__VERSION__'
           releaseBody: ${{ needs.generate-release-notes.outputs.release_body }}
           releaseDraft: true
           prerelease: false
@@ -246,7 +246,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: v__VERSION__
-          releaseName: 'Skillshare v__VERSION__'
+          releaseName: 'Skillshare App v__VERSION__'
           releaseBody: ${{ needs.generate-release-notes.outputs.release_body }}
           releaseDraft: true
           prerelease: false

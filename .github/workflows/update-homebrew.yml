@@ -117,8 +117,8 @@ jobs:
           SHA256: ${{ steps.sha.outputs.SHA256_AARCH64 }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cat > homebrew-tap/Casks/skillshare.rb << CASKEOF
-          cask "skillshare" do
+          cat > homebrew-tap/Casks/skillshare-app.rb << CASKEOF
+          cask "skillshare-app" do
             version "${VERSION}"
             sha256 "${SHA256}"
 
@@ -146,6 +146,6 @@ jobs:
           cd homebrew-tap
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Casks/skillshare.rb
-          git commit -m "Update skillshare to ${VERSION}"
+          git add Casks/skillshare-app.rb
+          git commit -m "Update skillshare-app to ${VERSION}"
           git push

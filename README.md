@@ -31,10 +31,10 @@ Install [skillshare CLI](https://github.com/runkids/skillshare) first.
 
 ```bash
 brew tap runkids/tap
-brew install --cask skillshare
+brew install --cask skillshare-app
 
 # Uninstall
-brew uninstall --cask skillshare
+brew uninstall --cask skillshare-app
 ```
 
 ### Direct Download
