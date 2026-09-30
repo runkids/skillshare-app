@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
-import { Settings, Monitor, TerminalSquare } from 'lucide-react';
+import { Settings, Monitor, TerminalSquare, RotateCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ProjectDropdown from './ProjectDropdown';
 import { useTerminal } from '../context/TerminalContext';
 import { useTauri } from '../context/TauriContext';
+import { useProjects } from '../context/ProjectContext';
 import { isMacOS } from '../utils/platform';
 import appIcon from '../../../src-tauri/icons/64x64.png';
 
@@ -14,6 +15,7 @@ export default function TitleBar() {
   const navigate = useNavigate();
   const { activeView, setActiveView, hasUnreadAny } = useTerminal();
   const { appInfo } = useTauri();
+  const { switching, reloadView } = useProjects();
   // macOS draws native traffic lights over the window (titleBarStyle: Overlay).
   const mac = isMacOS();
   useEffect(() => {
@@ -89,6 +91,19 @@ export default function TitleBar() {
           Server running
         </span>
       )}
+      <button
+        type="button"
+        onClick={() => {
+          reloadView();
+          navigate('/');
+        }}
+        disabled={switching}
+        className="w-[30px] h-[30px] flex items-center justify-center rounded-[var(--r-ctl)] hover:bg-[var(--sel)] transition-colors text-[var(--ink-2)] hover:text-[var(--ink)] disabled:opacity-50"
+        title="Reload"
+        aria-label="Reload"
+      >
+        <RotateCw size={15} className={switching ? 'motion-safe:animate-spin' : undefined} />
+      </button>
       <button
         type="button"
         onClick={() => navigate('/settings')}

@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import TitleBar from './TitleBar';
 import ProjectDropdown from './ProjectDropdown';
 
+const { reloadView } = vi.hoisted(() => ({ reloadView: vi.fn() }));
+
 const MAC_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15';
 const WIN_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
 
@@ -22,6 +24,8 @@ vi.mock('../context/ProjectContext', () => ({
       projectType: 'global',
     },
     switchWithRestart: vi.fn(),
+    switching: false,
+    reloadView,
   }),
 }));
 
@@ -47,6 +51,14 @@ describe('TitleBar platform chrome', () => {
     const { container } = renderWithUA(<TitleBar />, WIN_UA);
     expect(container.firstChild).toHaveStyle({ paddingLeft: '12px' });
     expect(screen.getByTestId('app-mark')).toHaveTextContent('skillshare');
+  });
+});
+
+describe('TitleBar reload', () => {
+  it('asks the web view to reload', () => {
+    renderWithUA(<TitleBar />, MAC_UA);
+    fireEvent.click(screen.getByRole('button', { name: 'Reload' }));
+    expect(reloadView).toHaveBeenCalledTimes(1);
   });
 });
 
