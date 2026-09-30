@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProjectProvider, useProjects } from './ProjectContext';
-import { tauriBridge } from '../api/tauri-bridge';
+import { tauriBridge, type Project } from '../api/tauri-bridge';
 
 vi.mock('../api/tauri-bridge', () => ({
   tauriBridge: {
@@ -17,8 +17,9 @@ vi.mock('../api/tauri-bridge', () => ({
 }));
 
 const bridge = vi.mocked(tauriBridge);
-const global = { id: 'g', name: 'Global', path: '/g', projectType: 'global' as const };
-const repo = { id: 'r', name: 'Repo', path: '/r', projectType: 'project' as const };
+const addedAt = '2026-01-01T00:00:00Z';
+const global: Project = { id: 'g', name: 'Global', path: '/g', projectType: 'global', addedAt };
+const repo: Project = { id: 'r', name: 'Repo', path: '/r', projectType: 'project', addedAt };
 
 const wrapper = ({ children }: { children: ReactNode }) => (
   <ProjectProvider>{children}</ProjectProvider>

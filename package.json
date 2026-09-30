@@ -12,7 +12,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -b",
     "test": "vitest run",
     "test:release": "node --test scripts/tests/check-release-version.mjs",
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
