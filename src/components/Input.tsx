@@ -12,10 +12,7 @@ export default function Input({ label, className = '', style, id, ...props }: In
   return (
     <div>
       {label && (
-        <label
-          htmlFor={inputId}
-          className="block text-base text-pencil-light mb-1"
-        >
+        <label htmlFor={inputId} className="block text-base text-pencil-light mb-1">
           {label}
         </label>
       )}
@@ -23,12 +20,12 @@ export default function Input({ label, className = '', style, id, ...props }: In
         id={inputId}
         className={`
           ss-input
-          w-full px-4 py-2.5 bg-surface border-2 border-muted text-pencil
+          w-full px-4 py-2.5 bg-surface border-[length:var(--bw)] border-[var(--line-2)] text-pencil
           placeholder:text-muted-dark
           hover:border-muted-dark
           focus:outline-none focus:border-pencil
           transition-all
-          rounded-[var(--radius-md)]
+          rounded-[var(--r-ctl)]
           ${className}
         `}
         style={{
@@ -52,10 +49,7 @@ export function Textarea({ label, className = '', style, id, ...props }: Textare
   return (
     <div>
       {label && (
-        <label
-          htmlFor={inputId}
-          className="block text-base text-pencil-light mb-1"
-        >
+        <label htmlFor={inputId} className="block text-base text-pencil-light mb-1">
           {label}
         </label>
       )}
@@ -63,12 +57,12 @@ export function Textarea({ label, className = '', style, id, ...props }: Textare
         id={inputId}
         className={`
           ss-input
-          w-full px-4 py-3 bg-surface border-2 border-muted text-pencil
+          w-full px-4 py-3 bg-surface border-[length:var(--bw)] border-[var(--line-2)] text-pencil
           placeholder:text-muted-dark
           hover:border-muted-dark
           focus:outline-none focus:border-pencil
           transition-all resize-y
-          rounded-[var(--radius-md)]
+          rounded-[var(--r-ctl)]
           ${className}
         `}
         style={{

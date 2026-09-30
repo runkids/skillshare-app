@@ -36,16 +36,16 @@ export default function ProjectDropdown() {
         className="flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-sm)] hover:bg-muted/50 transition-colors text-sm font-medium text-pencil"
       >
         {activeProject?.projectType === 'global' ? (
-          <Globe size={14} strokeWidth={2.5} />
+          <Globe size={14} strokeWidth={1.75} />
         ) : (
-          <Folder size={14} strokeWidth={2.5} />
+          <Folder size={14} strokeWidth={1.75} />
         )}
         <span className="max-w-[160px] truncate">{activeProject?.name || 'No Project'}</span>
-        <ChevronDown size={12} strokeWidth={2.5} />
+        <ChevronDown size={12} strokeWidth={1.75} />
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 mt-1 w-56 bg-paper border border-muted rounded-[var(--radius-md)] shadow-lg z-50 py-1">
+        <div className="absolute top-full right-0 mt-1 w-56 bg-surface border-[length:var(--bw)] border-[var(--line-2)] rounded-[var(--r-box)] shadow-lg z-50 py-1">
           {globalProjects.map((p) => (
             <button
               key={p.id}
@@ -55,7 +55,7 @@ export default function ProjectDropdown() {
                 p.id === activeProject?.id ? 'text-pencil font-medium' : 'text-pencil-light'
               }`}
             >
-              <Globe size={14} strokeWidth={2.5} className="shrink-0" />
+              <Globe size={14} strokeWidth={1.75} className="shrink-0" />
               <span className="truncate">{p.name}</span>
             </button>
           ))}
@@ -71,7 +71,7 @@ export default function ProjectDropdown() {
                 p.id === activeProject?.id ? 'text-pencil font-medium' : 'text-pencil-light'
               }`}
             >
-              <Folder size={14} strokeWidth={2.5} className="shrink-0" />
+              <Folder size={14} strokeWidth={1.75} className="shrink-0" />
               <span className="truncate">{p.name}</span>
             </button>
           ))}
@@ -84,7 +84,7 @@ export default function ProjectDropdown() {
             }}
             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-pencil-light hover:bg-muted/30 transition-colors"
           >
-            <Settings size={14} strokeWidth={2.5} className="shrink-0" />
+            <Settings size={14} strokeWidth={1.75} className="shrink-0" />
             <span>Manage Projects</span>
           </button>
         </div>

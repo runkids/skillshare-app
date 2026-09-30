@@ -5,6 +5,9 @@
     <link rel="icon" type="image/png" href="/image.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Skillshare App</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap" rel="stylesheet" />
     <script>
       // Initialize theme before page renders to prevent flash
       // MUST match ThemeContext.tsx storage keys and logic
@@ -56,9 +59,11 @@
         // Set background color immediately to prevent white flash
         document.documentElement.style.backgroundColor = isDark ? DARK_BG : LIGHT_BG;
 
-        // Force clean mode — remove any leftover playful theme
-        document.documentElement.removeAttribute('data-theme');
-        try { localStorage.setItem('skillshare-style', 'clean'); } catch(e) {}
+        const style = localStorage.getItem('skillshare-style');
+        if (style === 'playful') {
+          document.documentElement.setAttribute('data-theme', 'playful');
+          document.documentElement.style.backgroundColor = isDark ? '#1B1916' : '#FFF8E8';
+        }
       })();
     </script>
   </head>

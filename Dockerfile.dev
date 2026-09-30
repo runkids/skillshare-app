@@ -1,0 +1,33 @@
+FROM ubuntu:24.04
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential ca-certificates curl file git lsof pkg-config \
+        libwebkit2gtk-4.1-dev libxdo-dev libssl-dev \
+        libayatana-appindicator3-dev librsvg2-dev patchelf \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV MISE_DATA_DIR=/opt/mise \
+    MISE_CACHE_DIR=/opt/mise/cache \
+    MISE_VERSION=2026.9.11 \
+    MISE_INSTALL_PATH=/usr/local/bin/mise \
+    MISE_TRUSTED_CONFIG_PATHS=/workspace
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN curl --proto '=https' --proto-redir '=https' -fsSL https://mise.run | sh
+
+WORKDIR /workspace
+COPY mise.toml ./
+RUN mise trust && mise install
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        dbus-x11 novnc openbox tint2 websockify x11-utils x11vnc xdotool xvfb \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY scripts/dev-desktop.sh /usr/local/bin/dev-desktop
+
+ENV PATH="/opt/mise/shims:${PATH}"
+
+ENTRYPOINT ["mise", "exec", "--"]
+CMD ["bash"]

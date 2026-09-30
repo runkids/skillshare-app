@@ -282,7 +282,7 @@ pub async fn check_latest_release() -> Result<(String, String), String> {
         "darwin"
     };
 
-    let asset_prefix = format!("skillshare_{os}_{arch}");
+    let asset_prefix = format!("skillshare_{}_{os}_{arch}", tag.trim_start_matches('v'));
     let ext = if cfg!(target_os = "windows") { ".zip" } else { ".tar.gz" };
 
     let assets = body["assets"]

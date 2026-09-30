@@ -1,7 +1,6 @@
 import Card from '../../../components/Card';
 import SegmentedControl from '../../../components/SegmentedControl';
-import { useTheme, type Style, type ModePreference } from '../../../context/ThemeContext';
-import { tauriBridge } from '../../api/tauri-bridge';
+import { useTheme, type Style, type ModePreference } from '../../../context/useTheme';
 
 const STYLES: { id: Style; label: string }[] = [
   { id: 'clean', label: 'Clean' },
@@ -25,8 +24,6 @@ export default function AppearanceSettings() {
 
   const handleModeChange = (m: ModePreference) => {
     setModePreference(m);
-    // Persist mode preference for next launch (Tauri accepts light/dark/system)
-    tauriBridge.setPreferredTheme(m);
   };
 
   return (

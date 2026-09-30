@@ -10,17 +10,20 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses = {
-  primary: 'bg-pencil text-paper border-2 border-pencil hover:bg-pencil/85',
-  secondary: 'bg-transparent text-pencil border-2 border-muted-dark hover:bg-muted/30 hover:border-pencil hover:shadow-sm',
-  danger: 'bg-transparent text-danger border-2 border-danger hover:bg-danger hover:text-white',
+  primary:
+    'bg-[var(--pri)] text-[var(--on-pri)] border-[length:var(--bw)] border-[var(--pri)] hover:opacity-85',
+  secondary:
+    'bg-surface text-pencil border-[length:var(--bw)] border-[var(--line-2)] hover:bg-muted/30 hover:border-pencil hover:shadow-sm',
+  danger:
+    'bg-transparent text-danger border-[length:var(--bw)] border-danger hover:bg-danger hover:text-white',
   ghost: 'bg-transparent text-pencil-light hover:text-pencil hover:bg-muted/30',
   link: 'bg-transparent text-pencil-light hover:text-pencil hover:underline border-none',
 };
 
 const sizeClasses = {
-  sm: 'px-3 py-1.5 text-sm',
-  md: 'px-5 py-2.5 text-sm',
-  lg: 'px-6 py-3 text-base',
+  sm: 'h-7 px-3 text-[12.5px]',
+  md: 'h-[34px] px-3.5 text-[13px]',
+  lg: 'h-[42px] px-5 text-sm',
 };
 
 export default function Button({
@@ -52,7 +55,7 @@ export default function Button({
         ${isLink ? 'text-sm p-0' : `${sizeClasses[size]} rounded-[var(--radius-btn)]`}
         ${className}
       `}
-      style={style}
+      style={{ boxShadow: isGhostOrLink ? undefined : 'var(--sh-btn)', ...style }}
       disabled={isDisabled}
       {...props}
     >

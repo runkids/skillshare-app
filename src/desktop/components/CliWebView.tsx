@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { isTauri } from '@tauri-apps/api/core';
 import Spinner from '../../components/Spinner';
 import Button from '../../components/Button';
 import { useProjects } from '../context/ProjectContext';
 import { tauriBridge } from '../api/tauri-bridge';
 import { useTauri } from '../context/TauriContext';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../context/useTheme';
 
 const HEALTH_POLL_INTERVAL = 30_000;
 const HEALTH_FAIL_THRESHOLD = 3;
@@ -23,7 +24,7 @@ export default function CliWebView() {
   const [error, setError] = useState<string | null>(null);
   const [restarting, setRestarting] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const pushingThemeRef = useRef(false);
+  const loadedIframeRef = useRef<HTMLIFrameElement | null>(null);
   const failCount = useRef(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const startAttempted = useRef(false);
@@ -39,45 +40,31 @@ export default function CliWebView() {
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.data?.type !== 'theme-change') return;
-      if (pushingThemeRef.current) return; // Ignore echoes from our own push
-      const theme = event.data.theme as string;
-      // CLI theme values: dark, light, playful, clean
-      // Map back to shell's style + mode
-      if (theme === 'playful') {
-        setStyle('playful');
-      } else if (theme === 'dark') {
-        setStyle('clean');
-        setModePreference('dark');
-      } else if (theme === 'clean' || theme === 'light') {
-        setStyle('clean');
-        setModePreference('light');
-      }
-      // Persist mode for next launch (Tauri only accepts light/dark/system)
-      if (theme === 'dark') {
-        tauriBridge.setPreferredTheme('dark');
-      } else {
-        tauriBridge.setPreferredTheme('light');
+      if (event.source !== iframeRef.current?.contentWindow) return;
+      if (loadedIframeRef.current !== iframeRef.current) return;
+      const theme = event.data.theme;
+      // The CLI sends style and mode independently. Preserve the other axis.
+      if (theme === 'playful' || theme === 'clean') {
+        setStyle(theme);
+      } else if ((theme === 'dark' || theme === 'light') && theme !== resolvedMode) {
+        setModePreference(theme);
       }
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [setStyle, setModePreference]);
+  }, [setStyle, setModePreference, resolvedMode]);
 
-  // Push theme to iframe via postMessage (no reload needed)
+  const pushTheme = useCallback(() => {
+    iframeRef.current?.contentWindow?.postMessage(
+      { type: 'theme-push', mode: resolvedMode, style },
+      '*'
+    );
+  }, [resolvedMode, style]);
+
+  // Push each axis independently, including Playful light/dark changes.
   useEffect(() => {
-    if (status !== 'ready') return;
-    const win = iframeRef.current?.contentWindow;
-    if (!win) return;
-    pushingThemeRef.current = true;
-    win.postMessage({ type: 'theme-push', mode: resolvedMode, style }, '*');
-    // Also persist mode for next launch (Tauri only accepts light/dark/system)
-    tauriBridge.setPreferredTheme(resolvedMode === 'dark' ? 'dark' : 'light');
-    // Allow echoes to settle before accepting theme-change messages again
-    const timer = setTimeout(() => {
-      pushingThemeRef.current = false;
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [cliTheme]); // intentionally only depend on cliTheme
+    if (loadedIframeRef.current === iframeRef.current) pushTheme();
+  }, [pushTheme]);
 
   // Ref to capture current cliTheme for the initial URL without re-triggering server start
   const cliThemeRef = useRef(cliTheme);
@@ -85,6 +72,7 @@ export default function CliWebView() {
 
   // Try to start server if no port available on mount
   useEffect(() => {
+    if (!isTauri()) return;
     if (appInfo?.serverPort) {
       setIframeUrl(`http://localhost:${appInfo.serverPort}?theme=${cliThemeRef.current}`);
       setStatus('ready');
@@ -172,6 +160,15 @@ export default function CliWebView() {
     }
   }, [activeProject, refreshAppInfo]);
 
+  if (!isTauri()) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 bg-paper">
+        <p className="text-pencil font-medium">Browser preview</p>
+        <p className="text-pencil-light text-sm">Desktop features require the Tauri app.</p>
+      </div>
+    );
+  }
+
   // Switching state
   if (switching) {
     return (
@@ -220,6 +217,10 @@ export default function CliWebView() {
       key={`${iframeUrl}-${iframeKey}`}
       src={iframeUrl!}
       className="flex-1 w-full border-0"
+      onLoad={() => {
+        loadedIframeRef.current = iframeRef.current;
+        pushTheme();
+      }}
       allow="clipboard-write"
       title="skillshare UI"
     />

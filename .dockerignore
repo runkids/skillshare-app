@@ -1,0 +1,6 @@
+*
+!Dockerfile.dev
+!mise.toml
+!scripts/
+scripts/*
+!scripts/dev-desktop.sh

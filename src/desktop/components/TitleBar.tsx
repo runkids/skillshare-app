@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Settings, Monitor, TerminalSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getCurrentWindow } from '@tauri-apps/api/window';
 import ProjectDropdown from './ProjectDropdown';
 import { useTerminal } from '../context/TerminalContext';
 
@@ -11,19 +10,6 @@ const SHOW_VIEW_TABS = false;
 export default function TitleBar() {
   const navigate = useNavigate();
   const { activeView, setActiveView, hasUnreadAny } = useTerminal();
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
-  useEffect(() => {
-    const appWindow = getCurrentWindow();
-    appWindow.isFullscreen().then(setIsFullscreen);
-    const unlisten = appWindow.onResized(() => {
-      appWindow.isFullscreen().then(setIsFullscreen);
-    });
-    return () => {
-      unlisten.then((fn) => fn());
-    };
-  }, []);
-
   useEffect(() => {
     if (!SHOW_VIEW_TABS) return;
     function handleKeyDown(e: KeyboardEvent) {
@@ -42,8 +28,7 @@ export default function TitleBar() {
   return (
     <div
       data-tauri-drag-region
-      className="h-12 flex items-center justify-between px-4 bg-paper border-b border-muted select-none shrink-0"
-      style={{ paddingLeft: isFullscreen ? '16px' : '80px' }}
+      className="h-12 flex items-center justify-end gap-3 px-4 bg-paper border-b border-muted select-none shrink-0"
     >
       <div className="flex items-center gap-3">
         <ProjectDropdown />

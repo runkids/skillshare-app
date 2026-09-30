@@ -1,0 +1,35 @@
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    init: true
+    working_dir: /workspace
+    shm_size: 1gb
+    environment:
+      DISPLAY: ":99"
+      CARGO_BUILD_JOBS: "4"
+    ports:
+      - "127.0.0.1:1420:1420"
+      - "127.0.0.1:6080:6080"
+    volumes:
+      - .:/workspace
+      - node_modules:/workspace/node_modules
+      - cargo_registry:/root/.cargo/registry
+      - cargo_git:/root/.cargo/git
+      - cargo_target:/workspace/src-tauri/target
+      - app_data:/root/.local/share
+      - app_config:/root/.config
+    command:
+      - dbus-run-session
+      - --
+      - bash
+      - /usr/local/bin/dev-desktop
+
+volumes:
+  node_modules:
+  cargo_registry:
+  cargo_git:
+  cargo_target:
+  app_data:
+  app_config:

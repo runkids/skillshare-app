@@ -1,38 +1,11 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
-
-export type Style = 'clean' | 'playful';
-export type ModePreference = 'light' | 'dark' | 'system';
-export type ResolvedMode = 'light' | 'dark';
-
-interface ThemeContextValue {
-  style: Style;
-  setStyle: (s: Style) => void;
-  modePreference: ModePreference;
-  setModePreference: (m: ModePreference) => void;
-  resolvedMode: ResolvedMode;
-  // Legacy compat
-  theme: ResolvedMode;
-  toggleTheme: () => void;
-}
-
-const ThemeContext = createContext<ThemeContextValue>({
-  style: 'clean',
-  setStyle: () => {},
-  modePreference: 'light',
-  setModePreference: () => {},
-  resolvedMode: 'light',
-  theme: 'light',
-  toggleTheme: () => {},
-});
-
-export function useTheme() {
-  return useContext(ThemeContext);
-}
+import { ThemeContext, type Style, type ModePreference } from './useTheme';
+import { isTauri } from '@tauri-apps/api/core';
+import { tauriBridge } from '../desktop/api/tauri-bridge';
 
 function getInitialStyle(): Style {
-  // Skillshare App always uses clean mode
-  return 'clean';
+  return localStorage.getItem('skillshare-style') === 'playful' ? 'playful' : 'clean';
 }
 
 function getInitialModePreference(): ModePreference {
@@ -49,10 +22,20 @@ function getInitialModePreference(): ModePreference {
   return 'light';
 }
 
-function resolveMode(pref: ModePreference): ResolvedMode {
+function resolveMode(pref: ModePreference): 'light' | 'dark' {
   if (pref === 'light') return 'light';
   if (pref === 'dark') return 'dark';
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function getSystemMode() {
+  return resolveMode('system');
+}
+
+function subscribeToSystemMode(onChange: () => void) {
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  mq.addEventListener('change', onChange);
+  return () => mq.removeEventListener('change', onChange);
 }
 
 let transitionTimer: ReturnType<typeof setTimeout>;
@@ -69,9 +52,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [style, setStyleState] = useState<Style>(getInitialStyle);
   const [modePreference, setModePreferenceState] =
     useState<ModePreference>(getInitialModePreference);
-  const [resolvedMode, setResolvedMode] = useState<ResolvedMode>(() =>
-    resolveMode(getInitialModePreference())
-  );
+  const systemMode = useSyncExternalStore(subscribeToSystemMode, getSystemMode);
+  const resolvedMode = modePreference === 'system' ? systemMode : modePreference;
 
   // Apply style to DOM
   useEffect(() => {
@@ -87,8 +69,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Apply mode to DOM and handle system listener
   useEffect(() => {
     const root = document.documentElement;
-    const resolved = resolveMode(modePreference);
-    setResolvedMode(resolved);
+    const resolved = resolvedMode;
 
     if (resolved === 'dark') {
       root.classList.add('dark');
@@ -97,25 +78,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
 
     localStorage.setItem('skillshare-theme-preference', modePreference);
-
-    if (modePreference !== 'system') return;
-
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = (e: MediaQueryListEvent) => {
-      const next: ResolvedMode = e.matches ? 'dark' : 'light';
-      setResolvedMode(next);
-      if (next === 'dark') {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
-    };
-
-    mq.addEventListener('change', handler);
-    return () => {
-      mq.removeEventListener('change', handler);
-    };
-  }, [modePreference]);
+    if (isTauri()) void tauriBridge.setPreferredTheme(modePreference);
+  }, [modePreference, resolvedMode]);
 
   const setStyle = useCallback((s: Style) => {
     applyWithTransition(() => setStyleState(s));

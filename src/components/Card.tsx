@@ -14,7 +14,7 @@ interface CardProps {
 }
 
 const variantStyles = {
-  default: 'bg-surface border border-muted',
+  default: 'bg-surface border-[length:var(--bw)] border-[var(--line)]',
   accent: 'bg-surface border-2 border-muted-dark/30',
   outlined: 'border border-muted',
 };
@@ -50,7 +50,7 @@ export default function Card({
         relative ${paddingClasses[padding]}
         ${overflow ? 'overflow-visible' : 'overflow-hidden'}
         transition-all duration-150
-        rounded-[var(--radius-md)]
+        rounded-[var(--r-box)]
         ${variantStyles[variant]}
         ${hover ? 'cursor-pointer hover:shadow-md hover:translate-y-[-1px]' : ''}
         ${tilt ? 'card-tilt' : ''}
