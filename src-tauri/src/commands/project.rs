@@ -21,9 +21,14 @@ pub fn add_project(
     let mut store = project_store::load();
 
     if project_type == ProjectType::Global {
-        let has_global = store.projects.iter().any(|p| p.project_type == ProjectType::Global);
+        let has_global = store
+            .projects
+            .iter()
+            .any(|p| p.project_type == ProjectType::Global);
         if has_global {
-            return Err("A global project already exists. Remove it first to add a new one.".to_string());
+            return Err(
+                "A global project already exists. Remove it first to add a new one.".to_string(),
+            );
         }
     }
 
