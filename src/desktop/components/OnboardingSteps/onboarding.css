@@ -1,0 +1,384 @@
+/*
+ * Onboarding motion. Only transform, opacity and stroke-dashoffset are animated.
+ * Colours come from theme tokens; durations 250-400ms with an ease-out curve.
+ * prefers-reduced-motion (bottom of file) reduces everything to opacity fades.
+ */
+.ob-root {
+  --ob-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ob-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── Step change: outgoing slides out, incoming children rise in with a stagger ── */
+@keyframes ob-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes ob-out {
+  to {
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+}
+@keyframes ob-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.ob-enter > * {
+  animation: ob-rise 360ms var(--ob-ease) both;
+  animation-delay: calc(var(--ob-i, 0) * 50ms);
+}
+.ob-enter > :nth-child(1) {
+  --ob-i: 0;
+}
+.ob-enter > :nth-child(2) {
+  --ob-i: 1;
+}
+.ob-enter > :nth-child(3) {
+  --ob-i: 2;
+}
+.ob-enter > :nth-child(4) {
+  --ob-i: 3;
+}
+.ob-enter > :nth-child(5) {
+  --ob-i: 4;
+}
+.ob-enter > :nth-child(6) {
+  --ob-i: 5;
+}
+.ob-enter > :nth-child(7) {
+  --ob-i: 6;
+}
+.ob-enter > :nth-child(8) {
+  --ob-i: 7;
+}
+.ob-leave {
+  animation: ob-out 240ms var(--ob-ease) forwards;
+}
+
+/* Items with an explicit index (--ob-i set inline), e.g. target rows. */
+.ob-rise-item {
+  animation: ob-rise 360ms var(--ob-ease) both;
+  animation-delay: calc(var(--ob-i, 0) * 45ms + 120ms);
+}
+
+/* ── Stepper ── */
+.ob-connector {
+  transform-origin: top;
+  transform: scaleY(0);
+  transition: transform 420ms var(--ob-ease);
+}
+.ob-connector[data-filled='true'] {
+  transform: scaleY(1);
+}
+
+.ob-node {
+  position: relative;
+  transition:
+    background-color 240ms var(--ob-ease),
+    border-color 240ms var(--ob-ease),
+    color 240ms var(--ob-ease);
+}
+.ob-node[data-state='done'] {
+  animation: ob-pop 420ms var(--ob-spring);
+}
+.ob-node-num,
+.ob-node-check {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ob-node-num {
+  transition:
+    opacity 180ms var(--ob-ease),
+    transform 240ms var(--ob-ease);
+}
+.ob-node[data-state='done'] .ob-node-num {
+  opacity: 0;
+  transform: scale(0.4);
+}
+@keyframes ob-pop {
+  0% {
+    transform: scale(0.85);
+  }
+  60% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Drawn check: pathLength=1 so the dash maths is size independent. */
+.ob-check path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 360ms var(--ob-ease) 120ms;
+}
+.ob-check[data-drawn='true'] path {
+  stroke-dashoffset: 0;
+}
+
+/* ── Spinner that resolves into a check ── */
+.ob-spin {
+  width: 26px;
+  height: 26px;
+  box-sizing: border-box;
+  border-radius: 9999px;
+  border: 3px solid var(--line-soft);
+  border-top-color: var(--accent);
+  animation: ob-rotate 800ms linear infinite;
+}
+@keyframes ob-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.ob-mark {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background-color 240ms var(--ob-ease),
+    border-color 240ms var(--ob-ease);
+}
+.ob-mark[data-state='pending'] {
+  border: 1px dashed var(--line-2);
+}
+.ob-mark[data-state='active'] > .ob-spin {
+  position: absolute;
+  inset: 0;
+}
+.ob-mark[data-state='done'] {
+  background: var(--ok);
+  color: var(--on-pri);
+  animation: ob-pop 420ms var(--ob-spring);
+}
+.ob-mark[data-state='done'] > .ob-spin {
+  display: none;
+}
+
+/* ── Progress: indeterminate sweep, then determinate fill (scaleX) ── */
+.ob-progress {
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--line-soft);
+  overflow: hidden;
+}
+.ob-progress-bar {
+  height: 100%;
+  width: 100%;
+  border-radius: 9999px;
+  background: var(--accent);
+  transform-origin: left;
+}
+.ob-progress-bar[data-mode='indeterminate'] {
+  width: 35%;
+  animation: ob-sweep 1.2s var(--ob-ease) infinite;
+}
+.ob-progress-bar[data-mode='determinate'] {
+  transform: scaleX(var(--ob-p, 0));
+  transition: transform 400ms var(--ob-ease);
+}
+@keyframes ob-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+
+/* ── Installer output ── */
+.ob-line {
+  animation: ob-fade 260ms ease-out both;
+}
+
+/* ── Target checkbox ── */
+.ob-box {
+  transition:
+    background-color 160ms var(--ob-ease),
+    border-color 160ms var(--ob-ease),
+    transform 240ms var(--ob-spring);
+}
+.ob-box[data-checked='true'] {
+  transform: scale(1.08);
+}
+.ob-box[data-checked='true'] .ob-check path {
+  stroke-dashoffset: 0;
+}
+
+/* ── First sync diagram ── */
+.ob-wire {
+  fill: none;
+  stroke: var(--line-2);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: ob-draw 520ms var(--ob-ease) forwards;
+  animation-delay: calc(var(--ob-i, 0) * 220ms);
+}
+@keyframes ob-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+/* A stream of dots: a repeating dash pattern sliding along the same path. */
+.ob-flow {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 0.001 0.1;
+  opacity: 0;
+  animation:
+    ob-flow 1.1s linear infinite,
+    ob-fade 240ms ease-out forwards;
+  animation-delay: calc(var(--ob-i, 0) * 220ms + 520ms), calc(var(--ob-i, 0) * 220ms + 520ms);
+  transition: opacity 240ms ease-out;
+}
+.ob-flow[data-done='true'] {
+  animation: none;
+  opacity: 0;
+}
+@keyframes ob-flow {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -0.101;
+  }
+}
+.ob-tnode {
+  fill: var(--surface);
+  stroke: var(--line-2);
+  stroke-width: 1.5;
+  transition:
+    fill 240ms var(--ob-ease),
+    stroke 240ms var(--ob-ease);
+}
+.ob-tnode[data-done='true'] {
+  fill: var(--ok-bg);
+  stroke: var(--ok);
+}
+.ob-tcheck {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(0.3);
+  transition:
+    opacity 200ms var(--ob-ease),
+    transform 360ms var(--ob-spring);
+}
+.ob-tcheck[data-done='true'] {
+  opacity: 1;
+  transform: scale(1);
+}
+.ob-tcheck path {
+  fill: none;
+  stroke: var(--ok);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ob-node-in {
+  opacity: 0;
+  animation: ob-fade 300ms var(--ob-ease) forwards;
+  animation-delay: calc(var(--ob-i, 0) * 60ms);
+}
+
+/* ── Reduced motion: opacity fades only, no travel, scale or looping ── */
+@media (prefers-reduced-motion: reduce) {
+  .ob-enter > *,
+  .ob-rise-item {
+    animation-name: ob-fade;
+    animation-duration: 200ms;
+  }
+  .ob-leave {
+    animation-name: ob-fade-out;
+    animation-duration: 160ms;
+  }
+  .ob-connector {
+    transform: none;
+    opacity: 0;
+    transition: opacity 200ms ease-out;
+  }
+  .ob-connector[data-filled='true'] {
+    opacity: 1;
+  }
+  .ob-node[data-state='done'],
+  .ob-mark[data-state='done'] {
+    animation: none;
+  }
+  .ob-node[data-state='done'] .ob-node-num {
+    transform: none;
+  }
+  .ob-check path {
+    stroke-dashoffset: 0;
+    opacity: 0;
+    transition: opacity 200ms ease-out;
+  }
+  .ob-check[data-drawn='true'] path {
+    opacity: 1;
+  }
+  .ob-box[data-checked='true'] {
+    transform: none;
+  }
+  .ob-box .ob-check path {
+    opacity: 0;
+  }
+  .ob-box[data-checked='true'] .ob-check path {
+    opacity: 1;
+  }
+  .ob-spin {
+    animation-duration: 2.4s;
+  }
+  .ob-progress-bar[data-mode='indeterminate'] {
+    width: 100%;
+    transform: none;
+    animation: ob-pulse 1.6s ease-in-out infinite;
+  }
+  .ob-progress-bar[data-mode='determinate'] {
+    transition: opacity 200ms ease-out;
+  }
+  .ob-wire {
+    stroke-dashoffset: 0;
+    opacity: 0;
+    animation: ob-fade 200ms ease-out forwards;
+    animation-delay: 0ms;
+  }
+  .ob-flow {
+    display: none;
+  }
+  .ob-tcheck {
+    transform: none;
+  }
+}
+@keyframes ob-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes ob-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}

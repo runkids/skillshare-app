@@ -8,6 +8,24 @@ export interface Project {
   addedAt: string;
 }
 
+export interface InstallPlatform {
+  os: 'macos' | 'linux' | 'windows';
+  arch: 'arm64' | 'x64';
+  brew: boolean;
+}
+
+export interface InstallResult {
+  path: string;
+  version: string;
+}
+
+export interface InstallOutput {
+  stream: 'stdout' | 'stderr';
+  line: string;
+}
+
+export const CLI_INSTALL_OUTPUT_EVENT = 'cli-install-output';
+
 export interface OnboardingStatus {
   completed: boolean;
   cliReady: boolean;
@@ -32,6 +50,9 @@ export const tauriBridge = {
   upgradeCli: () => invoke<string>('upgrade_cli'),
   runCli: (cliPath: string, args: string[], workingDir?: string) =>
     invoke<string>('run_cli', { cliPath, args, workingDir }),
+  detectInstallPlatform: () => invoke<InstallPlatform>('detect_install_platform'),
+  installCli: (method: string) => invoke<InstallResult>('install_cli', { method }),
+  cancelCliInstall: () => invoke<boolean>('cancel_cli_install'),
 
   // Project commands
   listProjects: () => invoke<Project[]>('list_projects'),
