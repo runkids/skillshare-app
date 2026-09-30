@@ -87,6 +87,11 @@ pub async fn get_global_config_dir(cli_path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+pub async fn cli_path_hint(cli_path: String) -> Result<Option<cli_manager::PathHint>, String> {
+    Ok(cli_manager::path_hint(&cli_path).await)
+}
+
+#[tauri::command]
 pub async fn detect_install_platform() -> Result<cli_manager::InstallPlatform, String> {
     Ok(cli_manager::detect_install_platform().await)
 }

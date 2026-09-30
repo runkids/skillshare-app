@@ -32,6 +32,7 @@ pub fn run() {
             commands::cli::run_cli,
             commands::cli::get_global_config_dir,
             commands::cli::detect_install_platform,
+            commands::cli::cli_path_hint,
             commands::cli::install_cli,
             commands::cli::cancel_cli_install,
             // Project commands

@@ -14,6 +14,11 @@ export interface InstallPlatform {
   brew: boolean;
 }
 
+export interface PathHint {
+  dir: string;
+  command: string;
+}
+
 export interface InstallResult {
   path: string;
   version: string;
@@ -51,6 +56,7 @@ export const tauriBridge = {
   runCli: (cliPath: string, args: string[], workingDir?: string) =>
     invoke<string>('run_cli', { cliPath, args, workingDir }),
   detectInstallPlatform: () => invoke<InstallPlatform>('detect_install_platform'),
+  cliPathHint: (cliPath: string) => invoke<PathHint | null>('cli_path_hint', { cliPath }),
   installCli: (method: string) => invoke<InstallResult>('install_cli', { method }),
   cancelCliInstall: () => invoke<boolean>('cancel_cli_install'),
 
