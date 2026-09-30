@@ -1,29 +1,24 @@
 import { useState, useCallback, useEffect } from 'react';
-import { check, type Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { getVersion } from '@tauri-apps/api/app';
 import Card from '../../../components/Card';
 import Button from '../../../components/Button';
 import { useTauri } from '../../context/TauriContext';
+import { useAppUpdate, type UpdateCheckStatus } from '../../hooks/useAppUpdate';
 
-type UpdateStatus =
-  | 'idle'
-  | 'checking'
-  | 'available'
-  | 'downloading'
-  | 'installing'
-  | 'complete'
-  | 'up-to-date'
-  | 'error';
+type UpdateStatus = UpdateCheckStatus | 'downloading' | 'installing' | 'complete';
 
 export default function AboutSettings() {
   const { appInfo } = useTauri();
+  const { update: updateObj, status: checkStatus, error: checkError, recheck } = useAppUpdate();
   const [appVersion, setAppVersion] = useState('0.1.0');
-  const [status, setStatus] = useState<UpdateStatus>('idle');
-  const [newVersion, setNewVersion] = useState<string | null>(null);
+  // Download/install phases are local; the check result comes from the shared hook.
+  const [installStatus, setInstallStatus] = useState<UpdateStatus | null>(null);
   const [progress, setProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const [updateObj, setUpdateObj] = useState<Update | null>(null);
+  const [installError, setInstallError] = useState<string | null>(null);
+  const status: UpdateStatus = installStatus ?? checkStatus;
+  const error = installStatus ? installError : checkError;
+  const newVersion = updateObj?.version ?? null;
 
   useEffect(() => {
     getVersion()
@@ -32,27 +27,14 @@ export default function AboutSettings() {
   }, []);
 
   const handleCheck = useCallback(async () => {
-    setStatus('checking');
-    setError(null);
-    try {
-      const update = await check();
-      if (update) {
-        setUpdateObj(update);
-        setNewVersion(update.version);
-        setStatus('available');
-      } else {
-        setStatus('up-to-date');
-        setTimeout(() => setStatus('idle'), 3000);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-      setStatus('error');
-    }
-  }, []);
+    setInstallStatus(null);
+    setInstallError(null);
+    await recheck();
+  }, [recheck]);
 
   const handleDownload = useCallback(async () => {
     if (!updateObj) return;
-    setStatus('downloading');
+    setInstallStatus('downloading');
     setProgress(0);
     try {
       let downloaded = 0;
@@ -68,14 +50,14 @@ export default function AboutSettings() {
             break;
           case 'Finished':
             setProgress(100);
-            setStatus('installing');
+            setInstallStatus('installing');
             break;
         }
       });
-      setStatus('complete');
+      setInstallStatus('complete');
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-      setStatus('error');
+      setInstallError(err instanceof Error ? err.message : String(err));
+      setInstallStatus('error');
     }
   }, [updateObj]);
 
@@ -83,7 +65,7 @@ export default function AboutSettings() {
     try {
       await relaunch();
     } catch {
-      setError('Failed to restart. Please close and reopen the app.');
+      setInstallError('Failed to restart. Please close and reopen the app.');
     }
   }, []);
 

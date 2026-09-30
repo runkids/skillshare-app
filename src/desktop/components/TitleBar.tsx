@@ -3,6 +3,9 @@ import { Settings, Monitor, TerminalSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ProjectDropdown from './ProjectDropdown';
 import { useTerminal } from '../context/TerminalContext';
+import { useTauri } from '../context/TauriContext';
+import { isMacOS } from '../utils/platform';
+import appIcon from '../../../src-tauri/icons/64x64.png';
 
 // TODO: re-enable Web UI / Terminal tab switcher when terminal feature is ready
 const SHOW_VIEW_TABS = false;
@@ -10,6 +13,9 @@ const SHOW_VIEW_TABS = false;
 export default function TitleBar() {
   const navigate = useNavigate();
   const { activeView, setActiveView, hasUnreadAny } = useTerminal();
+  const { appInfo } = useTauri();
+  // macOS draws native traffic lights over the window (titleBarStyle: Overlay).
+  const mac = isMacOS();
   useEffect(() => {
     if (!SHOW_VIEW_TABS) return;
     function handleKeyDown(e: KeyboardEvent) {
@@ -28,8 +34,20 @@ export default function TitleBar() {
   return (
     <div
       data-tauri-drag-region
-      className="h-12 flex items-center justify-end gap-3 px-4 bg-paper border-b border-muted select-none shrink-0"
+      className="h-11 flex items-center gap-2 pr-3 bg-[var(--side)] border-b border-[var(--line)] select-none shrink-0"
+      style={{ paddingLeft: mac ? 84 : 12 }}
     >
+      {!mac && (
+        <span
+          data-testid="app-mark"
+          className="flex items-center gap-2 h-5 pr-2.5 mr-0.5 border-r border-[var(--line)]"
+        >
+          <img src={appIcon} alt="" className="w-5 h-5" draggable={false} />
+          <span className="text-[13px] font-bold tracking-[-0.01em] text-[var(--ink)]">
+            skillshare
+          </span>
+        </span>
+      )}
       <div className="flex items-center gap-3">
         <ProjectDropdown />
         {SHOW_VIEW_TABS && (
@@ -64,13 +82,21 @@ export default function TitleBar() {
           </div>
         )}
       </div>
+      <div data-tauri-drag-region className="flex-1 self-stretch" />
+      {appInfo?.serverRunning && (
+        <span className="flex items-center gap-1.5 h-[26px] px-2.5 rounded-[var(--r-btn)] bg-[var(--ok-bg)] text-[var(--ok)] text-xs">
+          <span className="w-1.5 h-1.5 rounded-full bg-[var(--ok)]" />
+          Server running
+        </span>
+      )}
       <button
         type="button"
         onClick={() => navigate('/settings')}
-        className="p-1.5 rounded-[var(--radius-sm)] hover:bg-muted/50 transition-colors text-pencil-light hover:text-pencil"
+        className="w-[30px] h-[30px] flex items-center justify-center rounded-[var(--r-ctl)] hover:bg-[var(--sel)] transition-colors text-[var(--ink-2)] hover:text-[var(--ink)]"
         title="Settings"
+        aria-label="Settings"
       >
-        <Settings size={16} strokeWidth={2.5} />
+        <Settings size={16} />
       </button>
     </div>
   );

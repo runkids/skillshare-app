@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isTauri } from '@tauri-apps/api/core';
-import Spinner from '../../components/Spinner';
+import { AlertTriangle, Check, RotateCw, Unplug } from 'lucide-react';
 import Button from '../../components/Button';
 import { useProjects } from '../context/ProjectContext';
 import { tauriBridge } from '../api/tauri-bridge';
@@ -12,6 +12,52 @@ const HEALTH_POLL_INTERVAL = 30_000;
 const HEALTH_FAIL_THRESHOLD = 3;
 
 type Status = 'loading' | 'ready' | 'error' | 'server-down';
+
+const CARD =
+  'w-full max-w-[520px] bg-[var(--surface)] border-[length:var(--bw)] border-[var(--line)] rounded-[var(--r-box)] shadow-[var(--sh-box)] p-9 flex flex-col motion-safe:animate-[fadeInUp_200ms_ease-out]';
+const HEADING = 'text-[28px] font-bold tracking-[-0.022em] leading-[1.1] text-[var(--ink)]';
+
+function StartingCard({
+  title,
+  cliVersion,
+  scope,
+}: {
+  title: string;
+  cliVersion?: string | null;
+  scope?: string;
+}) {
+  return (
+    <section aria-label="Starting" aria-busy="true" className={`${CARD} gap-[22px]`}>
+      <div className="text-xs font-bold tracking-[.08em] text-[var(--ink-3)]">LAUNCHING</div>
+      <h1 className={HEADING} style={{ fontFamily: 'var(--fh)' }}>
+        {title}
+      </h1>
+      <ol className="flex flex-col gap-3.5 text-[15px]">
+        <li className="flex items-center gap-3">
+          <span className="w-7 h-7 rounded-full bg-[var(--ok)] text-[var(--surface)] flex items-center justify-center">
+            <Check size={15} />
+          </span>
+          <span className="flex-1">Found CLI</span>
+          {cliVersion && (
+            <span className="font-mono text-xs text-[var(--ink-3)]">v{cliVersion}</span>
+          )}
+        </li>
+        <li className="flex items-center gap-3 font-bold">
+          <span className="w-7 h-7 rounded-full border-[3px] border-[var(--line)] border-t-[var(--accent)] animate-spin" />
+          <span className="flex-1">Starting local server</span>
+          {scope && <span className="text-xs font-normal text-[var(--ink-3)]">{scope}</span>}
+        </li>
+        <li className="flex items-center gap-3 text-[var(--ink-3)]">
+          <span className="w-7 h-7 rounded-full border border-dashed border-[var(--line-2)]" />
+          <span>Loading dashboard</span>
+        </li>
+      </ol>
+      <div className="h-2 rounded-[var(--r-btn)] bg-[var(--sunken)] overflow-hidden">
+        <div className="h-full w-[55%] rounded-[var(--r-btn)] bg-[var(--accent)]/40 motion-safe:animate-[shimmer_1.5s_ease-in-out_infinite]" />
+      </div>
+    </section>
+  );
+}
 
 export default function CliWebView() {
   const navigate = useNavigate();
@@ -172,11 +218,12 @@ export default function CliWebView() {
   // Switching state
   if (switching) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-3 bg-paper">
-        <Spinner size="lg" />
-        <span className="text-pencil-light text-sm">
-          Switching to {activeProject?.name || 'project'}...
-        </span>
+      <div className="flex-1 flex items-center justify-center p-8 bg-[var(--bg)]">
+        <StartingCard
+          title={`Switching to ${activeProject?.name || 'project'}…`}
+          cliVersion={appInfo?.cliVersion}
+          scope={activeProject?.name}
+        />
       </div>
     );
   }
@@ -184,29 +231,58 @@ export default function CliWebView() {
   // Loading state
   if (status === 'loading') {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-3 bg-paper">
-        <Spinner size="lg" />
-        <span className="text-pencil-light text-sm">Starting server...</span>
+      <div className="flex-1 flex items-center justify-center p-8 bg-[var(--bg)]">
+        <StartingCard
+          title="Getting skillshare ready…"
+          cliVersion={appInfo?.cliVersion}
+          scope={activeProject?.name}
+        />
       </div>
     );
   }
 
   // Error or server-down state
   if (status === 'error' || status === 'server-down') {
+    const down = status === 'server-down';
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-4 bg-paper">
-        <p className="text-pencil font-medium">
-          {status === 'error' ? 'Server failed to start' : 'Server disconnected'}
-        </p>
-        {error && <p className="text-pencil-light text-sm max-w-md text-center">{error}</p>}
-        <div className="flex items-center gap-3">
-          <Button onClick={handleRestart} loading={restarting}>
-            {status === 'error' ? 'Retry' : 'Restart Server'}
-          </Button>
-          <Button variant="secondary" onClick={() => navigate('/settings?tab=general')}>
-            Settings
-          </Button>
-        </div>
+      <div className="flex-1 flex items-center justify-center p-8 bg-[var(--bg)]">
+        <section
+          role="alert"
+          aria-label={down ? 'Disconnected' : 'Failed to start'}
+          className={`${CARD} gap-[18px]`}
+        >
+          <span className="w-[52px] h-[52px] rounded-[var(--r-box)] bg-[var(--bad-bg)] text-[var(--bad)] flex items-center justify-center">
+            {down ? <Unplug size={24} /> : <AlertTriangle size={24} />}
+          </span>
+          <h1 className={HEADING} style={{ fontFamily: 'var(--fh)' }}>
+            {down ? 'Lost touch with the server' : 'Server failed to start'}
+          </h1>
+          <p className="text-[15px] leading-[1.55] text-[var(--ink-2)]">
+            {down
+              ? 'The local skillshare server stopped answering health checks.'
+              : 'The local skillshare server could not be started.'}{' '}
+            Your skills and config are safe on disk.
+          </p>
+          <div className="flex items-center gap-3">
+            <Button size="lg" onClick={handleRestart} loading={restarting}>
+              {!restarting && <RotateCw size={16} />}
+              {down ? 'Restart server' : 'Retry'}
+            </Button>
+            <Button size="lg" variant="secondary" onClick={() => navigate('/settings?tab=cli')}>
+              CLI settings
+            </Button>
+          </div>
+          {error && (
+            <details className="rounded-[var(--r-box)] bg-[var(--sunken)] px-3.5 py-3">
+              <summary className="text-[13px] font-semibold cursor-pointer text-[var(--ink)]">
+                Technical details
+              </summary>
+              <pre className="mt-2.5 font-mono text-xs text-[var(--ink-2)] whitespace-pre-wrap">
+                {error}
+              </pre>
+            </details>
+          )}
+        </section>
       </div>
     );
   }
