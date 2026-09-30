@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.8](https://github.com/runkids/skillshare-app/compare/v0.0.7...v0.0.8) (2026-09-30)
+
+
+### Features
+
+* refresh shell UI and first-run onboarding ([#4](https://github.com/runkids/skillshare-app/issues/4)) ([e23b66f](https://github.com/runkids/skillshare-app/commit/e23b66f08274df12e614f6610e17fe85f6a57b54))
+
 ## [0.0.7](https://github.com/runkids/skillshare-app/compare/v0.0.6...v0.0.7) (2026-09-30)
 
 
