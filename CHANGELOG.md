@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.9](https://github.com/runkids/skillshare-app/compare/v0.0.8...v0.0.9) (2026-09-30)
+
+
+### Bug Fixes
+
+* unbreak release build and make typecheck real ([#6](https://github.com/runkids/skillshare-app/issues/6)) ([b32b9ab](https://github.com/runkids/skillshare-app/commit/b32b9ab94e829f9e1ffea91083c3c6c68cad879a))
+
 ## [0.0.8](https://github.com/runkids/skillshare-app/compare/v0.0.7...v0.0.8) (2026-09-30)
 
 
