@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertCircle, ArrowRight, Check } from 'lucide-react';
 import Button from '../../../components/Button';
-import { tauriBridge } from '../../api/tauri-bridge';
+import { tauriBridge, type PathHint } from '../../api/tauri-bridge';
+import CommandBlock from './CommandBlock';
 import StepHeader from './StepHeader';
 import SyncDiagram from './SyncDiagram';
 import { parseSyncResult, parseTargetNames } from './onboarding-cli';
@@ -69,6 +70,19 @@ export default function FirstSyncStep({ cliPath, onComplete, onSynced }: FirstSy
   const [linked, setLinked] = useState<Record<string, number> | null>(null);
   const [revealed, setRevealed] = useState(0);
   const alive = useRef(true);
+  const [pathHint, setPathHint] = useState<PathHint | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    // Only a hint: without it the plain terminal tip is shown.
+    tauriBridge
+      .cliPathHint(cliPath)
+      .then((hint) => active && setPathHint(hint))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [cliPath]);
 
   const execute = useCallback(
     () =>
@@ -156,12 +170,26 @@ export default function FirstSyncStep({ cliPath, onComplete, onSynced }: FirstSy
           <div className="rounded-xl bg-sunken px-3.5 py-3 text-[13px] text-ink-2">
             <b className="text-ink">Next:</b> install a skill from GitHub on the Skills page.
           </div>
-          <div className="rounded-xl bg-sunken px-3.5 py-3 text-[13px] text-ink-2">
-            <b className="text-ink">Tip:</b> the CLI works in your terminal too —{' '}
-            <span className="text-ink" style={mono}>
-              skillshare sync
-            </span>
-          </div>
+          {!pathHint && (
+            <div className="rounded-xl bg-sunken px-3.5 py-3 text-[13px] text-ink-2">
+              <b className="text-ink">Tip:</b> the CLI works in your terminal too —{' '}
+              <span className="text-ink" style={mono}>
+                skillshare sync
+              </span>
+            </div>
+          )}
+          {pathHint && (
+            <div className="col-span-2 flex flex-col gap-2 rounded-xl bg-sunken px-3.5 py-3 text-[13px] text-ink-2">
+              <span>
+                <b className="text-ink">Use it in your terminal:</b>{' '}
+                <span className="text-ink" style={mono}>
+                  {pathHint.dir}
+                </span>{' '}
+                isn’t on your PATH yet. Run this once, then open a new terminal window.
+              </span>
+              <CommandBlock command={pathHint.command} />
+            </div>
+          )}
         </div>
       )}
 

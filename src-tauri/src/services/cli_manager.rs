@@ -307,6 +307,77 @@ pub struct InstallResult {
 static INSTALL_CANCEL: std::sync::Mutex<Option<tokio::sync::oneshot::Sender<()>>> =
     std::sync::Mutex::new(None);
 
+/// How to put the CLI's folder on the user's terminal PATH.
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PathHint {
+    /// The CLI's folder, with the home prefix shown as `~`.
+    pub dir: String,
+    /// A one-line command that persists the folder on PATH for `shell`.
+    pub command: String,
+}
+
+/// Build the PATH hint for `cli_dir`, or `None` when the login shell already has it.
+fn path_hint_for(cli_dir: &str, home: &str, shell: &str, shell_path: &str) -> Option<PathHint> {
+    if shell_path
+        .split(':')
+        .any(|p| p.trim_end_matches('/') == cli_dir)
+    {
+        return None;
+    }
+    let rel = cli_dir.strip_prefix(home).filter(|r| r.starts_with('/'));
+    let shown = rel.map_or_else(|| cli_dir.to_string(), |r| format!("~{r}"));
+    let expr = rel.map_or_else(|| cli_dir.to_string(), |r| format!("$HOME{r}"));
+    let export = |rc: &str| format!(r#"echo 'export PATH="{expr}:$PATH"' >> {rc}"#);
+    let command = match shell.rsplit('/').next().unwrap_or(shell) {
+        "fish" => format!("fish_add_path {shown}"),
+        "zsh" => export("~/.zshrc"),
+        "bash" if cfg!(target_os = "macos") => export("~/.bash_profile"),
+        "bash" => export("~/.bashrc"),
+        _ => export("~/.profile"),
+    };
+    Some(PathHint {
+        dir: shown,
+        command,
+    })
+}
+
+/// PATH as the user's login shell sets it up (GUI apps do not inherit it).
+async fn login_shell_path(shell: &str) -> Option<String> {
+    let run = tokio::process::Command::new(shell)
+        .args(["-ilc", "/usr/bin/env"])
+        .stdin(std::process::Stdio::null())
+        .output();
+    let output = tokio::time::timeout(std::time::Duration::from_secs(5), run)
+        .await
+        .ok()?
+        .ok()?;
+    String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .find_map(|l| l.strip_prefix("PATH=").map(str::to_string))
+}
+
+/// Suggest a PATH fix when the CLI works in the app but not in the user's terminal.
+/// Windows installs update PATH themselves, and the app-only copy is meant to stay private.
+pub async fn path_hint(cli_path: &str) -> Option<PathHint> {
+    if cfg!(target_os = "windows") {
+        return None;
+    }
+    let dir = std::path::Path::new(cli_path).parent()?;
+    if dir.starts_with(crate::utils::paths::app_data_dir()) {
+        return None;
+    }
+    let shell = std::env::var("SHELL").ok()?;
+    let shell_path = login_shell_path(&shell).await?;
+    let home = dirs::home_dir()?;
+    path_hint_for(
+        &dir.to_string_lossy(),
+        &home.to_string_lossy(),
+        &shell,
+        &shell_path,
+    )
+}
+
 /// OS, CPU architecture and whether Homebrew is on the (enriched) PATH.
 pub async fn detect_install_platform() -> InstallPlatform {
     let os = if cfg!(target_os = "windows") {
@@ -681,6 +752,30 @@ pub async fn download_cli(url: &str) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn no_path_hint_when_login_shell_already_has_the_folder() {
+        let hint = path_hint_for("/h/.local/bin", "/h", "/bin/zsh", "/usr/bin:/h/.local/bin/");
+        assert_eq!(hint, None);
+    }
+
+    #[test]
+    fn zsh_hint_appends_home_relative_export_to_zshrc() {
+        let hint = path_hint_for("/h/.local/bin", "/h", "/bin/zsh", "/usr/bin");
+        assert_eq!(
+            hint.map(|h| h.command).as_deref(),
+            Some(r#"echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc"#)
+        );
+    }
+
+    #[test]
+    fn fish_hint_uses_fish_add_path() {
+        let hint = path_hint_for("/h/.local/bin", "/h", "/usr/local/bin/fish", "/usr/bin");
+        assert_eq!(
+            hint.map(|h| h.command).as_deref(),
+            Some("fish_add_path ~/.local/bin")
+        );
+    }
 
     fn meta_with(version: Option<&str>, modified_ms: Option<u64>) -> CliMeta {
         CliMeta {
