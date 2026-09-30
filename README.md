@@ -110,6 +110,44 @@ After changing `mise.toml`, rebuild the image with `docker compose up --build de
 Press `Ctrl+C` to stop the development container, then run `docker compose down`
 to remove the stopped container. Named volumes are preserved for the next run.
 
+## Releasing
+
+Commits on `main` use Conventional Commits. Release Please opens or updates a
+Release PR with the next version and `CHANGELOG.md`. It keeps `package.json`,
+`src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and the app entry in
+`src-tauri/Cargo.lock` in sync. While the app is below 1.0, features and fixes bump
+the patch version; breaking changes bump the minor version.
+
+To release:
+
+1. Review and merge the Release PR.
+2. The **Release Please** workflow creates the tag and draft, then directly calls
+   **Release** to test and build macOS, Windows, and Linux with the versions in
+   `mise.toml`.
+3. Wait for all three builds and the **release-ready** job to succeed. Review the
+   draft's installers and `latest.json`, then click **Publish release**. Publishing
+   triggers the existing Homebrew cask update.
+
+The workflow calls the build directly because tags created with `GITHUB_TOKEN`
+do not trigger another workflow. No additional release token is required. Enable
+**Allow GitHub Actions to create and approve pull requests** under repository
+Settings → Actions → General so Release Please can open its PRs.
+
+Keep these existing Actions secrets configured:
+
+- Updater: `TAURI_SIGNING_PRIVATE_KEY`, and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
+  if the key is password-protected.
+- macOS signing and notarization: `APPLE_CERTIFICATE`,
+  `APPLE_CERTIFICATE_PASSWORD`, `KEYCHAIN_PASSWORD`, `APPLE_SIGNING_IDENTITY`,
+  `APPLE_ID`, `APPLE_PASSWORD`, and `APPLE_TEAM_ID`.
+- Homebrew: `HOMEBREW_TAP_TOKEN` with access to `runkids/homebrew-tap`.
+
+For a failed build, rerun the failed jobs or manually run **Release** with the
+existing `tag_name` (for example, `v0.0.6`). It checks version consistency and
+uploads to the same draft. Published releases cannot be rebuilt through this
+workflow. Manual tag pushes remain supported; the local `pnpm bump` command is
+not needed for the automated Release PR flow.
+
 ## License
 
 MIT

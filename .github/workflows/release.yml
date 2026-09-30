@@ -6,9 +6,14 @@ on:
       - 'v*'
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Version to release (e.g., 0.1.0)'
-        required: false
+      tag_name:
+        description: 'Existing tag to build or retry (e.g., v0.0.6)'
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      tag_name:
+        required: true
         type: string
 
 env:
@@ -17,74 +22,53 @@ env:
 permissions:
   contents: write
 
+concurrency:
+  group: release-build-${{ inputs.tag_name || github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
-  generate-release-notes:
+  prepare-release:
     runs-on: ubuntu-latest
     outputs:
-      release_body: ${{ steps.notes.outputs.body }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      release_id: ${{ steps.release.outputs.release_id }}
     steps:
-      - name: Checkout repository
+      - name: Checkout release tag
         uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.tag_name || github.ref }}
           fetch-depth: 0
 
-      - name: Generate release notes
-        id: notes
+      - name: Verify release versions
         env:
-          GH_REF: ${{ github.ref }}
-          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.tag_name || github.ref_name }}
         run: |
-          CURRENT_TAG=${GH_REF#refs/tags/}
-          LAST_TAG=$(git tag --sort=-version:refname | grep -v "^${CURRENT_TAG}$" | head -1)
+          node --test scripts/tests/check-release-version.mjs
+          node scripts/check-release-version.mjs "$RELEASE_TAG"
 
-          if [ -z "$LAST_TAG" ]; then
-            echo "body=Initial release" >> "$GITHUB_OUTPUT"
-            exit 0
+      - name: Prepare release draft
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.tag_name || github.ref_name }}
+        run: |
+          git rev-parse --verify "refs/tags/$RELEASE_TAG"
+          if ! gh api "repos/$GH_REPO/releases/tags/$RELEASE_TAG" > release.json; then
+            gh release create "$RELEASE_TAG" --verify-tag --draft \
+              --title "Skillshare App $RELEASE_TAG" --generate-notes
+            gh api "repos/$GH_REPO/releases/tags/$RELEASE_TAG" > release.json
           fi
-
-          FEATURES=""
-          FIXES=""
-          DOCS=""
-          CHORES=""
-          REPO_URL="https://github.com/${GH_REPO}"
-
-          while IFS='|' read -r hash subject; do
-            [ -z "$subject" ] && continue
-            SHORT_HASH="${hash:0:7}"
-            COMMIT_LINK="([${SHORT_HASH}](${REPO_URL}/commit/${hash}))"
-            if [[ "$subject" =~ ^feat ]]; then
-              msg=$(echo "$subject" | sed -E 's/^feat(\([^)]+\))?:\s*//' | sed 's/^ *//')
-              msg="$(echo "${msg:0:1}" | tr '[:lower:]' '[:upper:]')${msg:1}"
-              FEATURES="${FEATURES}- ${msg} ${COMMIT_LINK}\n"
-            elif [[ "$subject" =~ ^fix ]]; then
-              msg=$(echo "$subject" | sed -E 's/^fix(\([^)]+\))?:\s*//' | sed 's/^ *//')
-              msg="$(echo "${msg:0:1}" | tr '[:lower:]' '[:upper:]')${msg:1}"
-              FIXES="${FIXES}- ${msg} ${COMMIT_LINK}\n"
-            elif [[ "$subject" =~ ^docs ]]; then
-              msg=$(echo "$subject" | sed -E 's/^docs(\([^)]+\))?:\s*//' | sed 's/^ *//')
-              msg="$(echo "${msg:0:1}" | tr '[:lower:]' '[:upper:]')${msg:1}"
-              DOCS="${DOCS}- ${msg} ${COMMIT_LINK}\n"
-            elif [[ "$subject" =~ ^(chore|ci|build|refactor|perf|test|style) ]]; then
-              msg=$(echo "$subject" | sed -E 's/^(chore|ci|build|refactor|perf|test|style)(\([^)]+\))?:\s*//' | sed 's/^ *//')
-              msg="$(echo "${msg:0:1}" | tr '[:lower:]' '[:upper:]')${msg:1}"
-              CHORES="${CHORES}- ${msg} ${COMMIT_LINK}\n"
-            fi
-          done <<< "$(git log "$LAST_TAG"..HEAD --pretty=format:"%H|%s" --no-merges | grep -v "|release")"
-
-          BODY=""
-          [ -n "$FEATURES" ] && BODY="${BODY}### ✨ New Features\n\n${FEATURES}\n"
-          [ -n "$FIXES" ] && BODY="${BODY}### 🐛 Bug Fixes\n\n${FIXES}\n"
-          [ -n "$DOCS" ] && BODY="${BODY}### 📚 Documentation\n\n${DOCS}\n"
-          [ -n "$CHORES" ] && BODY="${BODY}### 🔧 Maintenance\n\n${CHORES}\n"
-
-          BODY="${BODY}---\n**Full Changelog**: https://github.com/${GH_REPO}/compare/${LAST_TAG}...${CURRENT_TAG}"
-
-          echo "body<<EOF" >> "$GITHUB_OUTPUT"
-          echo -e "$BODY" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
+          if [ "$(jq -r '.draft' release.json)" != "true" ]; then
+            echo "::error::This release is already published; only drafts can be rebuilt."
+            exit 1
+          fi
+          gh release edit "$RELEASE_TAG" --title "Skillshare App $RELEASE_TAG"
+          echo "tag_name=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          echo "release_id=$(jq -r '.id' release.json)" >> "$GITHUB_OUTPUT"
 
   build-macos:
-    needs: generate-release-notes
+    needs: prepare-release
     runs-on: macos-latest
     timeout-minutes: 60
     strategy:
@@ -94,21 +78,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          ref: ${{ needs.prepare-release.outputs.tag_name }}
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - name: Install mise-managed tools
+        uses: jdx/mise-action@v4
         with:
-          version: 9
+          version: 2026.9.11
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
+      - name: Install Rust target
+        run: rustup target add ${{ matrix.target }}
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
@@ -118,7 +97,7 @@ jobs:
           key: ${{ matrix.target }}
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Import Apple certificate
         env:
@@ -126,14 +105,17 @@ jobs:
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          echo "$APPLE_CERTIFICATE" | base64 --decode > $RUNNER_TEMP/certificate.p12
-          security import $RUNNER_TEMP/certificate.p12 -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security list-keychain -d user -s $KEYCHAIN_PATH
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          echo "$APPLE_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security import "$RUNNER_TEMP/certificate.p12" -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+      - name: Run frontend regression tests
+        run: pnpm test
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
@@ -146,39 +128,29 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: v__VERSION__
-          releaseName: 'Skillshare App v__VERSION__'
-          releaseBody: ${{ needs.generate-release-notes.outputs.release_body }}
-          releaseDraft: true
-          prerelease: false
+          releaseId: ${{ needs.prepare-release.outputs.release_id }}
           args: --target ${{ matrix.target }}
 
       - name: Clean up keychain
         if: always()
         run: |
-          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
+          security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" || true
 
   build-windows:
-    needs: generate-release-notes
+    needs: prepare-release
     runs-on: windows-latest
     timeout-minutes: 60
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          ref: ${{ needs.prepare-release.outputs.tag_name }}
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - name: Install mise-managed tools
+        uses: jdx/mise-action@v4
         with:
-          version: 9
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+          version: 2026.9.11
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
@@ -187,7 +159,10 @@ jobs:
           cache-all-crates: true
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Run frontend regression tests
+        run: pnpm test
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
@@ -196,38 +171,28 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: v__VERSION__
-          releaseName: 'Skillshare App v__VERSION__'
-          releaseBody: ${{ needs.generate-release-notes.outputs.release_body }}
-          releaseDraft: true
-          prerelease: false
+          releaseId: ${{ needs.prepare-release.outputs.release_id }}
 
   build-linux:
-    needs: generate-release-notes
+    needs: prepare-release
     runs-on: ubuntu-22.04
     timeout-minutes: 60
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          ref: ${{ needs.prepare-release.outputs.tag_name }}
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - name: Install mise-managed tools
+        uses: jdx/mise-action@v4
         with:
-          version: 9
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+          version: 2026.9.11
 
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
@@ -236,7 +201,10 @@ jobs:
           cache-all-crates: true
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Run frontend regression tests
+        run: pnpm test
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
@@ -245,8 +213,17 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: v__VERSION__
-          releaseName: 'Skillshare App v__VERSION__'
-          releaseBody: ${{ needs.generate-release-notes.outputs.release_body }}
-          releaseDraft: true
-          prerelease: false
+          releaseId: ${{ needs.prepare-release.outputs.release_id }}
+
+  release-ready:
+    needs: [prepare-release, build-macos, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report completed draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.prepare-release.outputs.tag_name }}
+        run: |
+          RELEASE_URL=$(gh release view "$RELEASE_TAG" --json url --jq '.url')
+          echo "All three platform builds succeeded. [Review and publish the draft]($RELEASE_URL). Publishing triggers the Homebrew update." >> "$GITHUB_STEP_SUMMARY"
