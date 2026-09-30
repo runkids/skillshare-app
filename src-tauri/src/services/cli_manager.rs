@@ -160,6 +160,35 @@ pub async fn get_version(cli_path: &str) -> Result<String, String> {
     extract_version(&raw).ok_or_else(|| "Could not parse version from CLI output".to_string())
 }
 
+/// Modification time of the CLI binary in ms since the Unix epoch.
+pub fn binary_modified_ms(cli_path: &str) -> Option<u64> {
+    let modified = std::fs::metadata(cli_path).ok()?.modified().ok()?;
+    let since_epoch = modified.duration_since(std::time::UNIX_EPOCH).ok()?;
+    u64::try_from(since_epoch.as_millis()).ok()
+}
+
+/// Whether the cached version must be re-read because the binary changed on disk.
+fn needs_version_refresh(meta: &CliMeta, modified_ms: u64) -> bool {
+    meta.version.is_none() || meta.binary_modified_ms != Some(modified_ms)
+}
+
+/// Re-read and persist the CLI version when the binary changed since it was cached.
+/// Upgrades can happen outside the app (web UI, terminal), which leaves the cache stale.
+pub async fn refresh_cached_version(meta: &mut CliMeta) -> Result<(), String> {
+    let Some(path) = meta.path.clone() else {
+        return Ok(());
+    };
+    let Some(modified_ms) = binary_modified_ms(&path) else {
+        return Ok(());
+    };
+    if !needs_version_refresh(meta, modified_ms) {
+        return Ok(());
+    }
+    meta.version = Some(get_version(&path).await?);
+    meta.binary_modified_ms = Some(modified_ms);
+    save_meta(meta)
+}
+
 /// Strip ANSI escape codes (CSI and OSC sequences) from a string.
 fn strip_ansi(raw: &str) -> String {
     let mut clean = String::with_capacity(raw.len());
@@ -652,6 +681,31 @@ pub async fn download_cli(url: &str) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn meta_with(version: Option<&str>, modified_ms: Option<u64>) -> CliMeta {
+        CliMeta {
+            version: version.map(str::to_string),
+            binary_modified_ms: modified_ms,
+            ..CliMeta::default()
+        }
+    }
+
+    #[test]
+    fn keeps_cached_version_while_binary_is_unchanged() {
+        let meta = meta_with(Some("v0.22.2"), Some(10));
+        assert!(!needs_version_refresh(&meta, 10));
+    }
+
+    #[test]
+    fn rereads_version_after_binary_was_replaced() {
+        let meta = meta_with(Some("v0.22.2"), Some(10));
+        assert!(needs_version_refresh(&meta, 20));
+    }
+
+    #[test]
+    fn rereads_version_when_nothing_is_cached() {
+        assert!(needs_version_refresh(&meta_with(None, Some(10)), 10));
+    }
 
     #[test]
     fn rejects_unknown_install_method() {

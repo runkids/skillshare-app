@@ -15,7 +15,10 @@ fn global_config_exists(store: &crate::models::project::ProjectStore) -> bool {
 
 #[tauri::command]
 pub async fn get_app_state(server: State<'_, ServerManager>) -> Result<AppInfo, String> {
-    let meta = cli_manager::load_meta();
+    let mut meta = cli_manager::load_meta();
+    if let Err(e) = cli_manager::refresh_cached_version(&mut meta).await {
+        log::warn!("Could not refresh cached CLI version: {e}");
+    }
     let store = project_store::load();
     let running = server.is_running().await;
     let port = if running {

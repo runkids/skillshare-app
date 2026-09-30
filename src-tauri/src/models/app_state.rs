@@ -12,6 +12,8 @@ pub struct CliMeta {
     pub preferred_theme: Option<String>,
     pub notify_sync: Option<bool>,
     pub notify_update: Option<bool>,
+    /// Binary mtime (ms since epoch) when `version` was read; detects upgrades made outside the app.
+    pub binary_modified_ms: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

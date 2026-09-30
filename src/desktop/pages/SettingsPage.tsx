@@ -6,7 +6,9 @@ import ProjectSettings from '../components/settings/ProjectSettings';
 import CliSettings from '../components/settings/CliSettings';
 import AboutSettings from '../components/settings/AboutSettings';
 import { isMacOS } from '../utils/platform';
+import { useEffect } from 'react';
 import { useAppUpdate } from '../hooks/useAppUpdate';
+import { useTauri } from '../context/TauriContext';
 
 const TABS = [
   { id: 'general', label: 'General', icon: Settings },
@@ -20,6 +22,11 @@ export default function SettingsPage() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const { available: updateAvailable } = useAppUpdate();
+  const { refresh: refreshAppInfo } = useTauri();
+  // The CLI can be upgraded from its web UI or a terminal; re-read versions on open.
+  useEffect(() => {
+    refreshAppInfo();
+  }, [refreshAppInfo]);
   const activeTab = params.get('tab') || 'general';
 
   const renderContent = () => {

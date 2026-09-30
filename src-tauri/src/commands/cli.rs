@@ -16,6 +16,7 @@ pub async fn get_cli_version(cli_path: String) -> Result<String, String> {
     let path_changed = meta.path.as_deref() != Some(&cli_path);
     if meta.version.is_none() || version_changed || path_changed {
         meta.version = Some(version.clone());
+        meta.binary_modified_ms = cli_manager::binary_modified_ms(&cli_path);
         meta.path = Some(cli_path);
         if meta.source.is_none() {
             meta.source = Some("system-path".to_string());
