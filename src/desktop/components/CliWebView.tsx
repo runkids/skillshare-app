@@ -62,7 +62,7 @@ function StartingCard({
 export default function CliWebView() {
   const navigate = useNavigate();
   const { appInfo, refresh: refreshAppInfo } = useTauri();
-  const { switching, activeProject } = useProjects();
+  const { switching, activeProject, reloadKey } = useProjects();
   const { style, setStyle, resolvedMode, setModePreference } = useTheme();
   const [status, setStatus] = useState<Status>('loading');
   const [iframeUrl, setIframeUrl] = useState<string | null>(null);
@@ -205,6 +205,24 @@ export default function CliWebView() {
       setRestarting(false);
     }
   }, [activeProject, refreshAppInfo]);
+
+  // Header reload: reload the page when the server is healthy, otherwise restart it.
+  const prevReloadKey = useRef(reloadKey);
+  useEffect(() => {
+    if (prevReloadKey.current === reloadKey) return;
+    prevReloadKey.current = reloadKey;
+    (async () => {
+      const healthy = await tauriBridge.healthCheck().catch(() => false);
+      if (!healthy) {
+        await handleRestart();
+        return;
+      }
+      failCount.current = 0;
+      setStatus('ready');
+      await refreshAppInfo();
+      setIframeKey((k) => k + 1);
+    })();
+  }, [reloadKey, handleRestart, refreshAppInfo]);
 
   if (!isTauri()) {
     return (

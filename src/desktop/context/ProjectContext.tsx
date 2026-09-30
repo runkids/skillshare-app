@@ -17,6 +17,9 @@ interface ProjectContextValue {
   removeProject: (id: string) => Promise<void>;
   registerOnProjectRemoved: (callback: (projectId: string) => void) => () => void;
   lastSwitchOptionsRef: RefObject<SwitchOptions | null>;
+  /** Increments on each reloadView() call; the web view reloads when it changes. */
+  reloadKey: number;
+  reloadView: () => void;
 }
 
 const ProjectContext = createContext<ProjectContextValue>({
@@ -30,8 +33,11 @@ const ProjectContext = createContext<ProjectContextValue>({
   removeProject: async () => {},
   registerOnProjectRemoved: () => () => {},
   lastSwitchOptionsRef: { current: null },
+  reloadKey: 0,
+  reloadView: () => {},
 });
 
+// eslint-disable-next-line react-refresh/only-export-components -- hook lives beside its provider
 export function useProjects() {
   return useContext(ProjectContext);
 }
@@ -40,6 +46,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [switching, setSwitching] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const reloadView = useCallback(() => setReloadKey((k) => k + 1), []);
   const switchLock = useRef(false);
   const lastSwitchOptionsRef = useRef<SwitchOptions | null>(null);
   const projectRemovedCallbacks = useRef<Set<(projectId: string) => void>>(new Set());
@@ -111,13 +119,23 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   const removeProject = useCallback(
     async (id: string) => {
+      const wasActive = (await tauriBridge.getActiveProject())?.id === id;
       await tauriBridge.removeProject(id);
       await refresh();
       for (const cb of projectRemovedCallbacks.current) {
         cb(id);
       }
+      if (!wasActive) return;
+      // The store promotes another project to active, but the running server still
+      // serves the removed one's directory. Restart it so the web view follows.
+      const next = await tauriBridge.getActiveProject();
+      if (next) {
+        await switchWithRestart(next.id);
+      } else {
+        await tauriBridge.stopServer();
+      }
     },
-    [refresh]
+    [refresh, switchWithRestart]
   );
 
   useEffect(() => {
@@ -137,6 +155,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         removeProject,
         registerOnProjectRemoved,
         lastSwitchOptionsRef,
+        reloadKey,
+        reloadView,
       }}
     >
       {children}
