@@ -17,8 +17,7 @@ pub fn load() -> ProjectStore {
 
 pub fn save(store: &ProjectStore) -> Result<(), String> {
     let path = store_path();
-    let data =
-        serde_json::to_string_pretty(store).map_err(|e| format!("Serialize error: {e}"))?;
+    let data = serde_json::to_string_pretty(store).map_err(|e| format!("Serialize error: {e}"))?;
     std::fs::write(&path, data).map_err(|e| format!("Write error: {e}"))
 }
 

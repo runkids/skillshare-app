@@ -31,6 +31,9 @@ pub fn run() {
             commands::cli::upgrade_cli,
             commands::cli::run_cli,
             commands::cli::get_global_config_dir,
+            commands::cli::detect_install_platform,
+            commands::cli::install_cli,
+            commands::cli::cancel_cli_install,
             // Project commands
             commands::project::list_projects,
             commands::project::get_active_project,
@@ -194,8 +197,7 @@ async fn handle_quick_sync(app: &tauri::AppHandle) {
 
     let store = services::project_store::load();
     let working_dir = store.active_project().map(|p| p.path.as_str());
-    let result =
-        services::cli_manager::exec(&cli_path, &["sync".to_string()], working_dir).await;
+    let result = services::cli_manager::exec(&cli_path, &["sync".to_string()], working_dir).await;
 
     if let Err(e) = &result {
         log::warn!("Quick Sync failed: {e}");
@@ -226,9 +228,7 @@ async fn check_cli_update_background(app: &tauri::AppHandle) {
     // Skip if we checked within the last 24 hours
     if let Some(ref last_check) = meta.last_update_check {
         if let Ok(last) = chrono::DateTime::parse_from_rfc3339(last_check) {
-            let hours_since = Utc::now()
-                .signed_duration_since(last)
-                .num_hours();
+            let hours_since = Utc::now().signed_duration_since(last).num_hours();
             if hours_since < 24 {
                 log::info!("CLI update check skipped — last checked {hours_since}h ago");
                 return;
@@ -357,7 +357,10 @@ async fn auto_start_server(server: ServerManager) {
     let (project_dir, is_project_mode) = services::project_store::active_project_mode(&store);
 
     // Start the server
-    match server.start(&cli_path, project_dir.as_deref(), is_project_mode).await {
+    match server
+        .start(&cli_path, project_dir.as_deref(), is_project_mode)
+        .await
+    {
         Ok(port) => log::info!("Auto-started server on port {port}"),
         Err(e) => log::warn!("Auto-start server failed: {e}"),
     }

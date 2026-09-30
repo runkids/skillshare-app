@@ -1,95 +1,186 @@
-import { useEffect, useState } from 'react';
-import { CheckCircle, AlertCircle } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AlertCircle, ArrowRight, Check } from 'lucide-react';
 import Button from '../../../components/Button';
-import Spinner from '../../../components/Spinner';
 import { tauriBridge } from '../../api/tauri-bridge';
+import StepHeader from './StepHeader';
+import SyncDiagram from './SyncDiagram';
+import { parseSyncResult, parseTargetNames } from './onboarding-cli';
 
 interface FirstSyncStepProps {
   cliPath: string;
   onComplete: () => void;
+  /** Fires once the sync has succeeded, before the user opens the dashboard. */
+  onSynced?: () => void;
 }
 
 type Phase = 'syncing' | 'done' | 'error';
 
-export default function FirstSyncStep({ cliPath, onComplete }: FirstSyncStepProps) {
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+const mono = { fontFamily: 'var(--font-mono)' };
+
+interface SyncSink {
+  isAlive: () => boolean;
+  setNames: (names: string[]) => void;
+  setLinked: (linked: Record<string, number> | null) => void;
+  setRevealed: (count: number) => void;
+  setDone: () => void;
+  setFailed: (message: string) => void;
+}
+
+/** Sync for real, then reveal each target's result in turn so the diagram follows the CLI report. */
+async function runFirstSync(cliPath: string, sink: SyncSink) {
+  let targets: string[] = [];
+  try {
+    targets = parseTargetNames(await tauriBridge.runCli(cliPath, ['target', 'list', '--json']));
+  } catch {
+    // The diagram is decoration; names fall back to the sync report below.
+  }
+  if (!sink.isAlive()) return;
+  sink.setNames(targets);
+
+  try {
+    // Hold the animation long enough to be seen; completion still waits for the real result.
+    const [out] = await Promise.all([
+      tauriBridge.runCli(cliPath, ['sync', '--json']),
+      sleep(Math.min(3000, 900 + targets.length * 220)),
+    ]);
+    if (!sink.isAlive()) return;
+    const summary = parseSyncResult(out);
+    const finalNames = targets.length > 0 ? targets : Object.keys(summary?.perTarget ?? {});
+    sink.setNames(finalNames);
+    sink.setLinked(summary?.perTarget ?? null);
+    for (let i = 1; i <= finalNames.length; i++) {
+      sink.setRevealed(i);
+      await sleep(180);
+      if (!sink.isAlive()) return;
+    }
+    await sleep(finalNames.length > 0 ? 350 : 0);
+    if (sink.isAlive()) sink.setDone();
+  } catch (err) {
+    if (sink.isAlive()) sink.setFailed(err instanceof Error ? err.message : String(err));
+  }
+}
+
+export default function FirstSyncStep({ cliPath, onComplete, onSynced }: FirstSyncStepProps) {
   const [phase, setPhase] = useState<Phase>('syncing');
   const [error, setError] = useState<string | null>(null);
+  const [names, setNames] = useState<string[]>([]);
+  const [linked, setLinked] = useState<Record<string, number> | null>(null);
+  const [revealed, setRevealed] = useState(0);
+  const alive = useRef(true);
+
+  const execute = useCallback(
+    () =>
+      runFirstSync(cliPath, {
+        isAlive: () => alive.current,
+        setNames,
+        setLinked,
+        setRevealed,
+        setDone: () => setPhase('done'),
+        setFailed: (msg) => {
+          setError(msg);
+          setPhase('error');
+        },
+      }),
+    [cliPath]
+  );
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function runSync() {
-      try {
-        await tauriBridge.runCli(cliPath, ['sync']);
-        if (cancelled) return;
-        setPhase('done');
-      } catch (err) {
-        if (cancelled) return;
-        const msg = err instanceof Error ? err.message : String(err);
-        setError(msg);
-        setPhase('error');
-      }
-    }
-
-    runSync();
+    alive.current = true;
+    void execute();
     return () => {
-      cancelled = true;
+      alive.current = false;
     };
-  }, [cliPath]);
+  }, [execute]);
 
-  const handleRetry = async () => {
+  useEffect(() => {
+    if (phase === 'done') onSynced?.();
+  }, [phase, onSynced]);
+
+  const handleRetry = () => {
     setPhase('syncing');
     setError(null);
-    try {
-      await tauriBridge.runCli(cliPath, ['sync']);
-      setPhase('done');
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg);
-      setPhase('error');
-    }
+    setRevealed(0);
+    setLinked(null);
+    void execute();
   };
 
-  return (
-    <div className="space-y-6 text-center">
-      <h2 className="text-3xl font-bold text-pencil" style={{ fontFamily: 'var(--font-heading)' }}>
-        First Sync
-      </h2>
-      <p className="text-pencil-light mx-auto">
-        Syncing your dotfiles to build the initial snapshot.
-      </p>
+  const targets = names.map((name, i) => ({
+    name,
+    done: i < revealed,
+    linked: linked?.[name],
+  }));
+  const done = phase === 'done';
 
-      <div className="min-h-[120px] flex flex-col items-center justify-center gap-4">
-        {phase === 'syncing' && (
-          <div className="flex items-center gap-3 text-pencil-light">
-            <Spinner size="md" />
-            <span>Running sync...</span>
+  return (
+    <div className="ob-enter flex h-full flex-col gap-4">
+      <div key={done ? 'done' : 'syncing'} className="ob-rise-item flex flex-col gap-4">
+        <StepHeader
+          step={3}
+          title={
+            done ? 'You’re all set' : phase === 'error' ? 'Sync failed' : 'Syncing your skills…'
+          }
+        >
+          {done
+            ? 'The first sync finished. From now on, add or edit a skill once and sync sends it everywhere.'
+            : phase === 'error'
+              ? undefined
+              : 'Sending your skills to every target. This only takes a moment.'}
+        </StepHeader>
+      </div>
+
+      {phase === 'error' && (
+        <div className="flex items-start gap-2 text-bad">
+          <AlertCircle size={20} strokeWidth={2.5} className="mt-0.5 flex-none" />
+          <p className="m-0 whitespace-pre-wrap text-sm">{error}</p>
+        </div>
+      )}
+
+      {phase !== 'error' && targets.length > 0 && (
+        <div className="h-[210px] min-h-0">
+          <SyncDiagram targets={targets} />
+        </div>
+      )}
+      {done && targets.length === 0 && (
+        <div className="flex items-center gap-2 text-ok">
+          <Check size={20} strokeWidth={2.5} />
+          <span className="font-medium">
+            Sync complete. No targets are configured yet — add one from the Targets page.
+          </span>
+        </div>
+      )}
+
+      {done && (
+        <div className="ob-enter grid grid-cols-2 gap-2.5" aria-live="polite">
+          <div className="rounded-xl bg-sunken px-3.5 py-3 text-[13px] text-ink-2">
+            <b className="text-ink">Next:</b> install a skill from GitHub on the Skills page.
+          </div>
+          <div className="rounded-xl bg-sunken px-3.5 py-3 text-[13px] text-ink-2">
+            <b className="text-ink">Tip:</b> the CLI works in your terminal too —{' '}
+            <span className="text-ink" style={mono}>
+              skillshare sync
+            </span>
+          </div>
+        </div>
+      )}
+
+      <div className="mt-auto flex items-center gap-3">
+        {done && (
+          <div className="ob-enter">
+            <Button size="lg" autoFocus onClick={onComplete}>
+              Open dashboard <ArrowRight size={16} />
+            </Button>
           </div>
         )}
-
-        {phase === 'done' && (
-          <>
-            <div className="flex items-center gap-2 text-success">
-              <CheckCircle size={20} strokeWidth={2.5} />
-              <span className="font-medium">Sync complete</span>
-            </div>
-            <Button onClick={onComplete}>Enter skillshare App</Button>
-          </>
-        )}
-
         {phase === 'error' && (
           <>
-            <div className="flex items-center gap-2 text-danger">
-              <AlertCircle size={20} strokeWidth={2.5} />
-              <span className="font-medium">Sync failed</span>
-            </div>
-            {error && <p className="text-sm text-danger ">{error}</p>}
-            <div className="flex gap-3">
-              <Button variant="secondary" onClick={handleRetry}>
-                Retry
-              </Button>
-              <Button onClick={onComplete}>Skip & Continue</Button>
-            </div>
+            <Button size="lg" onClick={handleRetry}>
+              Retry
+            </Button>
+            <Button size="lg" variant="secondary" onClick={onComplete}>
+              Skip &amp; Continue
+            </Button>
           </>
         )}
       </div>

@@ -60,7 +60,11 @@ pub async fn detect_cli() -> Option<String> {
     let env = crate::utils::env::build_env_for_child();
 
     // 1. Check PATH via `which` (Unix) or `where` (Windows)
-    let find_cmd = if cfg!(target_os = "windows") { "where" } else { "which" };
+    let find_cmd = if cfg!(target_os = "windows") {
+        "where"
+    } else {
+        "which"
+    };
     if let Ok(output) = tokio::process::Command::new(find_cmd)
         .arg("skillshare")
         .envs(&env)
@@ -99,7 +103,11 @@ pub async fn detect_cli() -> Option<String> {
     }
 
     // 3. Check app-managed bin directory (in-app download)
-    let bin_name = if cfg!(target_os = "windows") { "skillshare.exe" } else { "skillshare" };
+    let bin_name = if cfg!(target_os = "windows") {
+        "skillshare.exe"
+    } else {
+        "skillshare"
+    };
     let bin = cli_dir().join(bin_name);
     if bin.exists() {
         return Some(bin.to_string_lossy().to_string());
@@ -119,8 +127,8 @@ pub async fn get_global_config_dir(cli_path: &str) -> Result<String, String> {
     )
     .await?;
 
-    let status: serde_json::Value =
-        serde_json::from_str(&output).map_err(|e| format!("Failed to parse CLI status JSON: {e}"))?;
+    let status: serde_json::Value = serde_json::from_str(&output)
+        .map_err(|e| format!("Failed to parse CLI status JSON: {e}"))?;
 
     let source_path = status["source"]["path"]
         .as_str()
@@ -150,6 +158,35 @@ pub async fn get_version(cli_path: &str) -> Result<String, String> {
 
     let raw = String::from_utf8_lossy(&output.stdout).to_string();
     extract_version(&raw).ok_or_else(|| "Could not parse version from CLI output".to_string())
+}
+
+/// Modification time of the CLI binary in ms since the Unix epoch.
+pub fn binary_modified_ms(cli_path: &str) -> Option<u64> {
+    let modified = std::fs::metadata(cli_path).ok()?.modified().ok()?;
+    let since_epoch = modified.duration_since(std::time::UNIX_EPOCH).ok()?;
+    u64::try_from(since_epoch.as_millis()).ok()
+}
+
+/// Whether the cached version must be re-read because the binary changed on disk.
+fn needs_version_refresh(meta: &CliMeta, modified_ms: u64) -> bool {
+    meta.version.is_none() || meta.binary_modified_ms != Some(modified_ms)
+}
+
+/// Re-read and persist the CLI version when the binary changed since it was cached.
+/// Upgrades can happen outside the app (web UI, terminal), which leaves the cache stale.
+pub async fn refresh_cached_version(meta: &mut CliMeta) -> Result<(), String> {
+    let Some(path) = meta.path.clone() else {
+        return Ok(());
+    };
+    let Some(modified_ms) = binary_modified_ms(&path) else {
+        return Ok(());
+    };
+    if !needs_version_refresh(meta, modified_ms) {
+        return Ok(());
+    }
+    meta.version = Some(get_version(&path).await?);
+    meta.binary_modified_ms = Some(modified_ms);
+    save_meta(meta)
 }
 
 /// Strip ANSI escape codes (CSI and OSC sequences) from a string.
@@ -238,6 +275,218 @@ pub async fn exec(
     }
 }
 
+// ── Platform-aware install ─────────────────────────────────────────
+
+/// Event emitted for every line the installer prints.
+pub const INSTALL_OUTPUT_EVENT: &str = "cli-install-output";
+
+const INSTALL_SH_URL: &str = "https://raw.githubusercontent.com/runkids/skillshare/main/install.sh";
+const INSTALL_PS1_URL: &str =
+    "https://raw.githubusercontent.com/runkids/skillshare/main/install.ps1";
+
+#[derive(serde::Serialize)]
+pub struct InstallPlatform {
+    pub os: &'static str,
+    pub arch: &'static str,
+    pub brew: bool,
+}
+
+#[derive(serde::Serialize, Clone)]
+struct InstallOutput {
+    stream: &'static str,
+    line: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct InstallResult {
+    pub path: String,
+    pub version: String,
+}
+
+/// Sender used by `cancel_install` to stop the running installer.
+static INSTALL_CANCEL: std::sync::Mutex<Option<tokio::sync::oneshot::Sender<()>>> =
+    std::sync::Mutex::new(None);
+
+/// OS, CPU architecture and whether Homebrew is on the (enriched) PATH.
+pub async fn detect_install_platform() -> InstallPlatform {
+    let os = if cfg!(target_os = "windows") {
+        "windows"
+    } else if cfg!(target_os = "linux") {
+        "linux"
+    } else {
+        "macos"
+    };
+    let arch = if cfg!(target_arch = "aarch64") {
+        "arm64"
+    } else {
+        "x64"
+    };
+
+    let brew = !cfg!(target_os = "windows")
+        && tokio::process::Command::new("which")
+            .arg("brew")
+            .envs(crate::utils::env::build_env_for_child())
+            .output()
+            .await
+            .map(|o| o.status.success())
+            .unwrap_or(false);
+
+    InstallPlatform { os, arch, brew }
+}
+
+/// Program and arguments for an install method.
+///
+/// The unix script installs into `~/.local/bin` (on the enriched PATH) because the
+/// default `/usr/local/bin` needs `sudo`, which cannot prompt inside the app.
+fn install_invocation(method: &str) -> Result<(&'static str, Vec<String>), String> {
+    match method {
+        "brew" if !cfg!(target_os = "windows") => {
+            Ok(("sh", vec!["-c".into(), "brew install skillshare".into()]))
+        }
+        "script" if !cfg!(target_os = "windows") => Ok((
+            "sh",
+            vec![
+                "-c".into(),
+                format!(
+                    "mkdir -p \"$HOME/.local/bin\" && curl -fsSL {INSTALL_SH_URL} | INSTALL_DIR=\"$HOME/.local/bin\" sh"
+                ),
+            ],
+        )),
+        "powershell" if cfg!(target_os = "windows") => Ok((
+            "powershell",
+            vec![
+                "-NoProfile".into(),
+                "-ExecutionPolicy".into(),
+                "Bypass".into(),
+                "-Command".into(),
+                format!("irm {INSTALL_PS1_URL} | iex"),
+            ],
+        )),
+        other => Err(format!("Install method '{other}' is not supported on this platform")),
+    }
+}
+
+/// Forward each line of `reader` to the frontend; returns the last non-empty line.
+async fn forward_lines<R>(app: tauri::AppHandle, stream: &'static str, reader: R) -> Option<String>
+where
+    R: tokio::io::AsyncRead + Unpin,
+{
+    use tauri::Emitter;
+    use tokio::io::AsyncBufReadExt;
+
+    let mut lines = tokio::io::BufReader::new(reader).lines();
+    let mut last = None;
+    loop {
+        match lines.next_line().await {
+            Ok(Some(raw)) => {
+                let line = strip_ansi(&raw);
+                if !line.trim().is_empty() {
+                    last = Some(line.clone());
+                }
+                if let Err(e) = app.emit(INSTALL_OUTPUT_EVENT, InstallOutput { stream, line }) {
+                    log::warn!("Failed to emit installer output: {e}");
+                }
+            }
+            Ok(None) => break,
+            Err(e) => {
+                log::warn!("Failed to read installer {stream}: {e}");
+                break;
+            }
+        }
+    }
+    last
+}
+
+/// Run the installer for `method`, streaming output, then verify the CLI with `version`.
+pub async fn install_cli(app: tauri::AppHandle, method: &str) -> Result<InstallResult, String> {
+    let (program, args) = install_invocation(method)?;
+    let mut cmd = tokio::process::Command::new(program);
+    cmd.args(&args)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .kill_on_drop(true);
+    if !cfg!(target_os = "windows") {
+        // The enriched PATH is unix-style; Windows keeps its own environment.
+        cmd.envs(crate::utils::env::build_env_for_child());
+    }
+    #[cfg(target_os = "windows")]
+    cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("Failed to start the {method} installer: {e}"))?;
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or("Installer stdout was not captured")?;
+    let stderr = child
+        .stderr
+        .take()
+        .ok_or("Installer stderr was not captured")?;
+    let out_task = tokio::spawn(forward_lines(app.clone(), "stdout", stdout));
+    let err_task = tokio::spawn(forward_lines(app, "stderr", stderr));
+
+    let (cancel_tx, cancel_rx) = tokio::sync::oneshot::channel();
+    set_cancel_sender(Some(cancel_tx))?;
+
+    let status = tokio::select! {
+        status = child.wait() => Some(status),
+        _ = cancel_rx => None,
+    };
+    set_cancel_sender(None)?;
+
+    let Some(status) = status else {
+        child
+            .kill()
+            .await
+            .map_err(|e| format!("Failed to stop the installer: {e}"))?;
+        return Err("Installation cancelled".to_string());
+    };
+
+    let status = status.map_err(|e| format!("Failed to wait for the installer: {e}"))?;
+    let last_out = out_task
+        .await
+        .map_err(|e| format!("Installer output task failed: {e}"))?;
+    let last_err = err_task
+        .await
+        .map_err(|e| format!("Installer output task failed: {e}"))?;
+    if !status.success() {
+        let detail = last_err.or(last_out).unwrap_or_default();
+        return Err(format!("Installer exited with {status}: {detail}"));
+    }
+
+    let path = detect_cli()
+        .await
+        .ok_or("Installer finished but the skillshare binary was not found on PATH")?;
+    let version = get_version(&path).await?;
+
+    let mut meta = load_meta();
+    meta.version = Some(version.clone());
+    meta.path = Some(path.clone());
+    meta.source = Some(format!("install-{method}"));
+    meta.installed_at = Some(chrono::Utc::now().to_rfc3339());
+    save_meta(&meta)?;
+
+    Ok(InstallResult { path, version })
+}
+
+fn set_cancel_sender(tx: Option<tokio::sync::oneshot::Sender<()>>) -> Result<(), String> {
+    let mut guard = INSTALL_CANCEL
+        .lock()
+        .map_err(|e| format!("Install state lock poisoned: {e}"))?;
+    *guard = tx;
+    Ok(())
+}
+
+/// Stop the running installer. Returns false when none is running.
+pub fn cancel_install() -> Result<bool, String> {
+    let mut guard = INSTALL_CANCEL
+        .lock()
+        .map_err(|e| format!("Install state lock poisoned: {e}"))?;
+    Ok(guard.take().is_some_and(|tx| tx.send(()).is_ok()))
+}
+
 // ── Release checking & download ────────────────────────────────────
 
 /// Returns (version_tag, download_url) for the latest GitHub release.
@@ -283,7 +532,11 @@ pub async fn check_latest_release() -> Result<(String, String), String> {
     };
 
     let asset_prefix = format!("skillshare_{}_{os}_{arch}", tag.trim_start_matches('v'));
-    let ext = if cfg!(target_os = "windows") { ".zip" } else { ".tar.gz" };
+    let ext = if cfg!(target_os = "windows") {
+        ".zip"
+    } else {
+        ".tar.gz"
+    };
 
     let assets = body["assets"]
         .as_array()
@@ -335,7 +588,11 @@ pub async fn download_cli(url: &str) -> Result<String, String> {
         .await
         .map_err(|e| format!("Failed to read download body: {e}"))?;
 
-    let archive_name = if cfg!(target_os = "windows") { "skillshare.zip" } else { "skillshare.tar.gz" };
+    let archive_name = if cfg!(target_os = "windows") {
+        "skillshare.zip"
+    } else {
+        "skillshare.tar.gz"
+    };
     let archive_path = tmp_dir.join(archive_name);
     std::fs::write(&archive_path, &bytes).map_err(|e| {
         std::fs::remove_dir_all(&tmp_dir).ok();
@@ -346,10 +603,14 @@ pub async fn download_cli(url: &str) -> Result<String, String> {
     #[cfg(target_os = "windows")]
     {
         let extract_status = tokio::process::Command::new("powershell")
-            .args(["-Command", &format!(
-                "Expand-Archive -Path '{}' -DestinationPath '{}' -Force",
-                archive_path.display(), tmp_dir.display()
-            )])
+            .args([
+                "-Command",
+                &format!(
+                    "Expand-Archive -Path '{}' -DestinationPath '{}' -Force",
+                    archive_path.display(),
+                    tmp_dir.display()
+                ),
+            ])
             .status()
             .await
             .map_err(|e| {
@@ -379,7 +640,11 @@ pub async fn download_cli(url: &str) -> Result<String, String> {
     }
 
     // Move extracted binary to bin dir
-    let bin_name = if cfg!(target_os = "windows") { "skillshare.exe" } else { "skillshare" };
+    let bin_name = if cfg!(target_os = "windows") {
+        "skillshare.exe"
+    } else {
+        "skillshare"
+    };
     let extracted = tmp_dir.join(bin_name);
     let dest = bin_dir.join(bin_name);
 
@@ -411,4 +676,62 @@ pub async fn download_cli(url: &str) -> Result<String, String> {
     std::fs::remove_dir_all(&tmp_dir).ok();
 
     Ok(dest.to_string_lossy().to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn meta_with(version: Option<&str>, modified_ms: Option<u64>) -> CliMeta {
+        CliMeta {
+            version: version.map(str::to_string),
+            binary_modified_ms: modified_ms,
+            ..CliMeta::default()
+        }
+    }
+
+    #[test]
+    fn keeps_cached_version_while_binary_is_unchanged() {
+        let meta = meta_with(Some("v0.22.2"), Some(10));
+        assert!(!needs_version_refresh(&meta, 10));
+    }
+
+    #[test]
+    fn rereads_version_after_binary_was_replaced() {
+        let meta = meta_with(Some("v0.22.2"), Some(10));
+        assert!(needs_version_refresh(&meta, 20));
+    }
+
+    #[test]
+    fn rereads_version_when_nothing_is_cached() {
+        assert!(needs_version_refresh(&meta_with(None, Some(10)), 10));
+    }
+
+    #[test]
+    fn rejects_unknown_install_method() {
+        assert!(install_invocation("npm").is_err());
+    }
+
+    #[test]
+    fn brew_and_script_are_unix_only_and_powershell_is_windows_only() {
+        assert_eq!(
+            install_invocation("brew").is_ok(),
+            !cfg!(target_os = "windows")
+        );
+        assert_eq!(
+            install_invocation("script").is_ok(),
+            !cfg!(target_os = "windows")
+        );
+        assert_eq!(
+            install_invocation("powershell").is_ok(),
+            cfg!(target_os = "windows")
+        );
+    }
+
+    #[test]
+    fn script_installs_to_user_bin_without_sudo() {
+        if let Ok((_, args)) = install_invocation("script") {
+            assert!(args[1].contains("INSTALL_DIR=\"$HOME/.local/bin\""));
+        }
+    }
 }

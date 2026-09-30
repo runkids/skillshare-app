@@ -16,6 +16,7 @@ pub async fn get_cli_version(cli_path: String) -> Result<String, String> {
     let path_changed = meta.path.as_deref() != Some(&cli_path);
     if meta.version.is_none() || version_changed || path_changed {
         meta.version = Some(version.clone());
+        meta.binary_modified_ms = cli_manager::binary_modified_ms(&cli_path);
         meta.path = Some(cli_path);
         if meta.source.is_none() {
             meta.source = Some("system-path".to_string());
@@ -61,8 +62,11 @@ pub async fn upgrade_cli(server: State<'_, ServerManager>) -> Result<String, Str
     // Restart server if it was running
     if server.is_running().await {
         let store = crate::services::project_store::load();
-        let (project_dir, is_project_mode) = crate::services::project_store::active_project_mode(&store);
-        server.restart(&path, project_dir.as_deref(), is_project_mode).await?;
+        let (project_dir, is_project_mode) =
+            crate::services::project_store::active_project_mode(&store);
+        server
+            .restart(&path, project_dir.as_deref(), is_project_mode)
+            .await?;
     }
 
     Ok(path)
@@ -80,4 +84,22 @@ pub async fn run_cli(
 #[tauri::command]
 pub async fn get_global_config_dir(cli_path: String) -> Result<String, String> {
     cli_manager::get_global_config_dir(&cli_path).await
+}
+
+#[tauri::command]
+pub async fn detect_install_platform() -> Result<cli_manager::InstallPlatform, String> {
+    Ok(cli_manager::detect_install_platform().await)
+}
+
+#[tauri::command]
+pub async fn install_cli(
+    app: tauri::AppHandle,
+    method: String,
+) -> Result<cli_manager::InstallResult, String> {
+    cli_manager::install_cli(app, &method).await
+}
+
+#[tauri::command]
+pub fn cancel_cli_install() -> Result<bool, String> {
+    cli_manager::cancel_install()
 }
