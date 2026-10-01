@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isTauri } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { AlertTriangle, Check, RotateCw, Unplug } from 'lucide-react';
 import Button from '../../components/Button';
 import { useProjects } from '../context/ProjectContext';
@@ -179,6 +180,28 @@ export default function CliWebView() {
     }, HEALTH_POLL_INTERVAL);
     return () => clearInterval(pollRef.current);
   }, [status, iframeUrl]);
+
+  // The backend restarts a server that exited on its own, possibly on another port,
+  // and gives up when it keeps exiting.
+  useEffect(() => {
+    if (!isTauri()) return;
+    const restarted = listen<number>('server-restarted', (e) => {
+      setIframeUrl(`http://localhost:${e.payload}`);
+      setIframeKey((k) => k + 1);
+      setError(null);
+      setStatus('ready');
+      failCount.current = 0;
+      void refreshAppInfo();
+    });
+    const stopped = listen('server-stopped', () => {
+      setError('The server kept exiting, so it was not restarted again. See server.log.');
+      setStatus('server-down');
+    });
+    return () => {
+      void restarted.then((off) => off());
+      void stopped.then((off) => off());
+    };
+  }, [refreshAppInfo]);
 
   // Force iframe reload when switching completes
   const prevSwitching = useRef(false);

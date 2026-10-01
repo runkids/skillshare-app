@@ -99,6 +99,7 @@ pub fn run() {
 
             // Auto-start Go server if onboarding is complete (non-blocking)
             let server = app.state::<ServerManager>().inner().clone();
+            server.set_app_handle(app.handle().clone());
             tauri::async_runtime::spawn(async move {
                 auto_start_server(server).await;
             });

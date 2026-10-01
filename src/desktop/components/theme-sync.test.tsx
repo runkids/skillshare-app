@@ -12,6 +12,7 @@ const { refresh, project } = vi.hoisted(() => ({
 }));
 
 vi.mock('@tauri-apps/api/core', () => ({ isTauri: () => true }));
+vi.mock('@tauri-apps/api/event', () => ({ listen: () => Promise.resolve(() => {}) }));
 vi.mock('../context/TauriContext', () => ({
   useTauri: () => ({ appInfo: { serverPort: 19420 }, refresh }),
 }));
