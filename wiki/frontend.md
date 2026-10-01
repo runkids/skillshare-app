@@ -4,7 +4,7 @@ React 19 + TypeScript + Vite 8 + Tailwind CSS 4, rendered in a Tauri 2 webview. 
 
 ## Layout
 
-- `src/main.tsx` mounts `App` in `StrictMode` and imports `src/index.css`.
+- `src/main.tsx` mounts the standalone `QuickActionsPalette` inside `ThemeProvider` when `?quick-actions=1` is present; otherwise it mounts `App` in `StrictMode` and imports `src/index.css`.
 - `src/App.tsx` nests providers in this order: `QueryClientProvider` > `ThemeProvider` > `TauriProvider` > `ProjectProvider` > `TerminalProvider` > `BrowserRouter` > `ErrorBoundary`. It renders `UpdateCheckListener`, then an `OnboardingGuard` around four routes: `/onboarding`, `/settings`, `/activity`, and `/*` (`MainView`).
 - `src/desktop/api/tauri-bridge.ts`: every Rust `invoke` call plus the shared types (`AppInfo`, `Project`, `AvailableUpdates`, ...).
 - `src/desktop/pages/`: `OnboardingPage`, `SettingsPage`, `ActivityPage` (`/activity`, opened from the title bar; day grouping and relative times in `utils/activity.ts`).
@@ -38,6 +38,12 @@ Rust events (names verified in `src-tauri/src`), all subscribed with `listen` fr
 - `cli-install-output` (`CLI_INSTALL_OUTPUT_EVENT`): `useCliManager`.
 
 App self-update uses `check()` from `@tauri-apps/plugin-updater` in `useAppUpdate`, not the bridge.
+
+## Quick Actions palette
+
+`components/quick-actions/QuickActionsPalette.tsx` and `useQuickActions.ts` separate the palette views from CLI state and debounce logic. The palette runs in its own window, without onboarding, project providers or the dashboard iframe. It loads the active project and source directory, debounces search by 350ms and ignores replies from superseded queries. Up/Down select a result; Enter opens a review of the exact source and optional skill selector, then Install (or Enter) starts the command. Progress and CLI results/errors stay in the window, including if it is hidden and reopened during a command. New skill… collects a lowercase name and shows the created file path and any editor-opening error. Escape hides the window.
+
+`settings/QuickActionsSettings.tsx` is embedded in General settings. Save shortcut applies the edited shortcut and enabled switch together, persisting them in CliMeta; registration errors remain visible. The palette listens for `QUICK_ACTIONS_OPENED_EVENT` through the bridge to focus search and refresh its target when idle.
 
 ## Talking to Rust
 

@@ -35,10 +35,12 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_process::init())
+        .plugin(services::quick_actions::plugin())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(ServerManager::new())
         .manage(services::update_watch::UpdateState::default())
         .manage(services::auto_sync::AutoSyncState::default())
+        .manage(services::quick_actions::QuickActionsState::default())
         .manage(services::source_health::SourceHealthState::default())
         .manage(services::audit::AuditState::default())
         .invoke_handler(tauri::generate_handler![
@@ -80,6 +82,13 @@ pub fn run() {
             commands::app::get_notify_update,
             commands::app::set_notify_update,
             commands::app::reset_all_data,
+            commands::quick_actions::get_quick_actions_settings,
+            commands::quick_actions::set_quick_actions_settings,
+            commands::quick_actions::get_quick_actions_context,
+            commands::quick_actions::close_quick_actions,
+            commands::quick_actions::quick_search,
+            commands::quick_actions::quick_install,
+            commands::quick_actions::quick_new_skill,
             commands::source_health::get_source_health,
             commands::audit::get_audit_report,
             // Activity commands
@@ -90,6 +99,7 @@ pub fn run() {
         .setup(|app| {
             main_window::build(app)?;
             setup_system_tray(app)?;
+            services::quick_actions::setup(app.handle());
             #[cfg(target_os = "macos")]
             setup_app_menu(app)?;
             // Tray and app menu events both reach this global listener.
@@ -177,6 +187,7 @@ fn setup_system_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
         .enabled(false)
         .build(app)?;
     app.manage(TrayUpdateItem(update_all.clone()));
+    let quick_actions = MenuItemBuilder::with_id("quick_actions", "Quick Actions…").build(app)?;
     let open_app = MenuItemBuilder::with_id("open_app", "Open Skillshare App").build(app)?;
 
     let active_project = MenuItemBuilder::with_id("active_project", active_project_label())
@@ -190,6 +201,7 @@ fn setup_system_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
     let menu = MenuBuilder::new(app)
         .item(&quick_sync)
         .item(&update_all)
+        .item(&quick_actions)
         .separator()
         .item(&open_app)
         .item(&active_project)
@@ -233,6 +245,9 @@ fn setup_system_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
             }
             "open_app" => {
                 show_main_window(app);
+            }
+            "quick_actions" => {
+                services::quick_actions::request_open(app);
             }
             "quit" => {
                 APP_QUITTING.store(true, Ordering::SeqCst);
