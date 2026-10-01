@@ -8,6 +8,10 @@ static LOGIN_SHELL_PATH: tokio::sync::OnceCell<Option<String>> = tokio::sync::On
 pub async fn load_login_shell_path() {
     LOGIN_SHELL_PATH
         .get_or_init(|| async {
+            // Windows has no login shell; GUI apps already inherit the user's PATH.
+            if cfg!(target_os = "windows") {
+                return None;
+            }
             let shell = std::env::var("SHELL").ok()?;
             crate::services::cli_manager::login_shell_path(&shell).await
         })
@@ -15,14 +19,18 @@ pub async fn load_login_shell_path() {
 }
 
 /// Join PATH entries in order, keeping the first copy of each directory.
+/// Uses the platform separator (`:` on Unix, `;` on Windows).
 fn merge_path(parts: &[String]) -> String {
     let mut seen = std::collections::HashSet::new();
-    parts
+    let dirs: Vec<_> = parts
         .iter()
-        .flat_map(|p| p.split(':'))
-        .filter(|dir| !dir.is_empty() && seen.insert(*dir))
-        .collect::<Vec<_>>()
-        .join(":")
+        .flat_map(std::env::split_paths)
+        .filter(|dir| !dir.as_os_str().is_empty() && seen.insert(dir.clone()))
+        .collect();
+    // Cannot fail: entries from split_paths never contain the separator.
+    std::env::join_paths(dirs)
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_default()
 }
 
 /// Build a HashMap of environment variables suitable for child PTY processes.
@@ -94,9 +102,35 @@ pub fn build_env_for_child() -> HashMap<String, String> {
 mod tests {
     use super::merge_path;
 
+    fn join(dirs: &[&str]) -> String {
+        std::env::join_paths(dirs)
+            .map(|p| p.to_string_lossy().into_owned())
+            .unwrap_or_default()
+    }
+
     #[test]
     fn merge_path_keeps_first_copy_in_order() {
-        let parts = ["/a:/b".to_string(), "/b:/c".to_string(), "/a".to_string()];
+        let parts = [join(&["/a", "/b"]), join(&["/b", "/c"]), join(&["/a"])];
+        assert_eq!(merge_path(&parts), join(&["/a", "/b", "/c"]));
+    }
+
+    #[test]
+    fn merge_path_drops_empty_entries() {
+        let parts = [join(&["/a", "", "/b"]), String::new()];
+        assert_eq!(merge_path(&parts), join(&["/a", "/b"]));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn merge_path_uses_colon_on_unix() {
+        let parts = ["/a:/b".to_string(), "/c".to_string()];
         assert_eq!(merge_path(&parts), "/a:/b:/c");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn merge_path_uses_semicolon_on_windows() {
+        let parts = [r"C:\a;C:\b".to_string(), r"C:\c".to_string()];
+        assert_eq!(merge_path(&parts), r"C:\a;C:\b;C:\c");
     }
 }
