@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.0](https://github.com/runkids/skillshare-app/compare/v0.3.2...v0.4.0) (2026-10-01)
+
+
+### Features
+
+* **quick-actions:** install from a pasted source instead of New skill ([#65](https://github.com/runkids/skillshare-app/issues/65)) ([f7c53b1](https://github.com/runkids/skillshare-app/commit/f7c53b1348ecb69ed27261e8bbdf2dcf09cf1f9e))
+* **titlebar:** add Quick Sync, Quick Actions and config files shortcuts ([#64](https://github.com/runkids/skillshare-app/issues/64)) ([a429baf](https://github.com/runkids/skillshare-app/commit/a429baf3104eb11615a750bbf362f9062c0bd9f7))
+* **tray:** open the menu on left-click ([#62](https://github.com/runkids/skillshare-app/issues/62)) ([12328fa](https://github.com/runkids/skillshare-app/commit/12328fa2025f515a500bbf454a1e904be2026ba6))
+
 ## [0.3.2](https://github.com/runkids/skillshare-app/compare/v0.3.1...v0.3.2) (2026-10-01)
 
 
