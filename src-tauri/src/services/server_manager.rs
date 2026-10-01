@@ -129,6 +129,9 @@ pub struct ServerManager {
     generation: Arc<AtomicU64>,
     /// When the server exited unexpectedly, for the restart backoff.
     exits: Arc<Mutex<Vec<Instant>>>,
+    /// Held across start, stop and each supervised restart, so `stop()` waits for a
+    /// restart in progress and then kills it instead of missing the new process.
+    lifecycle: Arc<Mutex<()>>,
     app: Arc<OnceLock<tauri::AppHandle>>,
 }
 
@@ -139,6 +142,7 @@ impl ServerManager {
             port: Arc::new(Mutex::new(DEFAULT_PORT)),
             generation: Arc::new(AtomicU64::new(0)),
             exits: Arc::new(Mutex::new(Vec::new())),
+            lifecycle: Arc::new(Mutex::new(())),
             app: Arc::new(OnceLock::new()),
         }
     }
@@ -169,7 +173,8 @@ impl ServerManager {
             project_dir: project_dir.map(str::to_string),
             is_project_mode,
         };
-        self.stop().await?;
+        let _lifecycle = self.lifecycle.lock().await;
+        self.end_generation().await;
         let generation = self.generation.load(Ordering::SeqCst);
         self.exits.lock().await.clear();
         let port = self.launch(&launch).await?;
@@ -281,9 +286,15 @@ impl ServerManager {
 
     /// Kill the running server process if any and end its supervision.
     pub async fn stop(&self) -> Result<(), String> {
+        let _lifecycle = self.lifecycle.lock().await;
+        self.end_generation().await;
+        Ok(())
+    }
+
+    /// End the current supervision and kill its process. Callers hold `lifecycle`.
+    async fn end_generation(&self) {
         self.generation.fetch_add(1, Ordering::SeqCst);
         self.kill_process().await;
-        Ok(())
     }
 
     async fn kill_process(&self) {
@@ -315,6 +326,7 @@ impl ServerManager {
                     return;
                 };
                 tokio::time::sleep(delay).await;
+                let _lifecycle = self.lifecycle.lock().await;
                 if self.generation.load(Ordering::SeqCst) != generation {
                     return;
                 }

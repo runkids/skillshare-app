@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
 import { ThemeContext, type Style, type ModePreference } from './useTheme';
-import { isTauri } from '@tauri-apps/api/core';
-import { tauriBridge } from '../desktop/api/tauri-bridge';
 
 function getInitialStyle(): Style {
   return localStorage.getItem('skillshare-style') === 'playful' ? 'playful' : 'clean';
@@ -78,7 +76,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
 
     localStorage.setItem('skillshare-theme-preference', modePreference);
-    if (isTauri()) void tauriBridge.setPreferredTheme(modePreference);
   }, [modePreference, resolvedMode]);
 
   const setStyle = useCallback((s: Style) => {
