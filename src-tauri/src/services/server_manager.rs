@@ -270,13 +270,14 @@ impl ServerManager {
             }
         }
 
-        {
-            let mut proc = self.process.lock().await;
-            *proc = Some(child);
-        }
+        // Port before process: once the process is recorded, `is_running` checks this port.
         {
             let mut p = self.port.lock().await;
             *p = chosen_port;
+        }
+        {
+            let mut proc = self.process.lock().await;
+            *proc = Some(child);
         }
 
         // Wait for the server to become ready
@@ -365,8 +366,13 @@ impl ServerManager {
         }
     }
 
-    /// Check if the server is currently responding on its port.
+    /// Check if the server this app started is responding on its port. Another server on
+    /// that port, such as one an earlier app instance left behind, does not count: it may
+    /// serve an older Web UI whose files are gone, which renders a blank page.
     pub async fn is_running(&self) -> bool {
+        if self.process.lock().await.is_none() {
+            return false;
+        }
         let port = self.get_port().await;
         health_check(port).await
     }
@@ -518,6 +524,28 @@ mod tests {
     #[test]
     fn recorded_server_no_longer_listening_is_left_alone() {
         assert!(!is_own_orphan(RECORDED, 1, ""));
+    }
+
+    #[tokio::test]
+    async fn a_server_the_app_did_not_start_is_not_running() -> std::io::Result<()> {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0")?;
+        let port = listener.local_addr()?.port();
+        std::thread::spawn(move || {
+            use std::io::{Read, Write};
+            for mut stream in listener.incoming().flatten() {
+                let _ = stream.read(&mut [0; 1024]);
+                let _ = stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\n{}");
+            }
+        });
+        let server = ServerManager::new();
+        *server.port.lock().await = port;
+        assert!(
+            health_check(port).await,
+            "the stand-in server should answer"
+        );
+
+        assert!(!server.is_running().await);
+        Ok(())
     }
 
     #[test]

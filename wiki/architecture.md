@@ -10,7 +10,7 @@ How the Rust backend in `src-tauri/` fits together.
   - loads the login-shell PATH;
   - runs `auto_start_server`.
 - `auto_start_server` runs only after onboarding (`CliMeta.version` is set and a project exists). It syncs the Global project path from `skillshare status --json`, then starts the server for the active project.
-- The server runs as `skillshare ui [-p] --port N --no-open` in the project dir. Its health check is `GET http://localhost:{port}/api/overview`. The frontend shows the server's UI in an iframe (`src/desktop/components/CliWebView.tsx`).
+- The server runs as `skillshare ui [-p] --port N --no-open` in the project dir. Its health check is `GET http://localhost:{port}/api/overview`. Only a server this app started counts as running: another server on the port, such as one an earlier app instance left behind, may serve a Web UI whose files are gone. The frontend shows the server's UI in an iframe (`src/desktop/components/CliWebView.tsx`).
 - `tauri.conf.json` sets `"create": false` on the main window; `main_window.rs:build` creates it from that config:
   - New windows: http/https/mailto links open in the browser; anything else is blocked.
   - Navigation: web links to non-local hosts open in the browser. `localhost`, `127.0.0.1`, `[::1]` and `tauri.localhost` stay in the window.
