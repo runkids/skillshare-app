@@ -19,6 +19,9 @@ pub struct CliMeta {
     /// Last versions announced by a notification, so each release is announced once.
     pub notified_cli_version: Option<String>,
     pub notified_app_version: Option<String>,
+    /// Skills with updates as of the last notification, so the same set is announced once.
+    #[serde(default)]
+    pub notified_skill_updates: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

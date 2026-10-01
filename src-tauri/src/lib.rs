@@ -1,4 +1,5 @@
 mod commands;
+mod main_window;
 mod models;
 mod services;
 mod utils;
@@ -77,6 +78,7 @@ pub fn run() {
             commands::app::set_auto_sync,
             commands::app::get_available_updates,
             commands::app::open_logs_folder,
+            commands::app::export_diagnostics,
             commands::app::check_updates_now,
             commands::app::get_notify_update,
             commands::app::set_notify_update,
@@ -85,6 +87,7 @@ pub fn run() {
             commands::terminal::get_pty_env,
         ])
         .setup(|app| {
+            main_window::build(app)?;
             setup_system_tray(app)?;
             #[cfg(target_os = "macos")]
             setup_app_menu(app)?;

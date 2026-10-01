@@ -1,6 +1,7 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, type ReactNode } from 'react';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { getVersion } from '@tauri-apps/api/app';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import Card from '../../../components/Card';
 import Button from '../../../components/Button';
 import { tauriBridge } from '../../api/tauri-bridge';
@@ -11,6 +12,24 @@ import { useNavigate } from 'react-router-dom';
 
 type UpdateStatus = UpdateCheckStatus | 'downloading' | 'installing' | 'complete';
 
+const APP_REPO = 'https://github.com/runkids/skillshare-app';
+
+/** The webview ignores target=_blank, so hand external links to the system browser. */
+function ExternalLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <a
+      href={href}
+      onClick={(e) => {
+        e.preventDefault();
+        void openUrl(href);
+      }}
+      className="text-sm text-pencil-light hover:text-pencil underline"
+    >
+      {children}
+    </a>
+  );
+}
+
 export default function AboutSettings() {
   const { appInfo } = useTauri();
   const { cli: cliUpdate } = useUpdates();
@@ -20,6 +39,14 @@ export default function AboutSettings() {
   const openLogs = () => {
     setLogsError(null);
     tauriBridge.openLogsFolder().catch((err) => setLogsError(String(err)));
+  };
+  const [diagnosticsMessage, setDiagnosticsMessage] = useState<string | null>(null);
+  const exportDiagnostics = () => {
+    setDiagnosticsMessage(null);
+    tauriBridge
+      .exportDiagnostics()
+      .then((path) => setDiagnosticsMessage(`Saved to ${path}`))
+      .catch((err) => setDiagnosticsMessage(String(err)));
   };
   const { update: updateObj, status: checkStatus, error: checkError, recheck } = useAppUpdate();
   const [appVersion, setAppVersion] = useState('0.1.0');
@@ -113,14 +140,21 @@ export default function AboutSettings() {
 
         <div className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
           <p className="text-sm font-medium text-pencil">GitHub</p>
-          <a
-            href="https://github.com/runkids/skillshare"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-pencil-light hover:text-pencil underline"
-          >
+          <ExternalLink href={APP_REPO}>runkids/skillshare-app</ExternalLink>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+          <p className="text-sm font-medium text-pencil">CLI Repository</p>
+          <ExternalLink href="https://github.com/runkids/skillshare">
             runkids/skillshare
-          </a>
+          </ExternalLink>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+          <p className="text-sm font-medium text-pencil">Release Notes</p>
+          <ExternalLink href={`${APP_REPO}/releases/tag/v${appVersion}`}>
+            v{appVersion}
+          </ExternalLink>
         </div>
 
         <div className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
@@ -132,6 +166,19 @@ export default function AboutSettings() {
           </div>
           <Button size="sm" variant="secondary" onClick={openLogs}>
             Open logs folder
+          </Button>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+          <div>
+            <p className="text-sm font-medium text-pencil">Diagnostics</p>
+            <p className="text-xs text-pencil-light mt-0.5">
+              {diagnosticsMessage ??
+                'App, CLI and server details with recent logs, saved to Downloads'}
+            </p>
+          </div>
+          <Button size="sm" variant="secondary" onClick={exportDiagnostics}>
+            Export diagnostics
           </Button>
         </div>
       </Card>
@@ -191,6 +238,13 @@ export default function AboutSettings() {
               )}
             </div>
           </div>
+
+          {/* Rendered as text, so release notes cannot inject markup. */}
+          {status === 'available' && updateObj?.body && (
+            <div className="max-h-48 overflow-y-auto rounded-[var(--r-btn)] bg-muted p-3 text-xs text-pencil-light whitespace-pre-wrap">
+              {updateObj.body}
+            </div>
+          )}
 
           {/* Progress bar */}
           {(status === 'downloading' || status === 'installing') && (

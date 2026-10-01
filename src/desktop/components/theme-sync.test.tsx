@@ -36,9 +36,9 @@ function Controls() {
   );
 }
 
-function Tree() {
+function Tree({ path = '/' }: { path?: string }) {
   return (
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[path]}>
       <ThemeProvider>
         <Controls />
         <CliWebView />
@@ -148,5 +148,15 @@ describe('desktop and CLI theme synchronization', () => {
     receive('light');
     expect(screen.getByText('clean/light/system')).toBeInTheDocument();
     expect(tauriBridge.setPreferredTheme).toHaveBeenLastCalledWith('system');
+  });
+});
+
+describe('CLI Web UI page', () => {
+  it('opens the page matching the shell path, keeping its query', () => {
+    render(<Tree path="/skills?tab=updates" />);
+    expect(screen.getByTitle('skillshare UI')).toHaveAttribute(
+      'src',
+      'http://localhost:19420/skills?tab=updates&theme=clean'
+    );
   });
 });
