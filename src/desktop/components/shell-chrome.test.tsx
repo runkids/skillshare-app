@@ -9,6 +9,9 @@ const updates = vi.hoisted(() => ({
   cli: null as string | null,
   app: null as string | null,
   skills: [] as string[],
+  repositories: [] as string[],
+  agents: [] as string[],
+  plugins: [] as string[],
 }));
 
 vi.mock('../hooks/useUpdates', () => ({ useUpdates: () => updates }));
@@ -50,6 +53,9 @@ afterEach(() => {
   updates.cli = null;
   updates.app = null;
   updates.skills = [];
+  updates.repositories = [];
+  updates.agents = [];
+  updates.plugins = [];
   vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -95,7 +101,7 @@ describe('TitleBar update badge', () => {
 describe('TitleBar skill updates badge', () => {
   it('is hidden when no skill has an update', () => {
     renderWithUA(<TitleBar />, MAC_UA);
-    expect(screen.queryByRole('button', { name: /skill update/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /\d+ updates?/ })).not.toBeInTheDocument();
   });
 
   it('opens the Web UI updates tab with the count shown', () => {
@@ -107,8 +113,55 @@ describe('TitleBar skill updates badge', () => {
       </>,
       MAC_UA
     );
-    fireEvent.click(screen.getByRole('button', { name: '2 skill updates' }));
+    fireEvent.click(screen.getByRole('button', { name: '2 updates' }));
+    fireEvent.click(screen.getByRole('link', { name: /2 skills/ }));
     expect(screen.getByTestId('location')).toHaveTextContent('/skills?tab=updates');
+  });
+});
+
+describe('TitleBar combined resource updates', () => {
+  it('counts every kind once and links each list to its review page', () => {
+    updates.skills = ['pdf', 'xlsx', 'docx'];
+    updates.plugins = ['hud'];
+    updates.agents = ['tutor'];
+    updates.repositories = ['_team'];
+    renderWithUA(
+      <>
+        <TitleBar />
+        <LocationProbe />
+      </>,
+      MAC_UA
+    );
+    const badge = screen.getByRole('button', { name: '6 updates' });
+    expect(badge).toHaveAttribute(
+      'title',
+      '3 skills, 1 plugin, 1 agent, 1 repository have updates'
+    );
+    fireEvent.click(badge);
+    expect(screen.getByRole('link', { name: /3 skills/ })).toHaveAttribute(
+      'href',
+      '/skills?tab=updates'
+    );
+    expect(screen.getByRole('link', { name: /1 repository/ })).toHaveAttribute(
+      'href',
+      '/skills?tab=updates'
+    );
+    expect(screen.getByRole('link', { name: /1 agent/ })).toHaveAttribute(
+      'href',
+      '/agents?tab=updates'
+    );
+    fireEvent.click(screen.getByRole('link', { name: /1 plugin/ }));
+    expect(screen.getByTestId('location')).toHaveTextContent('/plugins');
+    expect(screen.queryByRole('link', { name: /1 plugin/ })).not.toBeInTheDocument();
+  });
+
+  it('shows plugin-only updates and dismisses the list on Escape', () => {
+    updates.plugins = ['hud'];
+    renderWithUA(<TitleBar />, MAC_UA);
+    fireEvent.click(screen.getByRole('button', { name: '1 update' }));
+    expect(screen.getByRole('link', { name: /1 plugin/ })).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('link', { name: /1 plugin/ })).not.toBeInTheDocument();
   });
 });
 

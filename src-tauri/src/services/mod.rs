@@ -4,4 +4,5 @@ pub mod diagnostics;
 pub mod project_store;
 pub mod server_manager;
 pub mod source_health;
+pub mod update_all;
 pub mod update_watch;

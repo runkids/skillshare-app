@@ -171,6 +171,10 @@ fn setup_system_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
     use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 
     let quick_sync = MenuItemBuilder::with_id("quick_sync", "Quick Sync").build(app)?;
+    let update_all = MenuItemBuilder::with_id("update_all", "Update All (0)")
+        .enabled(false)
+        .build(app)?;
+    app.manage(TrayUpdateItem(update_all.clone()));
     let open_app = MenuItemBuilder::with_id("open_app", "Open Skillshare App").build(app)?;
 
     let active_project = MenuItemBuilder::with_id("active_project", active_project_label())
@@ -183,6 +187,7 @@ fn setup_system_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
 
     let menu = MenuBuilder::new(app)
         .item(&quick_sync)
+        .item(&update_all)
         .separator()
         .item(&open_app)
         .item(&active_project)
@@ -218,6 +223,12 @@ fn setup_system_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
                     handle_quick_sync(&app).await;
                 });
             }
+            "update_all" => {
+                let app = app.clone();
+                tauri::async_runtime::spawn(async move {
+                    services::update_all::run(&app).await;
+                });
+            }
             "open_app" => {
                 show_main_window(app);
             }
@@ -246,6 +257,18 @@ fn setup_system_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
         .build(app)?;
 
     Ok(())
+}
+
+/// The tray's resource update action, refreshed after each check.
+struct TrayUpdateItem(tauri::menu::MenuItem<tauri::Wry>);
+
+pub(crate) fn refresh_tray_update_count(app: &tauri::AppHandle, count: usize) {
+    if let Some(item) = app.try_state::<TrayUpdateItem>() {
+        let _ = item.0.set_text(format!("Update All ({count})"));
+        let _ = item
+            .0
+            .set_enabled(count > 0 && !services::update_all::is_running());
+    }
 }
 
 /// The tray's disabled item showing the active project, kept so its text can follow switches.
