@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.16](https://github.com/runkids/skillshare-app/compare/v0.0.15...v0.0.16) (2026-10-01)
+
+
+### Bug Fixes
+
+* **update:** clear the skill updates badge once skills are updated ([#32](https://github.com/runkids/skillshare-app/issues/32)) ([35b5946](https://github.com/runkids/skillshare-app/commit/35b594628a0389c068ccd49692dd2ab6b7d8a6d2))
+
 ## [0.0.15](https://github.com/runkids/skillshare-app/compare/v0.0.14...v0.0.15) (2026-10-01)
 
 
