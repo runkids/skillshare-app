@@ -67,7 +67,6 @@ pub fn run() {
             commands::app::get_app_state,
             commands::app::get_preferred_port,
             commands::app::set_preferred_port,
-            commands::app::set_preferred_theme,
             commands::app::get_notify_sync,
             commands::app::set_notify_sync,
             commands::app::get_auto_sync,

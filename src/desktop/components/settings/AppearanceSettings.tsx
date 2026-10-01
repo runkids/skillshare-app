@@ -57,8 +57,7 @@ export default function AppearanceSettings() {
 
   const handleStyleChange = (s: Style) => {
     setStyle(s);
-    // Style is persisted in localStorage by ThemeContext;
-    // Tauri only stores mode preference — no need to call setPreferredTheme here.
+    // Style and mode are persisted in localStorage by ThemeContext.
   };
 
   const handleModeChange = (m: ModePreference) => {

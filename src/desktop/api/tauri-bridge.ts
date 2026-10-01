@@ -94,7 +94,6 @@ export const tauriBridge = {
   getAppState: () => invoke<AppInfo>('get_app_state'),
   getPreferredPort: () => invoke<number>('get_preferred_port'),
   setPreferredPort: (port: number) => invoke<void>('set_preferred_port', { port }),
-  setPreferredTheme: (theme: string) => invoke<void>('set_preferred_theme', { theme }),
   getNotifySync: () => invoke<boolean>('get_notify_sync'),
   setNotifySync: (enabled: boolean) => invoke<void>('set_notify_sync', { enabled }),
   getAutoSync: () => invoke<boolean>('get_auto_sync'),

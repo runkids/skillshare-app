@@ -3,7 +3,6 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../../context/ThemeContext';
 import { useTheme } from '../../context/useTheme';
-import { tauriBridge } from '../api/tauri-bridge';
 import CliWebView from './CliWebView';
 
 const { refresh, project } = vi.hoisted(() => ({
@@ -18,7 +17,6 @@ vi.mock('../context/TauriContext', () => ({
 }));
 vi.mock('../api/tauri-bridge', () => ({
   tauriBridge: {
-    setPreferredTheme: vi.fn().mockResolvedValue(undefined),
     healthCheck: vi.fn().mockResolvedValue(true),
   },
 }));
@@ -126,7 +124,7 @@ describe('desktop and CLI theme synchronization', () => {
       { type: 'theme-push', mode: 'dark', style: 'clean' },
       '*'
     );
-    expect(tauriBridge.setPreferredTheme).toHaveBeenLastCalledWith('system');
+    expect(localStorage.getItem('skillshare-theme-preference')).toBe('system');
   });
 
   it('reloads the iframe with the style picked inside it, not the one it first loaded with', async () => {
@@ -148,7 +146,7 @@ describe('desktop and CLI theme synchronization', () => {
     fireEvent.click(screen.getByText('System'));
     receive('light');
     expect(screen.getByText('clean/light/system')).toBeInTheDocument();
-    expect(tauriBridge.setPreferredTheme).toHaveBeenLastCalledWith('system');
+    expect(localStorage.getItem('skillshare-theme-preference')).toBe('system');
   });
 });
 
