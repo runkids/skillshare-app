@@ -22,7 +22,7 @@ How the Rust backend in `src-tauri/` fits together.
 ## Backend modules
 
 - `commands/cli.rs`: detect, version, download, upgrade, install or cancel the CLI; `run_cli`; link the CLI for terminal use.
-- `commands/project.rs`: project CRUD and switch. Each change refreshes the tray label and the watcher.
+- `commands/project.rs`: project CRUD and switch. Each change refreshes the tray label, the watcher and source health.
 - `commands/server.rs`: start, stop, health check and port.
 - `commands/app.rs`: app state, settings in `CliMeta`, updates, logs folder, diagnostics, `reset_all_data`.
 - `commands/terminal.rs`: `get_pty_env`.
@@ -73,6 +73,7 @@ How the Rust backend in `src-tauri/` fits together.
   - `check_updates_now` calls `check(app, false)`, so it never notifies.
 - `source_health.rs`
   - `spawn_background` runs `refresh(app, true)` at launch, then every 15 min. `CHECK_LOCK` serializes runs; only a change emits `source-health` and updates the tray.
+  - Project add/remove/switch call `project_changed`: it clears the state (badge and tray items go away), emits, then runs `refresh(app, false)`. `refresh` drops a result whose project is no longer active (`is_news`), so a slow check for the old project never overwrites the new one.
   - `skillshare diff --json [--project|--global]` (30s timeout): skills with reason `local only` are collectable; a target with any `is_sync` item is out of sync.
   - Global mode only, since `push`/`pull` use the global config: `git status --porcelain=v2 --branch` in the source dir counts uncommitted paths and ahead/behind. A `fetch` (15s, `GIT_TERMINAL_PROMPT=0`) runs only on the timed check; a failed fetch keeps the last remote state.
   - Tray items are inserted after Quick Sync: "Collect N Local Skills…" (confirm dialog, then `collect --all --json`), "Push N Changes" (`push`, default message), "Pull N Updates" (`pull`). Each runs with a 120s timeout and notifies like Quick Sync.

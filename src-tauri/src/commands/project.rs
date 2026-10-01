@@ -37,6 +37,7 @@ pub fn add_project(
     project_store::save(&store)?;
     crate::refresh_tray_project_label(&app);
     crate::services::auto_sync::refresh(&app);
+    crate::services::source_health::project_changed(&app);
     Ok(project)
 }
 
@@ -47,6 +48,7 @@ pub fn remove_project(app: tauri::AppHandle, id: String) -> Result<(), String> {
     project_store::save(&store)?;
     crate::refresh_tray_project_label(&app);
     crate::services::auto_sync::refresh(&app);
+    crate::services::source_health::project_changed(&app);
     Ok(())
 }
 
@@ -57,5 +59,6 @@ pub fn switch_project(app: tauri::AppHandle, id: String) -> Result<(), String> {
     project_store::save(&store)?;
     crate::refresh_tray_project_label(&app);
     crate::services::auto_sync::refresh(&app);
+    crate::services::source_health::project_changed(&app);
     Ok(())
 }

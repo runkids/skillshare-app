@@ -163,9 +163,28 @@ async fn git_state(dir: &str, fetch: bool) -> Option<GitState> {
 }
 
 /// The current health, or `None` when the CLI could not report it.
-async fn compute(fetch: bool) -> Option<SourceHealth> {
+/// The active project's dir and whether it is in project mode; identifies whose health a check found.
+type ProjectMode = (Option<String>, bool);
+
+fn active_mode() -> ProjectMode {
+    project_store::active_project_mode(&project_store::load())
+}
+
+/// Whether a check's result should replace `current`: only if it changed, and only if
+/// the project it checked is still active, so a slow check for the previous project
+/// never overwrites the new one's state.
+fn is_news(
+    current: &SourceHealth,
+    found: &SourceHealth,
+    checked: &ProjectMode,
+    active: &ProjectMode,
+) -> bool {
+    checked == active && current != found
+}
+
+async fn compute(fetch: bool, (dir, is_project): &ProjectMode) -> Option<SourceHealth> {
+    let is_project = *is_project;
     let cli_path = cli_manager::detect_cli().await?;
-    let (dir, is_project) = project_store::active_project_mode(&project_store::load());
     let mode = if is_project { "--project" } else { "--global" };
     let args = ["diff", "--json", mode].map(String::from);
     let diff = run_with_timeout(
@@ -407,21 +426,20 @@ fn spawn_action(app: &AppHandle, args: &[&str], label: &'static str) {
 /// git remote, so callers reacting to local edits pass `false`.
 pub async fn refresh(app: &AppHandle, fetch: bool) {
     let _checking = CHECK_LOCK.lock().await;
-    let Some(health) = compute(fetch).await else {
+    let checked = active_mode();
+    let Some(health) = compute(fetch, &checked).await else {
         return;
     };
-    let state = app.state::<SourceHealthState>();
     {
+        // Checked under the state lock, so a project switch's reset can't slip in between.
+        let state = app.state::<SourceHealthState>();
         let mut current = state.0.lock().await;
-        if *current == health {
+        if !is_news(&current, &health, &checked, &active_mode()) {
             return;
         }
         *current = health.clone();
     }
-    update_tray(app, &health);
-    if let Err(e) = app.emit(SOURCE_HEALTH_EVENT, &health) {
-        log::warn!("Failed to emit source health: {e}");
-    }
+    publish(app, &health);
 
     // In the foreground the title bar badge is enough.
     let focused = app
@@ -449,6 +467,25 @@ pub async fn refresh(app: &AppHandle, fetch: bool) {
     }
 }
 
+fn publish(app: &AppHandle, health: &SourceHealth) {
+    update_tray(app, health);
+    if let Err(e) = app.emit(SOURCE_HEALTH_EVENT, health) {
+        log::warn!("Failed to emit source health: {e}");
+    }
+}
+
+/// The active project changed: stop showing the previous project's state at once,
+/// then re-check the new one from local state (no fetch).
+pub fn project_changed(app: &AppHandle) {
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let cleared = SourceHealth::default();
+        *app.state::<SourceHealthState>().0.lock().await = cleared.clone();
+        publish(&app, &cleared);
+        refresh(&app, false).await;
+    });
+}
+
 /// Check at launch, then every 15 minutes, fetching the remote each time.
 pub fn spawn_background(app: AppHandle) {
     tauri::async_runtime::spawn(async move {
@@ -474,6 +511,33 @@ mod tests {
                 ..Default::default()
             }),
         }
+    }
+
+    #[test]
+    fn check_for_a_previous_project_is_dropped() {
+        let checked = (Some("/old".to_string()), true);
+        let active = (Some("/new".to_string()), true);
+        let found = health(&["a"], 0);
+        assert!(!is_news(
+            &SourceHealth::default(),
+            &found,
+            &checked,
+            &active
+        ));
+    }
+
+    #[test]
+    fn changed_health_for_the_active_project_is_published() {
+        let mode = (None, false);
+        let found = health(&["a"], 0);
+        assert!(is_news(&SourceHealth::default(), &found, &mode, &mode));
+    }
+
+    #[test]
+    fn unchanged_health_is_not_published_again() {
+        let mode = (None, false);
+        let found = health(&["a"], 0);
+        assert!(!is_news(&found.clone(), &found, &mode, &mode));
     }
 
     #[test]
