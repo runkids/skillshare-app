@@ -76,7 +76,7 @@ async fn watch(app: AppHandle) {
                     tauri::async_runtime::spawn(async move {
                         if cli_manager::load_meta().auto_sync.unwrap_or(false) {
                             log::info!("Auto-sync: source changed, syncing");
-                            crate::handle_quick_sync(&app).await;
+                            let _ = crate::handle_quick_sync(&app, true).await;
                             crate::services::audit::run(&app).await;
                         }
                         update_watch::refresh_skills(&app).await;

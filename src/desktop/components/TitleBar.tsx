@@ -1,5 +1,13 @@
 import { useEffect } from 'react';
-import { Settings, Monitor, TerminalSquare, RotateCw, History } from 'lucide-react';
+import {
+  Settings,
+  Monitor,
+  TerminalSquare,
+  RotateCw,
+  History,
+  Command,
+  FileCog,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ProjectDropdown from './ProjectDropdown';
 import { useTerminal } from '../context/TerminalContext';
@@ -9,6 +17,8 @@ import { useUpdates } from '../hooks/useUpdates';
 import { useFullscreen } from '../hooks/useFullscreen';
 import StatusButton from './status/StatusButton';
 import ServerStatus from './ServerStatus';
+import QuickSyncButton from './QuickSyncButton';
+import { tauriBridge } from '../api/tauri-bridge';
 import appIcon from '../../../src-tauri/icons/64x64.png';
 
 // TODO: re-enable Web UI / Terminal tab switcher when terminal feature is ready
@@ -93,6 +103,25 @@ export default function TitleBar() {
       <div data-tauri-drag-region className="flex-1 self-stretch" />
       <StatusButton />
       <ServerStatus />
+      <QuickSyncButton disabled={switching} />
+      <button
+        type="button"
+        onClick={() => void tauriBridge.openQuickActions().catch(() => {})}
+        className="w-[30px] h-[30px] flex items-center justify-center rounded-[var(--r-ctl)] hover:bg-[var(--sel)] transition-colors text-[var(--ink-2)] hover:text-[var(--ink)]"
+        title="Quick Actions"
+        aria-label="Quick Actions"
+      >
+        <Command size={15} />
+      </button>
+      <button
+        type="button"
+        onClick={() => navigate('/config')}
+        className="w-[30px] h-[30px] flex items-center justify-center rounded-[var(--r-ctl)] hover:bg-[var(--sel)] transition-colors text-[var(--ink-2)] hover:text-[var(--ink)]"
+        title="Config files"
+        aria-label="Config files"
+      >
+        <FileCog size={16} />
+      </button>
       <button
         type="button"
         onClick={() => {

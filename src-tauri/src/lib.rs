@@ -71,6 +71,7 @@ pub fn run() {
             commands::server::get_server_port,
             // App commands
             commands::app::get_app_state,
+            commands::app::quick_sync,
             commands::app::get_preferred_port,
             commands::app::set_preferred_port,
             commands::app::get_notify_sync,
@@ -87,6 +88,7 @@ pub fn run() {
             commands::quick_actions::get_quick_actions_settings,
             commands::quick_actions::set_quick_actions_settings,
             commands::quick_actions::get_quick_actions_context,
+            commands::quick_actions::open_quick_actions,
             commands::quick_actions::close_quick_actions,
             commands::quick_actions::quick_search,
             commands::quick_actions::quick_install,
@@ -196,14 +198,17 @@ const QUICK_SYNC_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(1
 /// Held for a whole sync so tray and auto-sync runs never overlap.
 static SYNC_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
-async fn handle_quick_sync(app: &tauri::AppHandle) {
+/// Run `skillshare sync` for the active project and return its summary (`Ok`) or error
+/// (`Err`) in the words of the notification. `notify` also shows it as a system
+/// notification, unless the user turned those off; the title bar shows it in the window.
+async fn handle_quick_sync(app: &tauri::AppHandle, notify: bool) -> Result<String, String> {
     let _running = SYNC_LOCK.lock().await;
     let meta = services::cli_manager::load_meta();
     let cli_path = match services::cli_manager::detect_cli().await {
         Some(p) => p,
         None => {
             log::warn!("Quick Sync: CLI not found");
-            return;
+            return Err("skillshare CLI not found".to_string());
         }
     };
 
@@ -225,9 +230,14 @@ async fn handle_quick_sync(app: &tauri::AppHandle) {
         Err(e) => log::warn!("Quick Sync failed: {e}"),
     }
 
-    if meta.notify_sync.unwrap_or(true) {
-        let (title, body) = quick_sync_notification(&result);
-        let _ = app.notification().builder().title(title).body(body).show();
+    let (title, body) = quick_sync_notification(&result);
+    if notify && meta.notify_sync.unwrap_or(true) {
+        let _ = app.notification().builder().title(title).body(&body).show();
+    }
+    if result.is_ok() {
+        Ok(body)
+    } else {
+        Err(body)
     }
 }
 

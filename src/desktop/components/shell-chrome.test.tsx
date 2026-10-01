@@ -15,6 +15,14 @@ const updates = vi.hoisted(() => ({
 }));
 
 vi.mock('../hooks/useUpdates', () => ({ useUpdates: () => updates }));
+const bridge = vi.hoisted(() => ({
+  quickSync: vi.fn(() => Promise.resolve('Synced to 1 target: 1 linked, 0 updated, 0 pruned')),
+  openQuickActions: vi.fn(() => Promise.resolve()),
+}));
+vi.mock('../api/tauri-bridge', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../api/tauri-bridge')>();
+  return { ...actual, tauriBridge: { ...actual.tauriBridge, ...bridge } };
+});
 const screenState = vi.hoisted(() => ({ fullscreen: false }));
 vi.mock('../hooks/useFullscreen', () => ({ useFullscreen: () => screenState.fullscreen }));
 
@@ -89,6 +97,47 @@ describe('TitleBar reload', () => {
     renderWithUA(<TitleBar />, MAC_UA);
     fireEvent.click(screen.getByRole('button', { name: 'Reload' }));
     expect(reloadView).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('TitleBar shortcuts', () => {
+  it('shows Quick Sync progress while it runs', () => {
+    bridge.quickSync.mockReturnValueOnce(new Promise(() => {}));
+    renderWithUA(<TitleBar />, MAC_UA);
+    fireEvent.click(screen.getByRole('button', { name: 'Quick Sync' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Syncing…');
+  });
+
+  it('shows the Quick Sync summary when it finishes', async () => {
+    renderWithUA(<TitleBar />, MAC_UA);
+    fireEvent.click(screen.getByRole('button', { name: 'Quick Sync' }));
+    await screen.findByText(/^Synced to 1 target/);
+    expect(screen.getByRole('status')).toHaveTextContent('Synced to 1 target');
+  });
+
+  it('shows the Quick Sync error when it fails', async () => {
+    bridge.quickSync.mockReturnValueOnce(Promise.reject('no targets configured'));
+    renderWithUA(<TitleBar />, MAC_UA);
+    fireEvent.click(screen.getByRole('button', { name: 'Quick Sync' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('no targets configured');
+  });
+
+  it('opens the Quick Actions palette', () => {
+    renderWithUA(<TitleBar />, MAC_UA);
+    fireEvent.click(screen.getByRole('button', { name: 'Quick Actions' }));
+    expect(bridge.openQuickActions).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens the Web UI config files page', () => {
+    renderWithUA(
+      <>
+        <TitleBar />
+        <LocationProbe />
+      </>,
+      MAC_UA
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Config files' }));
+    expect(screen.getByTestId('location')).toHaveTextContent('/config');
   });
 });
 
