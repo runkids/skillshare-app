@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/runkids/skillshare-app/compare/v0.3.1...v0.3.2) (2026-10-01)
+
+
+### Bug Fixes
+
+* **linux:** bundle the AppImage with Tauri CLI 2.12 ([#60](https://github.com/runkids/skillshare-app/issues/60)) ([9102124](https://github.com/runkids/skillshare-app/commit/910212444b3608241dcd5b5707b0c6ae1e1945ab))
+
 ## [0.3.1](https://github.com/runkids/skillshare-app/compare/v0.3.0...v0.3.1) (2026-10-01)
 
 
