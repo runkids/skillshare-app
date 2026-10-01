@@ -17,6 +17,8 @@ export interface InstallPlatform {
 export interface AvailableUpdates {
   cli: string | null;
   app: string | null;
+  /** Skills and tracked repos in the active project with upstream changes. */
+  skills: string[];
 }
 
 export interface PathHint {
