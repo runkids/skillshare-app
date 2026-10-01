@@ -163,7 +163,7 @@ export default function ActivityPage() {
       // Leave room for the macOS overlay traffic lights; this page has no title bar.
       style={{ paddingTop: isMacOS() ? '48px' : '20px' }}
     >
-      <div className="max-w-[720px] flex flex-col gap-6">
+      <div className="mx-auto max-w-[720px] flex flex-col gap-6">
         <button
           type="button"
           onClick={() => navigate('/')}
