@@ -186,6 +186,7 @@ pub async fn reset_all_data(
     project_store::save(&store)?;
     crate::refresh_tray_project_label(&app);
     auto_sync::refresh(&app);
+    crate::services::oplog_watch::refresh(&app);
 
     Ok(())
 }

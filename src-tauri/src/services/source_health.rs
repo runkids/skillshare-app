@@ -422,6 +422,7 @@ fn spawn_action(app: &AppHandle, args: &[&str], label: &'static str) {
         if label == "Pull" && result.is_ok() {
             super::audit::run(&app).await;
         }
+        crate::services::update_watch::refresh_skills(&app).await;
     });
 }
 

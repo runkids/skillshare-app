@@ -40,6 +40,7 @@ pub fn run() {
         .manage(ServerManager::new())
         .manage(services::update_watch::UpdateState::default())
         .manage(services::auto_sync::AutoSyncState::default())
+        .manage(services::oplog_watch::OplogWatchState::default())
         .manage(services::quick_actions::QuickActionsState::default())
         .manage(services::source_health::SourceHealthState::default())
         .manage(services::audit::AuditState::default())
@@ -112,6 +113,7 @@ pub fn run() {
 
             services::update_watch::spawn_background(app.handle().clone());
             services::auto_sync::refresh(app.handle());
+            services::oplog_watch::refresh(app.handle());
             services::source_health::spawn_background(app.handle().clone());
 
             tauri::async_runtime::spawn(utils::env::load_login_shell_path());
@@ -235,12 +237,14 @@ fn setup_system_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
                 let app = app.clone();
                 tauri::async_runtime::spawn(async move {
                     handle_quick_sync(&app).await;
+                    services::oplog_watch::refresh_badges(&app).await;
                 });
             }
             "update_all" => {
                 let app = app.clone();
                 tauri::async_runtime::spawn(async move {
                     services::update_all::run(&app).await;
+                    services::source_health::refresh(&app, false).await;
                 });
             }
             "open_app" => {

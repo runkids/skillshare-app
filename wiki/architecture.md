@@ -4,9 +4,9 @@ How the Rust backend in `src-tauri/` fits together.
 
 ## Process model
 
-- `lib.rs:run` registers the plugins, the managed state (`ServerManager`, `UpdateState`, `AutoSyncState`, `SourceHealthState`, `AuditState`, `QuickActionsState`) and the commands. `setup` then:
+- `lib.rs:run` registers the plugins, the managed state (`ServerManager`, `UpdateState`, `AutoSyncState`, `OplogWatchState`, `SourceHealthState`, `AuditState`, `QuickActionsState`) and the commands. `setup` then:
   - builds the window, the tray and the macOS menu;
-  - spawns `update_watch::spawn_background`, `auto_sync::refresh` and `source_health::spawn_background`;
+  - spawns `update_watch::spawn_background`, `auto_sync::refresh`, `oplog_watch::refresh` and `source_health::spawn_background`;
   - loads the login-shell PATH;
   - runs `auto_start_server`.
 - `auto_start_server` runs only after onboarding (`CliMeta.version` is set and a project exists). It syncs the Global project path from `skillshare status --json`, then starts the server for the active project.
@@ -22,7 +22,7 @@ How the Rust backend in `src-tauri/` fits together.
 ## Backend modules
 
 - `commands/cli.rs`: detect, version, download, upgrade, install or cancel the CLI; `run_cli`; link the CLI for terminal use.
-- `commands/project.rs`: project CRUD and switch. Each change refreshes the tray label, the watcher and source health.
+- `commands/project.rs`: project CRUD and switch. Each change refreshes the tray label, both watchers and source health.
 - `commands/server.rs`: start, stop, health check and port.
 - `commands/app.rs`: app state, settings in `CliMeta`, updates, logs folder, diagnostics, `reset_all_data`.
 - `commands/quick_actions.rs`: debounced search support, non-interactive skill install/create, active-project checks and shortcut settings.
@@ -32,6 +32,7 @@ How the Rust backend in `src-tauri/` fits together.
 - `services/cli_manager.rs`: CLI discovery (`which`/`where`, then `%LOCALAPPDATA%\Programs\skillshare` on Windows, then app `bin/`), `exec`, version cache, installers, release download, terminal symlink, `CliMeta` load and save.
 - `services/server_manager.rs`: the server supervisor.
 - `services/auto_sync.rs`: the source watcher and auto-sync.
+- `services/oplog_watch.rs`: the CLI operation log watcher that keeps the badges live.
 - `services/update_watch.rs`: app, CLI and per-kind resource update checks; `services/update_all.rs`: tray resource updates and sync.
 - `services/source_health.rs`: target drift and the source's git remote state; tray collect/push/pull.
 - `commands/source_health.rs`: `get_source_health`.
@@ -62,33 +63,7 @@ How the Rust backend in `src-tauri/` fits together.
 
 ## Background services
 
-- `auto_sync.rs`
-  - `refresh` aborts the watcher task and spawns a new one. Call it at startup, after `set_auto_sync`, project add/remove/switch and reset.
-  - The source dir comes from `skillshare status --json`; `notify` watches it recursively.
-  - `is_source_change` ignores access events, `.git/` and editor or OS temp files.
-  - `Scheduler` waits for 2s of quiet (`SETTLE`), never overlaps runs, and folds changes made during a run into one follow-up.
-  - Each run calls `handle_quick_sync` and `audit::run` only if `auto_sync` is on (default off), then always calls `update_watch::refresh_skills` and `source_health::refresh(app, false)`.
-- `update_watch.rs`
-  - `spawn_background` checks at launch, then wakes hourly and checks once 24h have passed since `last_update_check`. Only due checks may notify.
-  - `check` gets the latest CLI (GitHub, `is_newer`), the latest app (updater), skills/repositories (`check --json`), agents (`check agents --json`, array or null), and managed plugins (`plugin check --json`, `update-available` changes deduplicated by package). Each CLI check has a 60s timeout; failures keep that kind's last list. Checks use the active project scope and serialize publication.
-  - `check` stores the result in `UpdateState` and emits `updates-available`. It notifies only if `notify` is set, `notify_update` is on, and the window is unfocused.
-  - `unannounced` announces each app or CLI version once (`notified_*_version`), and announces a combined resource summary when a name is new to its per-kind `notified_*_updates` list.
-  - `refresh_skills` re-runs all resource checks and emits only on change. `forget_cleared` drops resolved names per kind and never adds any.
-  - `check_updates_now` calls `check(app, false)`, so it never notifies.
-- `update_all.rs` updates skills/repositories with `update --all --json`, agents with `update agents --all --json`, and each plugin with `plugin update <name> --json` (noninteractive). It holds `SYNC_LOCK`, uses 120s timeouts and `exec`'s `kill_on_drop`, then syncs skills and any updated agents, emits `sync-completed`, and refreshes resources. It never forces an update or changes extras/MCP/hooks. Notifications respect `notify_sync`; skipped updates or failed final checks report incomplete rather than success. App/CLI upgrades remain in settings.
-- `source_health.rs`
-  - `spawn_background` runs `refresh(app, true)` at launch, then every 15 min. `CHECK_LOCK` serializes runs; only a change emits `source-health` and updates the tray.
-  - Project add/remove/switch call `project_changed`: it clears the state (badge and tray items go away), emits, then runs `refresh(app, false)`. `refresh` drops a result whose project is no longer active (`is_news`), so a slow check for the old project never overwrites the new one.
-  - `skillshare diff --json [--project|--global]` (30s timeout): skills with reason `local only` are collectable; a target with any `is_sync` item is out of sync.
-  - Global mode only, since `push`/`pull` use the global config: `git status --porcelain=v2 --branch` in the source dir counts uncommitted paths and ahead/behind. A `fetch` (15s, `GIT_TERMINAL_PROMPT=0`) runs only on the timed check; a failed fetch keeps the last remote state.
-  - Tray items are inserted after Quick Sync: "Collect N Local Skills…" (confirm dialog, then `collect --all --json`), "Push N Changes" (`push`, default message), "Pull N Updates" (`pull`). Each runs with a 120s timeout and notifies like Quick Sync.
-  - Notifies only when unfocused and `notify_update` is on, for keys new to `notified_source_health` (`local:<skill>`, `behind:<n>`). Drift and unpushed work are badge-only.
-- `audit.rs`
-  - `run` is called at the end of Update All, a successful tray Pull, an auto-sync run and a Quick Actions install (spawned, so the palette does not wait). It only reports; nothing is blocked or rolled back.
-  - It runs `audit --format json --yes` and `audit agents --format json --yes` with the active mode (60s timeout each, `kill_on_drop`) over the whole source: Pull and auto-sync do not know which skills changed. `audit` exits non-zero at its block threshold, so stdout is parsed regardless of the exit code; a failed audit keeps the last findings.
-  - It stores LOW to CRITICAL findings (INFO dropped) in `AuditState`, most severe first, and emits `audit-report`. `AUDIT_LOCK` serializes runs; `project_changed` (project add/remove/switch) waits for it, then clears and emits.
-  - Notifies, if `notify_sync` is on, for HIGH/CRITICAL keys (`<kind>:<skill>:<fingerprint>`) new to `notified_audit_findings`, which is replaced by the current keys. LOW/MEDIUM are badge-only.
-- Diagnostics: `commands/app.rs:export_diagnostics` writes `skillshare-app-diagnostics-<stamp>.txt` to Downloads, reveals it, and returns the redacted path. It includes the last 200 lines of each log.
+Auto-sync, update checks, the operation log watcher, source health and the audit are described in `wiki/background-services.md` (topic `background-services`).
 
 ## State and files
 

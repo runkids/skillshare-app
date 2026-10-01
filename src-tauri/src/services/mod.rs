@@ -2,6 +2,7 @@ pub mod audit;
 pub mod auto_sync;
 pub mod cli_manager;
 pub mod diagnostics;
+pub mod oplog_watch;
 pub mod project_store;
 pub mod quick_actions;
 pub mod server_manager;

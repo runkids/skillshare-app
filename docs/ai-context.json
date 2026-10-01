@@ -6,35 +6,59 @@
   },
   "topics": {
     "architecture": {
-      "description": "Changing the Rust backend: commands, the CLI server supervisor, background services, app state and files.",
+      "description": "Changing the Rust backend: commands, the CLI server supervisor, app state and files.",
       "sources": [
-        { "path": "wiki/architecture.md" }
+        {
+          "path": "wiki/architecture.md"
+        }
+      ]
+    },
+    "background-services": {
+      "description": "Changing a background service: auto-sync, update checks, the operation log watcher, source health, the post-change audit.",
+      "sources": [
+        {
+          "path": "wiki/background-services.md"
+        }
       ]
     },
     "frontend": {
       "description": "Changing React code, styling, theme, or how the UI talks to Rust; writing frontend tests.",
       "sources": [
-        { "path": "wiki/frontend.md" }
+        {
+          "path": "wiki/frontend.md"
+        }
       ]
     },
     "development": {
       "description": "Running the app, the dev container, verifying a change (CI checks, screenshots), logs and debugging.",
       "sources": [
-        { "path": "wiki/development.md" },
-        { "path": "README.md", "heading": "Development with Docker" }
+        {
+          "path": "wiki/development.md"
+        },
+        {
+          "path": "README.md",
+          "heading": "Development with Docker"
+        }
       ]
     },
     "release": {
       "description": "Shipping a version: Release Please, choosing a version, the build and publish pipeline, recovery.",
       "sources": [
-        { "path": "wiki/release.md" },
-        { "path": "README.md", "heading": "Releasing" }
+        {
+          "path": "wiki/release.md"
+        },
+        {
+          "path": "README.md",
+          "heading": "Releasing"
+        }
       ]
     },
     "ai-context": {
       "description": "Maintain the doc router: add, move or split topics and pages, and fix check failures.",
       "sources": [
-        { "path": "wiki/ai-context.md" }
+        {
+          "path": "wiki/ai-context.md"
+        }
       ]
     }
   }
