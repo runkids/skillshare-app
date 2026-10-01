@@ -5,7 +5,7 @@ mod utils;
 
 use services::server_manager::ServerManager;
 use std::sync::atomic::{AtomicBool, Ordering};
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 use tauri_plugin_notification::NotificationExt;
 
 /// Global flag: when true, window close actually quits (instead of hiding to tray).
@@ -22,6 +22,7 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(ServerManager::new())
+        .manage(services::update_watch::UpdateState::default())
         .invoke_handler(tauri::generate_handler![
             // CLI commands
             commands::cli::detect_cli,
@@ -32,7 +33,8 @@ pub fn run() {
             commands::cli::run_cli,
             commands::cli::get_global_config_dir,
             commands::cli::detect_install_platform,
-            commands::cli::cli_path_hint,
+            commands::cli::cli_terminal_access,
+            commands::cli::link_cli_for_terminal,
             commands::cli::install_cli,
             commands::cli::cancel_cli_install,
             // Project commands
@@ -56,6 +58,8 @@ pub fn run() {
             commands::app::set_preferred_theme,
             commands::app::get_notify_sync,
             commands::app::set_notify_sync,
+            commands::app::get_available_updates,
+            commands::app::check_updates_now,
             commands::app::get_notify_update,
             commands::app::set_notify_update,
             commands::app::reset_all_data,
@@ -64,12 +68,17 @@ pub fn run() {
         ])
         .setup(|app| {
             setup_system_tray(app)?;
-
-            // Background CLI update check (non-blocking)
-            let app_handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                check_cli_update_background(&app_handle).await;
+            #[cfg(target_os = "macos")]
+            setup_app_menu(app)?;
+            // Tray and app menu events both reach this global listener.
+            app.on_menu_event(|app, event| {
+                if event.id().as_ref() == CHECK_UPDATES_MENU_ID {
+                    show_main_window(app);
+                    let _ = app.emit(services::update_watch::CHECK_REQUESTED_EVENT, ());
+                }
             });
+
+            services::update_watch::spawn_background(app.handle().clone());
 
             // Auto-start Go server if onboarding is complete (non-blocking)
             let server = app.state::<ServerManager>().inner().clone();
@@ -106,6 +115,24 @@ pub fn run() {
 
 // ── System Tray ─────────────────────────────────────────────────────
 
+const CHECK_UPDATES_MENU_ID: &str = "check_updates";
+
+fn check_updates_item(app: &tauri::App) -> tauri::Result<tauri::menu::MenuItem<tauri::Wry>> {
+    tauri::menu::MenuItemBuilder::with_id(CHECK_UPDATES_MENU_ID, "Check for Updates…").build(app)
+}
+
+/// The default macOS menu plus "Check for Updates…" under About, where Mac users look for it.
+#[cfg(target_os = "macos")]
+fn setup_app_menu(app: &tauri::App) -> tauri::Result<()> {
+    let menu = tauri::menu::Menu::default(app.handle())?;
+    let items = menu.items()?;
+    if let Some(app_submenu) = items.first().and_then(|item| item.as_submenu()) {
+        app_submenu.insert(&check_updates_item(app)?, 1)?;
+    }
+    app.set_menu(menu)?;
+    Ok(())
+}
+
 fn show_main_window(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
@@ -130,6 +157,7 @@ fn setup_system_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
         .enabled(false)
         .build(app)?;
 
+    let check_updates = check_updates_item(app)?;
     let quit = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
 
     let menu = MenuBuilder::new(app)
@@ -138,6 +166,7 @@ fn setup_system_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
         .item(&open_app)
         .item(&active_project)
         .separator()
+        .item(&check_updates)
         .item(&quit)
         .build()?;
 
@@ -214,66 +243,6 @@ async fn handle_quick_sync(app: &tauri::AppHandle) {
                 Err(e) => format!("Sync failed: {e}"),
             })
             .show();
-    }
-}
-
-// ── Background Update Check ─────────────────────────────────────────
-
-/// Check if a newer CLI version is available. Skips if checked within 24 hours.
-/// Sends a notification if an update is found.
-async fn check_cli_update_background(app: &tauri::AppHandle) {
-    use chrono::Utc;
-
-    let mut meta = services::cli_manager::load_meta();
-
-    // Skip if we checked within the last 24 hours
-    if let Some(ref last_check) = meta.last_update_check {
-        if let Ok(last) = chrono::DateTime::parse_from_rfc3339(last_check) {
-            let hours_since = Utc::now().signed_duration_since(last).num_hours();
-            if hours_since < 24 {
-                log::info!("CLI update check skipped — last checked {hours_since}h ago");
-                return;
-            }
-        }
-    }
-
-    let current_version = meta.version.clone().unwrap_or_default();
-    if current_version.is_empty() {
-        // No CLI installed yet, nothing to compare
-        return;
-    }
-
-    // Fetch latest release
-    let (latest_tag, _url) = match services::cli_manager::check_latest_release().await {
-        Ok(r) => r,
-        Err(e) => {
-            log::warn!("CLI update check failed: {e}");
-            return;
-        }
-    };
-
-    // Update last_update_check regardless of result
-    meta.last_update_check = Some(Utc::now().to_rfc3339());
-    if let Err(e) = services::cli_manager::save_meta(&meta) {
-        log::warn!("Failed to save CLI meta after update check: {e}");
-    }
-
-    // Compare versions (strip leading 'v')
-    let current = current_version.trim_start_matches('v');
-    let latest = latest_tag.trim_start_matches('v');
-
-    if current != latest {
-        log::info!("CLI update available: {current} -> {latest}");
-        if meta.notify_update.unwrap_or(true) {
-            let _ = app
-                .notification()
-                .builder()
-                .title("Skillshare Update Available")
-                .body(format!("Version {latest_tag} is available"))
-                .show();
-        }
-    } else {
-        log::info!("CLI is up to date ({current})");
     }
 }
 

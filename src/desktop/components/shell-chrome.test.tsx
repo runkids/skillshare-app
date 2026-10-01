@@ -1,10 +1,18 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import TitleBar from './TitleBar';
 import ProjectDropdown from './ProjectDropdown';
 
 const { reloadView } = vi.hoisted(() => ({ reloadView: vi.fn() }));
+const updates = vi.hoisted(() => ({ cli: null as string | null, app: null as string | null }));
+
+vi.mock('../hooks/useUpdates', () => ({ useUpdates: () => updates }));
+
+function LocationProbe() {
+  const { pathname, search } = useLocation();
+  return <span data-testid="location">{pathname + search}</span>;
+}
 
 const MAC_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15';
 const WIN_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
@@ -35,6 +43,8 @@ function renderWithUA(ui: React.ReactElement, userAgent: string) {
 }
 
 afterEach(() => {
+  updates.cli = null;
+  updates.app = null;
   vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -62,6 +72,21 @@ describe('TitleBar reload', () => {
   });
 });
 
+describe('TitleBar update badge', () => {
+  it('opens the CLI settings tab when a newer CLI is known', () => {
+    updates.cli = 'v0.24.0';
+    renderWithUA(
+      <>
+        <TitleBar />
+        <LocationProbe />
+      </>,
+      MAC_UA
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Settings, update available' }));
+    expect(screen.getByTestId('location')).toHaveTextContent('/settings?tab=cli');
+  });
+});
+
 describe('ProjectDropdown menu', () => {
   it('explains how to add a project when none exist', () => {
     renderWithUA(<ProjectDropdown />, MAC_UA);
@@ -85,6 +110,14 @@ describe('ProjectDropdown menu', () => {
     expect(screen.getByText(/click a project to open it in a new session/)).toHaveTextContent(
       'Alt + click'
     );
+  });
+
+  it('closes when focus moves into the CLI iframe', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduce') }));
+    renderWithUA(<ProjectDropdown />, MAC_UA);
+    fireEvent.click(screen.getByRole('button', { name: /Global/ }));
+    fireEvent.blur(window);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
   it('keeps the menu mounted while the close animation plays, then unmounts', () => {

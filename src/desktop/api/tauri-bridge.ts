@@ -14,9 +14,20 @@ export interface InstallPlatform {
   brew: boolean;
 }
 
+export interface AvailableUpdates {
+  cli: string | null;
+  app: string | null;
+}
+
 export interface PathHint {
   dir: string;
   command: string;
+}
+
+export interface TerminalAccess {
+  needsLink: boolean;
+  linked: boolean;
+  pathHint: PathHint | null;
 }
 
 export interface InstallResult {
@@ -56,7 +67,10 @@ export const tauriBridge = {
   runCli: (cliPath: string, args: string[], workingDir?: string) =>
     invoke<string>('run_cli', { cliPath, args, workingDir }),
   detectInstallPlatform: () => invoke<InstallPlatform>('detect_install_platform'),
-  cliPathHint: (cliPath: string) => invoke<PathHint | null>('cli_path_hint', { cliPath }),
+  cliTerminalAccess: (cliPath: string) =>
+    invoke<TerminalAccess>('cli_terminal_access', { cliPath }),
+  linkCliForTerminal: (cliPath: string) =>
+    invoke<TerminalAccess>('link_cli_for_terminal', { cliPath }),
   installCli: (method: string) => invoke<InstallResult>('install_cli', { method }),
   cancelCliInstall: () => invoke<boolean>('cancel_cli_install'),
 
@@ -86,6 +100,8 @@ export const tauriBridge = {
   setPreferredTheme: (theme: string) => invoke<void>('set_preferred_theme', { theme }),
   getNotifySync: () => invoke<boolean>('get_notify_sync'),
   setNotifySync: (enabled: boolean) => invoke<void>('set_notify_sync', { enabled }),
+  getAvailableUpdates: () => invoke<AvailableUpdates>('get_available_updates'),
+  checkUpdatesNow: () => invoke<AvailableUpdates>('check_updates_now'),
   getNotifyUpdate: () => invoke<boolean>('get_notify_update'),
   setNotifyUpdate: (enabled: boolean) => invoke<void>('set_notify_update', { enabled }),
   resetAllData: () => invoke<void>('reset_all_data'),

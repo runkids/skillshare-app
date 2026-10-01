@@ -14,6 +14,9 @@ pub struct CliMeta {
     pub notify_update: Option<bool>,
     /// Binary mtime (ms since epoch) when `version` was read; detects upgrades made outside the app.
     pub binary_modified_ms: Option<u64>,
+    /// Last versions announced by a notification, so each release is announced once.
+    pub notified_cli_version: Option<String>,
+    pub notified_app_version: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

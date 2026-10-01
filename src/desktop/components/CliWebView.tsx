@@ -116,11 +116,19 @@ export default function CliWebView() {
   const cliThemeRef = useRef(cliTheme);
   cliThemeRef.current = cliTheme;
 
+  // Read the theme each time the iframe (re)mounts. A stale ?theme= would make the
+  // reloaded CLI UI restore the old style and post it back, undoing the user's choice.
+  const iframeSrc = useMemo(
+    () => (iframeUrl ? `${iframeUrl}?theme=${cliThemeRef.current}` : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- iframeKey marks a remount
+    [iframeUrl, iframeKey]
+  );
+
   // Try to start server if no port available on mount
   useEffect(() => {
     if (!isTauri()) return;
     if (appInfo?.serverPort) {
-      setIframeUrl(`http://localhost:${appInfo.serverPort}?theme=${cliThemeRef.current}`);
+      setIframeUrl(`http://localhost:${appInfo.serverPort}`);
       setStatus('ready');
       failCount.current = 0;
       startAttempted.current = false;
@@ -141,7 +149,7 @@ export default function CliWebView() {
         }
         const projectDir = activeProject?.path;
         const port = await tauriBridge.startServer(cliPath, projectDir);
-        setIframeUrl(`http://localhost:${port}?theme=${cliThemeRef.current}`);
+        setIframeUrl(`http://localhost:${port}`);
         setStatus('ready');
         await refreshAppInfo();
       } catch (err) {
@@ -193,7 +201,7 @@ export default function CliWebView() {
       if (!cliPath) throw new Error('CLI not found');
       const projectDir = activeProject?.path;
       const port = await tauriBridge.startServer(cliPath, projectDir);
-      setIframeUrl(`http://localhost:${port}?theme=${cliThemeRef.current}`);
+      setIframeUrl(`http://localhost:${port}`);
       setStatus('ready');
       failCount.current = 0;
       await refreshAppInfo();
@@ -309,7 +317,7 @@ export default function CliWebView() {
     <iframe
       ref={iframeRef}
       key={`${iframeUrl}-${iframeKey}`}
-      src={iframeUrl!}
+      src={iframeSrc!}
       className="flex-1 w-full border-0"
       onLoad={() => {
         loadedIframeRef.current = iframeRef.current;

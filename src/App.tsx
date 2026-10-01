@@ -10,6 +10,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import MainView from './desktop/components/MainView';
 import OnboardingPage from './desktop/pages/OnboardingPage';
 import SettingsPage from './desktop/pages/SettingsPage';
+import UpdateCheckListener from './desktop/components/UpdateCheckListener';
 
 function OnboardingGuard({ children }: { children: React.ReactNode }) {
   const { appInfo, loading } = useTauri();
@@ -32,6 +33,7 @@ export default function App() {
               <TerminalProvider>
                 <BrowserRouter>
                   <ErrorBoundary>
+                    <UpdateCheckListener />
                     <div className="h-screen flex flex-col">
                       <OnboardingGuard>
                         <Routes>

@@ -160,6 +160,32 @@ pub async fn get_version(cli_path: &str) -> Result<String, String> {
     extract_version(&raw).ok_or_else(|| "Could not parse version from CLI output".to_string())
 }
 
+/// Best guess at how the CLI at `path` got there, for when no install was recorded.
+fn infer_source(path: &str, app_bin_dir: &std::path::Path) -> &'static str {
+    let windows_path = path.to_ascii_lowercase().replace('/', "\\");
+    if std::path::Path::new(path).starts_with(app_bin_dir) {
+        "github-release"
+    } else if path.contains("/Cellar/")
+        || path.starts_with("/opt/homebrew/")
+        || path.starts_with("/home/linuxbrew/")
+    {
+        "homebrew"
+    } else if windows_path.contains("\\programs\\skillshare\\") {
+        "powershell-installer"
+    } else {
+        "system-path"
+    }
+}
+
+/// [`infer_source`] on the resolved path, so Homebrew's `/usr/local/bin` symlinks count too.
+pub fn guess_source(cli_path: &str) -> String {
+    let resolved = std::fs::canonicalize(cli_path)
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_else(|_| cli_path.to_string());
+    let app_bin = std::fs::canonicalize(cli_dir()).unwrap_or_else(|_| cli_dir());
+    infer_source(&resolved, &app_bin).to_string()
+}
+
 /// Modification time of the CLI binary in ms since the Unix epoch.
 pub fn binary_modified_ms(cli_path: &str) -> Option<u64> {
     let modified = std::fs::metadata(cli_path).ok()?.modified().ok()?;
@@ -376,6 +402,94 @@ pub async fn path_hint(cli_path: &str) -> Option<PathHint> {
         &shell,
         &shell_path,
     )
+}
+
+/// Whether the user can run the CLI from a terminal, and what to do if not.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TerminalAccess {
+    /// The CLI is the app's own copy and nothing on the terminal side points at it yet.
+    pub needs_link: bool,
+    /// `~/.local/bin/skillshare` links to the app's copy.
+    pub linked: bool,
+    /// The folder the terminal would use is not on the login shell's PATH.
+    pub path_hint: Option<PathHint>,
+}
+
+/// Where the app links its own CLI copy so terminals can run it.
+fn terminal_link_path() -> Option<PathBuf> {
+    dirs::home_dir().map(|home| home.join(".local/bin/skillshare"))
+}
+
+fn links_to(link: &std::path::Path, target: &std::path::Path) -> bool {
+    std::fs::read_link(link).is_ok_and(|dest| dest == target)
+}
+
+pub async fn terminal_access(cli_path: &str) -> TerminalAccess {
+    if cfg!(target_os = "windows") {
+        return TerminalAccess::default();
+    }
+    let target = std::path::Path::new(cli_path);
+    if !target.starts_with(crate::utils::paths::app_data_dir()) {
+        return TerminalAccess {
+            path_hint: path_hint(cli_path).await,
+            ..TerminalAccess::default()
+        };
+    }
+    match terminal_link_path().filter(|link| links_to(link, target)) {
+        Some(link) => TerminalAccess {
+            linked: true,
+            path_hint: path_hint(&link.to_string_lossy()).await,
+            ..TerminalAccess::default()
+        },
+        None => TerminalAccess {
+            needs_link: true,
+            ..TerminalAccess::default()
+        },
+    }
+}
+
+/// Symlink `link` to `cli_path`. Only an old link to the app's copy or a dangling link is
+/// replaced; a real file or a link to another CLI belongs to the user and is left alone.
+#[cfg(unix)]
+fn link_cli_at(
+    cli_path: &str,
+    link: &std::path::Path,
+    app_dir: &std::path::Path,
+) -> Result<(), String> {
+    if let Ok(meta) = std::fs::symlink_metadata(link) {
+        let replaceable = meta.file_type().is_symlink()
+            && std::fs::read_link(link)
+                .is_ok_and(|dest| dest.starts_with(app_dir) || !dest.exists());
+        if !replaceable {
+            return Err(format!(
+                "{} already exists. Remove it first if you want the app's copy there.",
+                link.display()
+            ));
+        }
+        std::fs::remove_file(link)
+            .map_err(|e| format!("Could not replace {}: {e}", link.display()))?;
+    }
+    if let Some(dir) = link.parent() {
+        std::fs::create_dir_all(dir)
+            .map_err(|e| format!("Could not create {}: {e}", dir.display()))?;
+    }
+    std::os::unix::fs::symlink(cli_path, link)
+        .map_err(|e| format!("Could not create {}: {e}", link.display()))
+}
+
+/// Make the app's CLI copy runnable from a terminal via `~/.local/bin/skillshare`.
+pub fn link_for_terminal(cli_path: &str) -> Result<(), String> {
+    #[cfg(unix)]
+    {
+        let link = terminal_link_path().ok_or("Home folder not found")?;
+        link_cli_at(cli_path, &link, &crate::utils::paths::app_data_dir())
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = cli_path;
+        Err("Linking the CLI for the terminal is not supported on Windows".to_string())
+    }
 }
 
 /// OS, CPU architecture and whether Homebrew is on the (enriched) PATH.
@@ -800,6 +914,83 @@ mod tests {
     #[test]
     fn rereads_version_when_nothing_is_cached() {
         assert!(needs_version_refresh(&meta_with(None, Some(10)), 10));
+    }
+
+    /// A fresh scratch folder holding `app/skillshare` (the app's copy) and `bin/`.
+    #[cfg(unix)]
+    fn link_sandbox(name: &str) -> (std::path::PathBuf, std::path::PathBuf, std::path::PathBuf) {
+        let root = std::env::temp_dir().join(format!("ss-link-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let app = root.join("app");
+        std::fs::create_dir_all(&app).ok();
+        std::fs::write(app.join("skillshare"), "").ok();
+        (root.clone(), app, root.join("bin/skillshare"))
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn links_the_app_copy_into_a_new_bin_folder() {
+        let (_root, app, link) = link_sandbox("new");
+        let cli = app.join("skillshare");
+        let linked = link_cli_at(&cli.to_string_lossy(), &link, &app).is_ok();
+        assert_eq!((linked, links_to(&link, &cli)), (true, true));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn never_replaces_a_real_cli_file() {
+        let (_root, app, link) = link_sandbox("file");
+        std::fs::create_dir_all(link.parent().unwrap_or(&app)).ok();
+        std::fs::write(&link, "user binary").ok();
+        let result = link_cli_at(&app.join("skillshare").to_string_lossy(), &link, &app);
+        assert!(
+            result.is_err() && std::fs::read_to_string(&link).is_ok_and(|s| s == "user binary")
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn replaces_a_dangling_link() {
+        let (root, app, link) = link_sandbox("dangling");
+        std::fs::create_dir_all(link.parent().unwrap_or(&app)).ok();
+        std::os::unix::fs::symlink(root.join("gone"), &link).ok();
+        let cli = app.join("skillshare");
+        let linked = link_cli_at(&cli.to_string_lossy(), &link, &app).is_ok();
+        assert_eq!((linked, links_to(&link, &cli)), (true, true));
+    }
+
+    #[test]
+    fn app_downloaded_cli_is_not_labelled_system_path() {
+        let bin = std::path::Path::new("/data/com.skillshare.app/bin");
+        assert_eq!(
+            infer_source("/data/com.skillshare.app/bin/skillshare", bin),
+            "github-release"
+        );
+    }
+
+    #[test]
+    fn homebrew_cellar_path_is_homebrew() {
+        let bin = std::path::Path::new("/data/app/bin");
+        assert_eq!(
+            infer_source("/usr/local/Cellar/skillshare/0.23.0/bin/skillshare", bin),
+            "homebrew"
+        );
+    }
+
+    #[test]
+    fn powershell_install_dir_is_recognised() {
+        let bin = std::path::Path::new("/data/app/bin");
+        let path = r"C:\Users\me\AppData\Local\Programs\skillshare\skillshare.exe";
+        assert_eq!(infer_source(path, bin), "powershell-installer");
+    }
+
+    #[test]
+    fn other_locations_stay_system_path() {
+        let bin = std::path::Path::new("/data/app/bin");
+        assert_eq!(
+            infer_source("/home/me/.local/bin/skillshare", bin),
+            "system-path"
+        );
     }
 
     #[test]

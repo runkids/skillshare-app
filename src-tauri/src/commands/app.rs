@@ -1,6 +1,6 @@
 use crate::models::app_state::{AppInfo, OnboardingStatus};
 use crate::models::project::ProjectType;
-use crate::services::{cli_manager, project_store, server_manager::ServerManager};
+use crate::services::{cli_manager, project_store, server_manager::ServerManager, update_watch};
 use tauri::State;
 
 /// Check if the Global project's config.yaml actually exists on disk.
@@ -102,6 +102,20 @@ pub fn set_notify_sync(enabled: bool) -> Result<(), String> {
     let mut meta = cli_manager::load_meta();
     meta.notify_sync = Some(enabled);
     cli_manager::save_meta(&meta)
+}
+
+#[tauri::command]
+pub async fn get_available_updates(
+    state: State<'_, update_watch::UpdateState>,
+) -> Result<update_watch::AvailableUpdates, String> {
+    Ok(state.0.lock().await.clone())
+}
+
+#[tauri::command]
+pub async fn check_updates_now(
+    app: tauri::AppHandle,
+) -> Result<update_watch::AvailableUpdates, String> {
+    Ok(update_watch::check(&app, false).await)
 }
 
 #[tauri::command]

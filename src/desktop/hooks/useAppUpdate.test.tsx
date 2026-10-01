@@ -8,6 +8,9 @@ import { resetAppUpdateForTests } from './useAppUpdate';
 vi.mock('@tauri-apps/api/core', () => ({ isTauri: () => true }));
 vi.mock('@tauri-apps/plugin-updater', () => ({ check: vi.fn() }));
 
+const updates = vi.hoisted(() => ({ cli: null as string | null, app: null as string | null }));
+vi.mock('./useUpdates', () => ({ useUpdates: () => updates }));
+
 const mockCheck = vi.mocked(check);
 
 function renderSettings() {
@@ -21,6 +24,7 @@ function renderSettings() {
 beforeEach(() => {
   resetAppUpdateForTests();
   mockCheck.mockReset();
+  updates.cli = null;
 });
 
 describe('settings nav update badge', () => {
@@ -44,6 +48,15 @@ describe('settings nav update badge', () => {
     renderSettings();
     await waitFor(() => expect(mockCheck).toHaveBeenCalledTimes(1));
     expect(screen.queryByText('Update')).not.toBeInTheDocument();
+  });
+
+  it('marks the CLI tab when a newer CLI is known', async () => {
+    mockCheck.mockResolvedValue(null);
+    updates.cli = 'v0.24.0';
+    renderSettings();
+    expect(await screen.findByRole('button', { name: 'CLI, update available' })).toHaveTextContent(
+      'Update'
+    );
   });
 
   it('checks only once per session across remounts', async () => {
