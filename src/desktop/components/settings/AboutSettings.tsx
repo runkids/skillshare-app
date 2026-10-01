@@ -177,7 +177,7 @@ export default function AboutSettings() {
                 'App, CLI and server details with recent logs, saved to Downloads'}
             </p>
           </div>
-          <Button size="sm" variant="secondary" onClick={exportDiagnostics}>
+          <Button size="sm" variant="secondary" onClick={exportDiagnostics} className="shrink-0">
             Export diagnostics
           </Button>
         </div>
