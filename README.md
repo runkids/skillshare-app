@@ -152,6 +152,12 @@ uploads to the same draft, then publishes it once every build succeeds. Publishe
 releases cannot be rebuilt through this workflow. Manual tag pushes remain supported; the local `pnpm bump` command is
 not needed for the automated Release PR flow.
 
+## Documentation
+
+- [CONTRIBUTING.md](CONTRIBUTING.md): setup, project structure and pull requests.
+- [wiki/README.md](wiki/README.md): architecture, frontend, development and release notes for maintainers and coding agents.
+- [AGENTS.md](AGENTS.md): the rules every coding agent follows in this repo.
+
 ## License
 
 MIT
