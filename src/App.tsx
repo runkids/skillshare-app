@@ -9,6 +9,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import MainView from './desktop/components/MainView';
 import OnboardingPage from './desktop/pages/OnboardingPage';
 import SettingsPage from './desktop/pages/SettingsPage';
+import ActivityPage from './desktop/pages/ActivityPage';
 import UpdateCheckListener from './desktop/components/UpdateCheckListener';
 
 function OnboardingGuard({ children }: { children: React.ReactNode }) {
@@ -37,6 +38,7 @@ export default function App() {
                       <Routes>
                         <Route path="/onboarding" element={<OnboardingPage />} />
                         <Route path="/settings" element={<SettingsPage />} />
+                        <Route path="/activity" element={<ActivityPage />} />
                         <Route path="/*" element={<MainView />} />
                       </Routes>
                     </OnboardingGuard>

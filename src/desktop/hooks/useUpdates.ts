@@ -3,7 +3,14 @@ import { isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { tauriBridge, type AvailableUpdates } from '../api/tauri-bridge';
 
-const NONE: AvailableUpdates = { cli: null, app: null, skills: [] };
+const NONE: AvailableUpdates = {
+  cli: null,
+  app: null,
+  skills: [],
+  repositories: [],
+  agents: [],
+  plugins: [],
+};
 
 // Module-level store fed by the Rust background check (launch, then every 24h).
 let state = NONE;
@@ -30,12 +37,12 @@ function start() {
     .catch(() => {});
 }
 
-/** Re-check the CLI and app now, ignoring the 24h schedule. */
+/** Re-check all updates now, ignoring the 24h schedule. */
 export function checkUpdatesNow() {
   return tauriBridge.checkUpdatesNow().then(publish);
 }
 
-/** Newer CLI/app versions (`null` = none known) and skills with updates found by the last check. */
+/** Newer CLI/app versions (`null` = none known) and per-kind resources with updates found by the last check. */
 export function useUpdates() {
   useEffect(start, []);
   return useSyncExternalStore(subscribe, () => state);

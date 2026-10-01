@@ -41,6 +41,7 @@ pub fn run() {
         .manage(services::update_watch::UpdateState::default())
         .manage(services::auto_sync::AutoSyncState::default())
         .manage(services::quick_actions::QuickActionsState::default())
+        .manage(services::source_health::SourceHealthState::default())
         .invoke_handler(tauri::generate_handler![
             // CLI commands
             commands::cli::detect_cli,
@@ -87,6 +88,9 @@ pub fn run() {
             commands::quick_actions::quick_search,
             commands::quick_actions::quick_install,
             commands::quick_actions::quick_new_skill,
+            commands::source_health::get_source_health,
+            // Activity commands
+            commands::activity::get_activity,
             // Terminal commands
             commands::terminal::get_pty_env,
         ])
@@ -106,6 +110,7 @@ pub fn run() {
 
             services::update_watch::spawn_background(app.handle().clone());
             services::auto_sync::refresh(app.handle());
+            services::source_health::spawn_background(app.handle().clone());
 
             tauri::async_runtime::spawn(utils::env::load_login_shell_path());
 
@@ -176,6 +181,10 @@ fn setup_system_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
     use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 
     let quick_sync = MenuItemBuilder::with_id("quick_sync", "Quick Sync").build(app)?;
+    let update_all = MenuItemBuilder::with_id("update_all", "Update All (0)")
+        .enabled(false)
+        .build(app)?;
+    app.manage(TrayUpdateItem(update_all.clone()));
     let quick_actions = MenuItemBuilder::with_id("quick_actions", "Quick Actions…").build(app)?;
     let open_app = MenuItemBuilder::with_id("open_app", "Open Skillshare App").build(app)?;
 
@@ -189,6 +198,7 @@ fn setup_system_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
 
     let menu = MenuBuilder::new(app)
         .item(&quick_sync)
+        .item(&update_all)
         .item(&quick_actions)
         .separator()
         .item(&open_app)
@@ -197,6 +207,7 @@ fn setup_system_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
         .item(&check_updates)
         .item(&quit)
         .build()?;
+    services::source_health::attach_tray(app, &menu)?;
 
     let mut tray = TrayIconBuilder::new();
     // macOS menu bar icons are monochrome templates that the system tints
@@ -222,6 +233,12 @@ fn setup_system_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
                 let app = app.clone();
                 tauri::async_runtime::spawn(async move {
                     handle_quick_sync(&app).await;
+                });
+            }
+            "update_all" => {
+                let app = app.clone();
+                tauri::async_runtime::spawn(async move {
+                    services::update_all::run(&app).await;
                 });
             }
             "open_app" => {
@@ -255,6 +272,18 @@ fn setup_system_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
         .build(app)?;
 
     Ok(())
+}
+
+/// The tray's resource update action, refreshed after each check.
+struct TrayUpdateItem(tauri::menu::MenuItem<tauri::Wry>);
+
+pub(crate) fn refresh_tray_update_count(app: &tauri::AppHandle, count: usize) {
+    if let Some(item) = app.try_state::<TrayUpdateItem>() {
+        let _ = item.0.set_text(format!("Update All ({count})"));
+        let _ = item
+            .0
+            .set_enabled(count > 0 && !services::update_all::is_running());
+    }
 }
 
 /// The tray's disabled item showing the active project, kept so its text can follow switches.

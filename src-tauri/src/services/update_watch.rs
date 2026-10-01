@@ -1,4 +1,4 @@
-//! Background update checks for the CLI, the app itself, and installed skills.
+//! Background update checks for the app, CLI, and managed resources.
 
 use crate::services::{cli_manager, project_store};
 use chrono::{DateTime, Utc};
@@ -16,7 +16,7 @@ const CHECK_EVERY_HOURS: i64 = 24;
 /// Wake up hourly so a sleeping laptop still checks soon after the 24h mark.
 const WAKE_INTERVAL: Duration = Duration::from_secs(60 * 60);
 /// `skillshare check` fetches every source repo; give up rather than hang on a slow remote.
-const SKILL_CHECK_TIMEOUT: Duration = Duration::from_secs(60);
+const RESOURCE_CHECK_TIMEOUT: Duration = Duration::from_secs(60);
 
 /// Newer versions found by the last check; `None` means up to date (or unknown).
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize)]
@@ -24,9 +24,35 @@ const SKILL_CHECK_TIMEOUT: Duration = Duration::from_secs(60);
 pub struct AvailableUpdates {
     pub cli: Option<String>,
     pub app: Option<String>,
-    /// Skills and tracked repos in the active project with upstream changes, sorted.
+    /// Per-kind resources in the active project with upstream changes, sorted.
     pub skills: Vec<String>,
+    pub repositories: Vec<String>,
+    pub agents: Vec<String>,
+    pub plugins: Vec<String>,
 }
+
+impl AvailableUpdates {
+    pub fn resource_count(&self) -> usize {
+        self.skills.len() + self.repositories.len() + self.agents.len() + self.plugins.len()
+    }
+
+    fn resource_summary(&self) -> String {
+        [
+            (self.skills.len(), "skill", "skills"),
+            (self.plugins.len(), "plugin", "plugins"),
+            (self.agents.len(), "agent", "agents"),
+            (self.repositories.len(), "repository", "repositories"),
+        ]
+        .into_iter()
+        .filter(|(n, _, _)| *n > 0)
+        .map(|(n, one, many)| format!("{n} {}", if n == 1 { one } else { many }))
+        .collect::<Vec<_>>()
+        .join(", ")
+    }
+}
+
+// Serialize checks so a slower earlier check cannot restore a cleared badge.
+static CHECK_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 #[derive(Default)]
 pub struct UpdateState(pub tokio::sync::Mutex<AvailableUpdates>);
@@ -85,57 +111,127 @@ struct CheckEntry {
 
 #[derive(serde::Deserialize)]
 struct CheckOutput {
-    #[serde(default)]
     tracked_repos: Vec<CheckEntry>,
-    #[serde(default)]
     skills: Vec<CheckEntry>,
 }
 
-/// Names with updates in `skillshare check --json` output: skills marked
-/// `update_available` and tracked repos that are `behind`.
-fn parse_skill_updates(stdout: &str) -> Option<Vec<String>> {
-    let out: CheckOutput = serde_json::from_str(stdout)
-        .map_err(|e| log::warn!("Unexpected `skillshare check --json` output: {e}"))
-        .ok()?;
-    let repos = out
-        .tracked_repos
-        .into_iter()
-        .filter(|r| r.status == "behind");
-    let skills = out
-        .skills
-        .into_iter()
-        .filter(|s| s.status == "update_available");
-    let mut names: Vec<String> = repos.chain(skills).map(|e| e.name).collect();
-    names.sort();
-    names.dedup();
-    Some(names)
+fn update_names(entries: Vec<CheckEntry>, status: &str) -> Vec<String> {
+    sorted_names(
+        entries
+            .into_iter()
+            .filter(|e| e.status == status)
+            .map(|e| e.name),
+    )
 }
 
-/// Skills with updates in the active project; `None` when the check could not run.
-/// `check` only reads upstream state; updating stays a user action in the Web UI.
-async fn skill_updates() -> Option<Vec<String>> {
-    let cli_path = cli_manager::detect_cli().await?;
-    let (dir, is_project) = project_store::active_project_mode(&project_store::load());
-    let mode = if is_project { "--project" } else { "--global" };
-    let args = ["check", "--json", mode].map(String::from);
-    let result = tokio::time::timeout(
-        SKILL_CHECK_TIMEOUT,
-        cli_manager::exec(&cli_path, &args, dir.as_deref()),
-    )
-    .await
-    .unwrap_or_else(|_| {
-        Err(format!(
-            "timed out after {}s",
-            SKILL_CHECK_TIMEOUT.as_secs()
-        ))
-    });
-    match result {
-        Ok(stdout) => parse_skill_updates(&stdout),
-        Err(e) => {
-            log::warn!("Skill update check failed: {e}");
+fn sorted_names(names: impl Iterator<Item = String>) -> Vec<String> {
+    let mut names: Vec<_> = names.collect();
+    names.sort();
+    names.dedup();
+    names
+}
+
+fn parse_skill_updates(stdout: &str) -> Option<(Vec<String>, Vec<String>)> {
+    let out: CheckOutput = serde_json::from_str(stdout).ok()?;
+    Some((
+        update_names(out.skills, "update_available"),
+        update_names(out.tracked_repos, "behind"),
+    ))
+}
+
+fn parse_agent_updates(stdout: &str) -> Option<Vec<String>> {
+    // The CLI emits null, rather than [], when no agents were discovered.
+    let out: Option<Vec<CheckEntry>> = serde_json::from_str(stdout).ok()?;
+    Some(update_names(out.unwrap_or_default(), "update_available"))
+}
+
+#[derive(serde::Deserialize)]
+struct PluginChange {
+    name: String,
+    action: String,
+}
+
+#[derive(serde::Deserialize)]
+struct PluginCheck {
+    #[serde(deserialize_with = "null_changes")]
+    changes: Vec<PluginChange>,
+}
+
+fn null_changes<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Vec<PluginChange>, D::Error> {
+    use serde::Deserialize;
+    Ok(Option::<Vec<PluginChange>>::deserialize(deserializer)?.unwrap_or_default())
+}
+
+fn parse_plugin_updates(stdout: &str) -> Option<Vec<String>> {
+    let out: PluginCheck = serde_json::from_str(stdout).ok()?;
+    // Several target bindings may report the same logical plugin package.
+    Some(sorted_names(
+        out.changes
+            .into_iter()
+            .filter(|c| c.action == "update-available")
+            .map(|c| c.name),
+    ))
+}
+
+async fn resource_check(cli: &str, args: &[&str], dir: Option<&str>, mode: &str) -> Option<String> {
+    let args: Vec<_> = args
+        .iter()
+        .copied()
+        .chain(["--json", mode])
+        .map(String::from)
+        .collect();
+    match tokio::time::timeout(RESOURCE_CHECK_TIMEOUT, cli_manager::exec(cli, &args, dir)).await {
+        Ok(Ok(stdout)) => Some(stdout),
+        result => {
+            log::warn!("Resource update check {args:?} failed: {result:?}");
             None
         }
     }
+}
+
+/// Failed checks preserve only that kind's last list; successful kinds still refresh.
+async fn resource_updates(found: &mut AvailableUpdates) -> bool {
+    let Some(cli) = cli_manager::detect_cli().await else {
+        return false;
+    };
+    let (dir, is_project) = project_store::active_project_mode(&project_store::load());
+    let mode = if is_project { "--project" } else { "--global" };
+    let skills = resource_check(&cli, &["check"], dir.as_deref(), mode)
+        .await
+        .and_then(|s| parse_skill_updates(&s));
+    let agents = resource_check(&cli, &["check", "agents"], dir.as_deref(), mode)
+        .await
+        .and_then(|s| parse_agent_updates(&s));
+    let plugins = resource_check(&cli, &["plugin", "check"], dir.as_deref(), mode)
+        .await
+        .and_then(|s| parse_plugin_updates(&s));
+    let complete = apply_resource_results(found, skills, agents, plugins);
+    if !complete {
+        log::warn!("Some resource updates could not be checked; keeping previous lists");
+    }
+    complete
+}
+
+fn apply_resource_results(
+    found: &mut AvailableUpdates,
+    skills: Option<(Vec<String>, Vec<String>)>,
+    agents: Option<Vec<String>>,
+    plugins: Option<Vec<String>>,
+) -> bool {
+    let complete = skills.is_some() && agents.is_some() && plugins.is_some();
+    if let Some((skills, repositories)) = skills {
+        found.skills = skills;
+        found.repositories = repositories;
+    }
+    if let Some(agents) = agents {
+        found.agents = agents;
+    }
+    if let Some(plugins) = plugins {
+        found.plugins = plugins;
+    }
+    complete
 }
 
 fn main_window_focused(app: &AppHandle) -> bool {
@@ -162,50 +258,72 @@ fn unannounced(
             meta.notified_cli_version = Some(v.clone());
         }
     }
-    // Announce when a skill appears that the last notification didn't list. Remember the
-    // current set either way, so a skill updated and later outdated again is announced anew.
-    let new_skill = found
-        .skills
-        .iter()
-        .any(|s| !meta.notified_skill_updates.contains(s));
-    if new_skill {
-        let n = found.skills.len();
+    let new_resource = [
+        (&found.skills, &meta.notified_skill_updates),
+        (&found.repositories, &meta.notified_repository_updates),
+        (&found.agents, &meta.notified_agent_updates),
+        (&found.plugins, &meta.notified_plugin_updates),
+    ]
+    .iter()
+    .any(|(current, notified)| current.iter().any(|name| !notified.contains(name)));
+    if new_resource {
         lines.push(format!(
-            "{n} skill update{} available.",
-            if n == 1 { " is" } else { "s are" }
+            "{} {} updates.",
+            found.resource_summary(),
+            if found.resource_count() == 1 {
+                "has"
+            } else {
+                "have"
+            }
         ));
     }
     meta.notified_skill_updates = found.skills.clone();
+    meta.notified_repository_updates = found.repositories.clone();
+    meta.notified_agent_updates = found.agents.clone();
+    meta.notified_plugin_updates = found.plugins.clone();
     lines
 }
 
-/// Re-check only skills after the skills source changed, e.g. when the user updated
-/// them in the Web UI, so the badge clears without waiting for the daily check.
-pub async fn refresh_skills(app: &AppHandle) {
-    let Some(skills) = skill_updates().await else {
-        return;
-    };
-    let updates = app.state::<UpdateState>();
-    let found = {
-        let mut state = updates.0.lock().await;
-        if state.skills == skills {
-            return;
-        }
-        state.skills = skills;
-        state.clone()
-    };
-    let mut meta = cli_manager::load_meta();
-    if forget_cleared(&mut meta.notified_skill_updates, &found.skills) {
-        if let Err(e) = cli_manager::save_meta(&meta) {
-            log::warn!("Could not save notified skill updates: {e}");
-        }
-    }
-    if let Err(e) = app.emit(UPDATES_EVENT, &found) {
+fn forget_cleared_resources(
+    meta: &mut crate::models::app_state::CliMeta,
+    found: &AvailableUpdates,
+) -> bool {
+    // Do not short-circuit: every kind must forget cleared entries.
+    forget_cleared(&mut meta.notified_skill_updates, &found.skills)
+        | forget_cleared(&mut meta.notified_repository_updates, &found.repositories)
+        | forget_cleared(&mut meta.notified_agent_updates, &found.agents)
+        | forget_cleared(&mut meta.notified_plugin_updates, &found.plugins)
+}
+
+fn publish(app: &AppHandle, found: &AvailableUpdates) {
+    crate::refresh_tray_update_count(app, found.resource_count());
+    if let Err(e) = app.emit(UPDATES_EVENT, found) {
         log::warn!("Failed to emit update result: {e}");
     }
 }
 
-/// Drop announced skills that no longer have an update, so a later update to one of
+/// Refresh managed resources after source changes or Update All; retains the public
+/// name used by the existing watcher. Returns false if any check was inconclusive.
+pub async fn refresh_skills(app: &AppHandle) -> bool {
+    let _checking = CHECK_LOCK.lock().await;
+    let updates = app.state::<UpdateState>();
+    let mut found = updates.0.lock().await.clone();
+    let complete = resource_updates(&mut found).await;
+    let mut meta = cli_manager::load_meta();
+    if forget_cleared_resources(&mut meta, &found) {
+        if let Err(e) = cli_manager::save_meta(&meta) {
+            log::warn!("Could not save notified resource updates: {e}");
+        }
+    }
+    let mut state = updates.0.lock().await;
+    if *state != found {
+        *state = found.clone();
+        publish(app, &found);
+    }
+    complete
+}
+
+/// Drop announced resources that no longer have an update, so a later update to one of
 /// them is announced again. Never adds: new updates are left for the notifying check.
 fn forget_cleared(notified: &mut Vec<String>, current: &[String]) -> bool {
     let before = notified.len();
@@ -213,23 +331,19 @@ fn forget_cleared(notified: &mut Vec<String>, current: &[String]) -> bool {
     notified.len() != before
 }
 
-/// Check the CLI, the app, and skills, publish the result, and notify while the app is in the background.
+/// Check all updates, publish the result, and notify while the app is in the background.
 pub async fn check(app: &AppHandle, notify: bool) -> AvailableUpdates {
+    let _checking = CHECK_LOCK.lock().await;
     let mut meta = cli_manager::load_meta();
     if let Err(e) = cli_manager::refresh_cached_version(&mut meta).await {
         log::warn!("Could not refresh cached CLI version: {e}");
     }
     let state = app.state::<UpdateState>();
-    // A failed skill check keeps the last known list instead of clearing the badge.
-    let skills = match skill_updates().await {
-        Some(skills) => skills,
-        None => state.0.lock().await.skills.clone(),
-    };
-    let found = AvailableUpdates {
-        cli: latest_cli(meta.version.as_deref()).await,
-        app: latest_app(app).await,
-        skills,
-    };
+    let mut found = state.0.lock().await.clone();
+    resource_updates(&mut found).await;
+    found.cli = latest_cli(meta.version.as_deref()).await;
+    found.app = latest_app(app).await;
+    forget_cleared_resources(&mut meta, &found);
     meta.last_update_check = Some(Utc::now().to_rfc3339());
 
     // In the foreground the title bar badge is enough.
@@ -249,9 +363,7 @@ pub async fn check(app: &AppHandle, notify: bool) -> AvailableUpdates {
     }
 
     *state.0.lock().await = found.clone();
-    if let Err(e) = app.emit(UPDATES_EVENT, &found) {
-        log::warn!("Failed to emit update result: {e}");
-    }
+    publish(app, &found);
     found
 }
 
@@ -320,7 +432,7 @@ mod tests {
         let found = AvailableUpdates {
             cli: Some("v0.24.0".into()),
             app: None,
-            skills: Vec::new(),
+            ..Default::default()
         };
         let first = unannounced(&found, &mut meta).len();
         let second = unannounced(&found, &mut meta).len();
@@ -349,13 +461,112 @@ mod tests {
         }"#;
         assert_eq!(
             parse_skill_updates(stdout),
-            Some(vec!["_team".to_string(), "pdf".to_string()])
+            Some((vec!["pdf".to_string()], vec!["_team".to_string()]))
         );
     }
 
     #[test]
     fn unparseable_check_output_is_unknown() {
         assert_eq!(parse_skill_updates("No tracked repositories"), None);
+    }
+
+    #[test]
+    fn agent_check_accepts_array_and_null_without_counting_local_or_dirty_entries() {
+        assert_eq!(parse_agent_updates("null"), Some(vec![]));
+        assert_eq!(
+            parse_agent_updates(
+                r#"[{"name":"tutor","status":"update_available"},{"name":"mine","status":"local"},{"name":"edited","status":"dirty"}]"#
+            ),
+            Some(vec!["tutor".into()])
+        );
+        assert_eq!(parse_agent_updates(r#"{"error":"bad config"}"#), None);
+    }
+
+    #[test]
+    fn plugin_check_deduplicates_targets_and_ignores_native_unknowns() {
+        assert_eq!(
+            parse_plugin_updates(
+                r#"{"changes":[{"name":"hud","action":"update-available"},{"name":"hud","action":"update-available"},{"name":"native","action":"native-check"},{"name":"ok","action":"noop"},{"name":"blocked","action":"blocked"}]}"#
+            ),
+            Some(vec!["hud".into()])
+        );
+        assert_eq!(parse_plugin_updates(r#"{"changes":null}"#), Some(vec![]));
+        assert_eq!(parse_plugin_updates(r#"{"error":"bad config"}"#), None);
+    }
+
+    #[test]
+    fn resource_notifications_count_kinds_once_and_forget_all_cleared_kinds() {
+        let found = AvailableUpdates {
+            skills: vec!["pdf".into(), "xlsx".into(), "docx".into()],
+            plugins: vec!["hud".into()],
+            agents: vec!["tutor".into()],
+            repositories: vec!["_team".into()],
+            ..Default::default()
+        };
+        let mut meta = crate::models::app_state::CliMeta::default();
+        assert_eq!(found.resource_count(), 6);
+        assert_eq!(
+            unannounced(&found, &mut meta),
+            vec!["3 skills, 1 plugin, 1 agent, 1 repository have updates."]
+        );
+        assert!(unannounced(&found, &mut meta).is_empty());
+        assert!(forget_cleared_resources(
+            &mut meta,
+            &AvailableUpdates::default()
+        ));
+        assert_eq!(unannounced(&found, &mut meta).len(), 1);
+    }
+
+    #[test]
+    fn new_plugin_is_announced_without_reannouncing_unchanged_skills() {
+        let mut meta = crate::models::app_state::CliMeta::default();
+        let mut found = skills(&["pdf"]);
+        unannounced(&found, &mut meta);
+        found.plugins.push("hud".into());
+        assert_eq!(
+            unannounced(&found, &mut meta),
+            vec!["1 skill, 1 plugin have updates."]
+        );
+        found.skills.clear();
+        assert!(unannounced(&found, &mut meta).is_empty());
+    }
+
+    #[test]
+    fn partial_checks_preserve_failed_kinds_while_clearing_successful_kinds() {
+        let mut found = AvailableUpdates {
+            skills: vec!["pdf".into()],
+            repositories: vec!["_team".into()],
+            agents: vec!["tutor".into()],
+            plugins: vec!["hud".into()],
+            ..Default::default()
+        };
+        assert!(!apply_resource_results(
+            &mut found,
+            None,
+            Some(vec![]),
+            None
+        ));
+        assert_eq!(found.skills, vec!["pdf"]);
+        assert_eq!(found.repositories, vec!["_team"]);
+        assert_eq!(found.plugins, vec!["hud"]);
+        assert!(found.agents.is_empty());
+        assert!(apply_resource_results(
+            &mut found,
+            Some((vec![], vec![])),
+            Some(vec![]),
+            Some(vec![])
+        ));
+        assert_eq!(found.resource_count(), 0);
+    }
+
+    #[test]
+    fn legacy_meta_loads_new_notification_lists_as_empty() {
+        let meta: crate::models::app_state::CliMeta =
+            serde_json::from_str(r#"{"notifiedSkillUpdates":["pdf"]}"#).unwrap_or_default();
+        assert_eq!(meta.notified_skill_updates, vec!["pdf"]);
+        assert!(meta.notified_agent_updates.is_empty());
+        assert!(meta.notified_repository_updates.is_empty());
+        assert!(meta.notified_plugin_updates.is_empty());
     }
 
     #[test]
