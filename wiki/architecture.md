@@ -4,7 +4,7 @@ How the Rust backend in `src-tauri/` fits together.
 
 ## Process model
 
-- `lib.rs:run` registers the plugins, the managed state (`ServerManager`, `UpdateState`, `AutoSyncState`, `OplogWatchState`, `SourceHealthState`, `QuickActionsState`) and the commands. `setup` then:
+- `lib.rs:run` registers the plugins, the managed state (`ServerManager`, `UpdateState`, `AutoSyncState`, `OplogWatchState`, `SourceHealthState`, `AuditState`, `QuickActionsState`) and the commands. `setup` then:
   - builds the window, the tray and the macOS menu;
   - spawns `update_watch::spawn_background`, `auto_sync::refresh`, `oplog_watch::refresh` and `source_health::spawn_background`;
   - loads the login-shell PATH;
@@ -36,6 +36,8 @@ How the Rust backend in `src-tauri/` fits together.
 - `services/update_watch.rs`: app, CLI and per-kind resource update checks; `services/update_all.rs`: tray resource updates and sync.
 - `services/source_health.rs`: target drift and the source's git remote state; tray collect/push/pull.
 - `commands/source_health.rs`: `get_source_health`.
+- `services/audit.rs`: the security audit after changes; `commands/audit.rs`: `get_audit_report`.
+- `commands/status.rs`: the title bar status panel; `run_status_action` starts the tray's Update All, Quick Sync, Collect, Push or Pull, and `check_status_now` re-runs the update, source health and audit checks.
 - `services/diagnostics.rs`: the report text, with home redacted to `~`.
 - `services/project_store.rs`: `projects.json`, the active project, `active_project_mode`.
 - `utils/env.rs`: the login-shell PATH and the child-process environment.
@@ -62,34 +64,7 @@ How the Rust backend in `src-tauri/` fits together.
 
 ## Background services
 
-- `auto_sync.rs`
-  - `refresh` aborts the watcher task and spawns a new one. Call it at startup, after `set_auto_sync`, project add/remove/switch and reset.
-  - The source dir comes from `skillshare status --json`; `notify` watches it recursively.
-  - `is_source_change` ignores access events, `.git/` and editor or OS temp files.
-  - `Scheduler` waits for 2s of quiet (`SETTLE`), never overlaps runs, and folds changes made during a run into one follow-up.
-  - Each run calls `handle_quick_sync` only if `auto_sync` is on (default off), then always calls `update_watch::refresh_skills` and `source_health::refresh(app, false)`.
-- `oplog_watch.rs`
-  - Every CLI command, including the web UI's, appends a JSONL entry to `operations.log`: `<project>/.skillshare/logs/` (or `skillshare/`) in project mode, else `$XDG_STATE_HOME/skillshare/logs/` (`%AppData%\skillshare\logs` on Windows, `~/.local/state/skillshare/logs`). `refresh` (startup, project add/remove/switch, reset) watches the active project's log dir non-recursively; a missing dir is retried every 60s and never created, since the CLI adds the project `.gitignore` entry when it creates it.
-  - Only appended complete lines are parsed. A log that shrank was trimmed by the CLI right after an append, so only its last line counts.
-  - `is_mutating` is an allowlist (`MUTATING`, plus `plugin`/`mcp`/`hooks` with a `MUTATING_VERBS` verb); dry runs never count. The badge checks log `check`, `diff` and `status`, so reacting to those would loop.
-  - After 1.5s of quiet (`SETTLE`) it awaits `refresh_badges` (`update_watch::refresh_skills`, then `source_health::refresh(app, false)`) inline, so entries logged meanwhile coalesce into one follow-up.
-  - The tray's Quick Sync calls `refresh_badges`, Update All is followed by `source_health::refresh`, and the tray source actions also call `refresh_skills`.
-- `update_watch.rs`
-  - `spawn_background` checks at launch, then wakes hourly and checks once 24h have passed since `last_update_check`. Only due checks may notify.
-  - `check` gets the latest CLI (GitHub, `is_newer`), the latest app (updater), skills/repositories (`check --json`), agents (`check agents --json`, array or null), and managed plugins (`plugin check --json`, `update-available` changes deduplicated by package). Each CLI check has a 60s timeout; failures keep that kind's last list. Checks use the active project scope and serialize publication.
-  - `check` stores the result in `UpdateState` and emits `updates-available`. It notifies only if `notify` is set, `notify_update` is on, and the window is unfocused.
-  - `unannounced` announces each app or CLI version once (`notified_*_version`), and announces a combined resource summary when a name is new to its per-kind `notified_*_updates` list.
-  - `refresh_skills` re-runs all resource checks and emits only on change. `forget_cleared` drops resolved names per kind and never adds any.
-  - `check_updates_now` calls `check(app, false)`, so it never notifies.
-- `update_all.rs` updates skills/repositories with `update --all --json`, agents with `update agents --all --json`, and each plugin with `plugin update <name> --json` (noninteractive). It holds `SYNC_LOCK`, uses 120s timeouts and `exec`'s `kill_on_drop`, then syncs skills and any updated agents, emits `sync-completed`, and refreshes resources. It never forces an update or changes extras/MCP/hooks. Notifications respect `notify_sync`; skipped updates or failed final checks report incomplete rather than success. App/CLI upgrades remain in settings.
-- `source_health.rs`
-  - `spawn_background` runs `refresh(app, true)` at launch, then every 15 min. `CHECK_LOCK` serializes runs; only a change emits `source-health` and updates the tray.
-  - Project add/remove/switch call `project_changed`: it clears the state (badge and tray items go away), emits, then runs `refresh(app, false)`. `refresh` drops a result whose project is no longer active (`is_news`), so a slow check for the old project never overwrites the new one.
-  - `skillshare diff --json [--project|--global]` (30s timeout): skills with reason `local only` are collectable; a target with any `is_sync` item is out of sync.
-  - Global mode only, since `push`/`pull` use the global config: `git status --porcelain=v2 --branch` in the source dir counts uncommitted paths and ahead/behind. A `fetch` (15s, `GIT_TERMINAL_PROMPT=0`) runs only on the timed check; a failed fetch keeps the last remote state.
-  - Tray items are inserted after Quick Sync: "Collect N Local Skills…" (confirm dialog, then `collect --all --json`), "Push N Changes" (`push`, default message), "Pull N Updates" (`pull`). Each runs with a 120s timeout and notifies like Quick Sync.
-  - Notifies only when unfocused and `notify_update` is on, for keys new to `notified_source_health` (`local:<skill>`, `behind:<n>`). Drift and unpushed work are badge-only.
-- Diagnostics: `commands/app.rs:export_diagnostics` writes `skillshare-app-diagnostics-<stamp>.txt` to Downloads, reveals it, and returns the redacted path. It includes the last 200 lines of each log.
+Auto-sync, update checks, the operation log watcher, source health and the audit are described in `wiki/background-services.md` (topic `background-services`).
 
 ## State and files
 
@@ -102,7 +77,7 @@ How the Rust backend in `src-tauri/` fits together.
 - `CliMeta` fields:
   - install: `version`, `path`, `source`, `installed_at`, `binary_modified_ms`;
   - settings: `preferred_port`, `notify_sync`, `notify_update`, `auto_sync`, `quick_actions_enabled`, `quick_actions_shortcut`;
-  - update tracking: `last_update_check`, `notified_cli_version`, `notified_app_version`, `notified_skill_updates`, `notified_repository_updates`, `notified_agent_updates`, `notified_plugin_updates`, `notified_source_health`.
+  - update tracking: `last_update_check`, `notified_cli_version`, `notified_app_version`, `notified_skill_updates`, `notified_repository_updates`, `notified_agent_updates`, `notified_plugin_updates`, `notified_source_health`, `notified_audit_findings`.
 - Project store rules:
   - A corrupt `projects.json` is moved to `projects.json.corrupt-<ts>`.
   - Duplicate paths are rejected after canonicalizing.
@@ -128,6 +103,7 @@ How the Rust backend in `src-tauri/` fits together.
 | `server-stopped` | `server_manager.rs:SERVER_STOPPED_EVENT` | none |
 | `updates-available` | `update_watch.rs:UPDATES_EVENT` | `AvailableUpdates` |
 | `source-health` | `source_health.rs:SOURCE_HEALTH_EVENT` | `SourceHealth` |
+| `audit-report` | `audit.rs:AUDIT_EVENT` | `AuditFinding[]` |
 | `check-for-updates` | `update_watch.rs:CHECK_REQUESTED_EVENT` (emitted in `lib.rs`) | none |
 | `sync-completed` | `lib.rs:SYNC_COMPLETED_EVENT` | none |
 | `quick-actions-opened` | `quick_actions.rs:OPENED_EVENT` | none |

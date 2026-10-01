@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ServerStatus from './ServerStatus';
+import { resetServerStoppedForTests } from '../hooks/useServerStopped';
 
 const mocks = vi.hoisted(() => ({
   handlers: new Map<string, () => void>(),
@@ -29,6 +30,7 @@ function emit(event: string) {
 
 beforeEach(() => {
   mocks.handlers.clear();
+  resetServerStoppedForTests();
   mocks.reloadView.mockClear();
   mocks.appInfo = { serverRunning: true, serverPort: 19420 };
 });

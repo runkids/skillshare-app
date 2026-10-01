@@ -1,25 +1,12 @@
-import { useEffect, useState } from 'react';
-import { isTauri } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
 import { useTauri } from '../context/TauriContext';
 import { useProjects } from '../context/ProjectContext';
+import { clearServerStopped, useServerStopped } from '../hooks/useServerStopped';
 
 // A quiet dot while the server is up; text only when it needs attention.
 export default function ServerStatus() {
   const { appInfo } = useTauri();
   const { reloadView } = useProjects();
-  // `appInfo` is read once, so follow the supervisor's events to notice a dead server.
-  const [stopped, setStopped] = useState(false);
-
-  useEffect(() => {
-    if (!isTauri()) return;
-    const offStopped = listen('server-stopped', () => setStopped(true));
-    const offRestarted = listen('server-restarted', () => setStopped(false));
-    return () => {
-      void offStopped.then((off) => off());
-      void offRestarted.then((off) => off());
-    };
-  }, []);
+  const stopped = useServerStopped();
 
   if (stopped) {
     return (
@@ -27,7 +14,7 @@ export default function ServerStatus() {
         type="button"
         // The header reload restarts a server that is not healthy.
         onClick={() => {
-          setStopped(false);
+          clearServerStopped();
           reloadView();
         }}
         className="flex items-center gap-1.5 h-[26px] px-2.5 rounded-[var(--r-btn)] bg-[var(--bad-bg)] text-[var(--bad)] text-xs hover:opacity-80 transition-opacity"

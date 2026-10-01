@@ -43,6 +43,7 @@ pub fn run() {
         .manage(services::oplog_watch::OplogWatchState::default())
         .manage(services::quick_actions::QuickActionsState::default())
         .manage(services::source_health::SourceHealthState::default())
+        .manage(services::audit::AuditState::default())
         .invoke_handler(tauri::generate_handler![
             // CLI commands
             commands::cli::detect_cli,
@@ -90,6 +91,9 @@ pub fn run() {
             commands::quick_actions::quick_install,
             commands::quick_actions::quick_new_skill,
             commands::source_health::get_source_health,
+            commands::audit::get_audit_report,
+            commands::status::run_status_action,
+            commands::status::check_status_now,
             // Activity commands
             commands::activity::get_activity,
             // Terminal commands

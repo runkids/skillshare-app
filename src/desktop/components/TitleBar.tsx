@@ -7,8 +7,7 @@ import { useProjects } from '../context/ProjectContext';
 import { isMacOS } from '../utils/platform';
 import { useUpdates } from '../hooks/useUpdates';
 import { useFullscreen } from '../hooks/useFullscreen';
-import ResourceUpdatesBadge from './ResourceUpdatesBadge';
-import SourceHealthBadge from './SourceHealthBadge';
+import StatusButton from './status/StatusButton';
 import ServerStatus from './ServerStatus';
 import appIcon from '../../../src-tauri/icons/64x64.png';
 
@@ -92,8 +91,7 @@ export default function TitleBar() {
         )}
       </div>
       <div data-tauri-drag-region className="flex-1 self-stretch" />
-      <ResourceUpdatesBadge updates={updates} />
-      <SourceHealthBadge />
+      <StatusButton />
       <ServerStatus />
       <button
         type="button"

@@ -124,17 +124,27 @@ async fn watch(app: AppHandle) {
 
     let mut tail = Tail::at_end(path);
     let mut debounce = Debounce::default();
+    // A CLI upgrade changes the version the update check compares against.
+    let mut upgraded = false;
     loop {
         let wake = debounce.deadline();
         tokio::select! {
             Some(event) = events.recv() => {
-                if touches_log(&event) && tail.read_new().iter().any(|l| is_mutating(l)) {
-                    debounce.changed(Instant::now());
+                if touches_log(&event) {
+                    let lines = tail.read_new();
+                    let upgrade = lines.iter().any(|l| is_upgrade(l));
+                    upgraded |= upgrade;
+                    if upgrade || lines.iter().any(|l| is_mutating(l)) {
+                        debounce.changed(Instant::now());
+                    }
                 }
             }
             _ = tokio::time::sleep_until(wake.unwrap_or_else(Instant::now)), if wake.is_some() => {
                 // Awaited inline: entries logged meanwhile queue up and coalesce into one follow-up.
                 if debounce.take_due(Instant::now()) {
+                    if std::mem::take(&mut upgraded) {
+                        update_watch::check(&app, false).await;
+                    }
                     refresh_badges(&app).await;
                 }
             }
@@ -201,6 +211,24 @@ fn is_mutating(line: &str) -> bool {
         Some((group, verb)) => GROUPS.contains(&group) && MUTATING_VERBS.contains(&verb),
         None => MUTATING.contains(&entry.cmd.as_str()),
     }
+}
+
+/// Whether a log line records a CLI upgrade that went through. It is not in `MUTATING`
+/// because it changes the CLI, not skills: it needs the full update check instead.
+fn is_upgrade(line: &str) -> bool {
+    #[derive(serde::Deserialize)]
+    struct Entry {
+        cmd: String,
+        #[serde(default)]
+        status: String,
+        #[serde(default)]
+        args: serde_json::Map<String, serde_json::Value>,
+    }
+    serde_json::from_str::<Entry>(line).is_ok_and(|e| {
+        e.cmd == "upgrade"
+            && e.status == "ok"
+            && e.args.get("dry_run") != Some(&serde_json::Value::Bool(true))
+    })
 }
 
 /// Reads only what was appended to the log since the last read.
@@ -305,6 +333,19 @@ mod tests {
         ];
         let triggering: Vec<_> = lines.iter().filter(|l| is_mutating(l)).collect();
         assert!(triggering.is_empty(), "should not trigger: {triggering:?}");
+    }
+
+    #[test]
+    fn a_successful_upgrade_triggers_the_full_update_check() {
+        let line = r#"{"ts":"2026-10-02T00:05:12+08:00","cmd":"upgrade","args":{"cli":true,"from_version":"0.23.0","to_version":"0.23.1"},"status":"ok"}"#;
+        assert!(is_upgrade(line));
+    }
+
+    #[test]
+    fn a_failed_or_dry_run_upgrade_does_not() {
+        let failed = r#"{"cmd":"upgrade","args":{"cli":true},"status":"error","msg":"a password is needed"}"#;
+        let dry = r#"{"cmd":"upgrade","args":{"dry_run":true},"status":"ok"}"#;
+        assert!(!is_upgrade(failed) && !is_upgrade(dry) && !is_upgrade(&entry("sync", "{}")));
     }
 
     #[test]
