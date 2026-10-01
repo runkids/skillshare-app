@@ -86,7 +86,8 @@ pub async fn detect_cli() -> Option<String> {
     }
 
     // 2. Check well-known install locations per platform
-    //    - curl|sh  → /usr/local/bin/skillshare  (covered by PATH above)
+    //    - curl|sh  → ~/.local/bin/skillshare from the app, or /usr/local/bin/skillshare
+    //                 from a terminal with sudo (both covered by PATH above)
     //    - brew     → /opt/homebrew/bin/skillshare (covered by PATH above)
     //    - Windows  → %LOCALAPPDATA%\Programs\skillshare\skillshare.exe
     #[cfg(target_os = "windows")]

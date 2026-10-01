@@ -157,7 +157,8 @@ impl ServerManager {
     }
 
     /// Start the skillshare UI server and restart it if it exits on its own.
-    /// Stops any existing process first. Tries ports from 19420 to 19430 until one works.
+    /// Stops any existing process first. Tries the preferred port (default 19420) and the
+    /// next 10 ports until one is free.
     ///
     /// The server is launched via `current_dir()`:
     /// - Project mode: `cd {project_dir} && skillshare ui -p --port N --no-open`
@@ -433,7 +434,7 @@ pub async fn health_check(port: u16) -> bool {
     matches!(client.get(&url).send().await, Ok(resp) if resp.status().is_success())
 }
 
-/// Quick check if a port is in use by attempting a health check.
+/// Quick check if a port is in use: anything accepting a TCP connection counts.
 async fn is_port_in_use(port: u16) -> bool {
     // Try a TCP connect to see if something is listening
     tokio::net::TcpStream::connect(format!("127.0.0.1:{port}"))
