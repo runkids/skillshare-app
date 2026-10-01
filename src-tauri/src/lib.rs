@@ -165,14 +165,10 @@ fn setup_system_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
     let quick_sync = MenuItemBuilder::with_id("quick_sync", "Quick Sync").build(app)?;
     let open_app = MenuItemBuilder::with_id("open_app", "Open Skillshare App").build(app)?;
 
-    let store = services::project_store::load();
-    let project_label = store
-        .active_project()
-        .map(|p| p.name.clone())
-        .unwrap_or_else(|| "No active project".to_string());
-    let active_project = MenuItemBuilder::with_id("active_project", &project_label)
+    let active_project = MenuItemBuilder::with_id("active_project", active_project_label())
         .enabled(false)
         .build(app)?;
+    app.manage(TrayProjectItem(active_project.clone()));
 
     let check_updates = check_updates_item(app)?;
     let quit = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
@@ -232,6 +228,31 @@ fn setup_system_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
     Ok(())
 }
 
+/// The tray's disabled item showing the active project, kept so its text can follow switches.
+struct TrayProjectItem(tauri::menu::MenuItem<tauri::Wry>);
+
+fn active_project_label() -> String {
+    services::project_store::load()
+        .active_project()
+        .map(|p| p.name.clone())
+        .unwrap_or_else(|| "No active project".to_string())
+}
+
+/// Re-read the active project and update the tray label; call after the store changes.
+pub(crate) fn refresh_tray_project_label(app: &tauri::AppHandle) {
+    if let Some(item) = app.try_state::<TrayProjectItem>() {
+        if let Err(e) = item.0.set_text(active_project_label()) {
+            log::warn!("Failed to update tray project label: {e}");
+        }
+    }
+}
+
+/// Emitted after a tray Quick Sync succeeds so the web view can show the new state.
+const SYNC_COMPLETED_EVENT: &str = "sync-completed";
+
+/// Long enough for a slow git pull, short enough that a hung prompt doesn't block forever.
+const QUICK_SYNC_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(120);
+
 async fn handle_quick_sync(app: &tauri::AppHandle) {
     let meta = services::cli_manager::load_meta();
     let cli_path = match services::cli_manager::detect_cli().await {
@@ -244,22 +265,72 @@ async fn handle_quick_sync(app: &tauri::AppHandle) {
 
     let store = services::project_store::load();
     let working_dir = store.active_project().map(|p| p.path.as_str());
-    let result = services::cli_manager::exec(&cli_path, &["sync".to_string()], working_dir).await;
+    let args = ["sync".to_string(), "--json".to_string()];
+    let result = tokio::time::timeout(
+        QUICK_SYNC_TIMEOUT,
+        services::cli_manager::exec(&cli_path, &args, working_dir),
+    )
+    .await
+    .unwrap_or_else(|_| Err(format!("timed out after {}s", QUICK_SYNC_TIMEOUT.as_secs())));
 
-    if let Err(e) = &result {
-        log::warn!("Quick Sync failed: {e}");
+    match &result {
+        Ok(_) => {
+            let _ = app.emit(SYNC_COMPLETED_EVENT, ());
+        }
+        Err(e) => log::warn!("Quick Sync failed: {e}"),
     }
 
     if meta.notify_sync.unwrap_or(true) {
-        let _ = app
-            .notification()
-            .builder()
-            .title("Skillshare Sync Complete")
-            .body(match &result {
-                Ok(_) => "Sync finished successfully".to_string(),
-                Err(e) => format!("Sync failed: {e}"),
-            })
-            .show();
+        let (title, body) = quick_sync_notification(&result);
+        let _ = app.notification().builder().title(title).body(body).show();
+    }
+}
+
+/// The totals `skillshare sync --json` prints on success.
+#[derive(serde::Deserialize)]
+struct SyncJsonSummary {
+    targets: usize,
+    linked: usize,
+    updated: usize,
+    pruned: usize,
+}
+
+/// Notification title and body for a Quick Sync result (stdout of `sync --json`, or the error).
+fn quick_sync_notification(result: &Result<String, String>) -> (&'static str, String) {
+    const MAX_ERROR_CHARS: usize = 200;
+    match result {
+        Ok(stdout) => {
+            let body = match serde_json::from_str::<SyncJsonSummary>(stdout) {
+                Ok(s) if s.targets == 0 => "No targets to sync".to_string(),
+                Ok(s) => format!(
+                    "Synced to {} target{}: {} linked, {} updated, {} pruned",
+                    s.targets,
+                    if s.targets == 1 { "" } else { "s" },
+                    s.linked,
+                    s.updated,
+                    s.pruned
+                ),
+                Err(_) => "Sync finished successfully".to_string(),
+            };
+            ("Skillshare Sync Complete", body)
+        }
+        Err(e) => {
+            // With --json the CLI reports failures as {"error": "..."} on stdout.
+            #[derive(serde::Deserialize)]
+            struct JsonError {
+                error: String,
+            }
+            let message = e
+                .find('{')
+                .and_then(|i| serde_json::from_str::<JsonError>(&e[i..]).ok())
+                .map(|j| j.error)
+                .unwrap_or_else(|| e.clone());
+            let mut body: String = message.chars().take(MAX_ERROR_CHARS).collect();
+            if message.chars().count() > MAX_ERROR_CHARS {
+                body.push('…');
+            }
+            ("Sync failed", body)
+        }
     }
 }
 
@@ -350,5 +421,48 @@ async fn auto_start_server(server: ServerManager) {
     {
         Ok(port) => log::info!("Auto-started server on port {port}"),
         Err(e) => log::warn!("Auto-start server failed: {e}"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sync_json_reports_targets_and_counts() {
+        let stdout = r#"{"targets":2,"linked":3,"local":1,"updated":1,"pruned":0,"details":[]}"#;
+        assert_eq!(
+            quick_sync_notification(&Ok(stdout.to_string())),
+            (
+                "Skillshare Sync Complete",
+                "Synced to 2 targets: 3 linked, 1 updated, 0 pruned".to_string()
+            )
+        );
+    }
+
+    #[test]
+    fn sync_json_with_zero_targets_says_nothing_to_sync() {
+        let stdout = r#"{"targets":0,"linked":0,"local":0,"updated":0,"pruned":0}"#;
+        assert_eq!(
+            quick_sync_notification(&Ok(stdout.to_string())).1,
+            "No targets to sync"
+        );
+    }
+
+    #[test]
+    fn unparseable_sync_output_falls_back_to_generic_message() {
+        assert_eq!(
+            quick_sync_notification(&Ok("Synced!".to_string())).1,
+            "Sync finished successfully"
+        );
+    }
+
+    #[test]
+    fn failed_sync_shows_the_cli_json_error() {
+        let err = r#"CLI exited with exit status: 1: {"error": "config not found"}"#;
+        assert_eq!(
+            quick_sync_notification(&Err(err.to_string())),
+            ("Sync failed", "config not found".to_string())
+        );
     }
 }

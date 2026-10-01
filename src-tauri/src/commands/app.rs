@@ -141,7 +141,10 @@ pub fn open_logs_folder(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn reset_all_data(server: State<'_, ServerManager>) -> Result<(), String> {
+pub async fn reset_all_data(
+    app: tauri::AppHandle,
+    server: State<'_, ServerManager>,
+) -> Result<(), String> {
     // Stop server if running
     server.stop().await?;
 
@@ -152,6 +155,7 @@ pub async fn reset_all_data(server: State<'_, ServerManager>) -> Result<(), Stri
     // Reset project store to default
     let store = crate::models::project::ProjectStore::default();
     project_store::save(&store)?;
+    crate::refresh_tray_project_label(&app);
 
     Ok(())
 }

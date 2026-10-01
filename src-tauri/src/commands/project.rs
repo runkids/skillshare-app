@@ -14,6 +14,7 @@ pub fn get_active_project() -> Option<Project> {
 
 #[tauri::command]
 pub fn add_project(
+    app: tauri::AppHandle,
     name: String,
     path: String,
     project_type: ProjectType,
@@ -34,19 +35,24 @@ pub fn add_project(
 
     let project = project_store::add_project(&mut store, name, path, project_type);
     project_store::save(&store)?;
+    crate::refresh_tray_project_label(&app);
     Ok(project)
 }
 
 #[tauri::command]
-pub fn remove_project(id: String) -> Result<(), String> {
+pub fn remove_project(app: tauri::AppHandle, id: String) -> Result<(), String> {
     let mut store = project_store::load();
     project_store::remove_project(&mut store, &id);
-    project_store::save(&store)
+    project_store::save(&store)?;
+    crate::refresh_tray_project_label(&app);
+    Ok(())
 }
 
 #[tauri::command]
-pub fn switch_project(id: String) -> Result<(), String> {
+pub fn switch_project(app: tauri::AppHandle, id: String) -> Result<(), String> {
     let mut store = project_store::load();
     project_store::set_active(&mut store, &id)?;
-    project_store::save(&store)
+    project_store::save(&store)?;
+    crate::refresh_tray_project_label(&app);
+    Ok(())
 }
