@@ -44,6 +44,23 @@ export interface InstallOutput {
 
 export const CLI_INSTALL_OUTPUT_EVENT = 'cli-install-output';
 
+/** Emitted after a tray or auto Quick Sync succeeds. */
+export const SYNC_COMPLETED_EVENT = 'sync-completed';
+
+/** One operation from `skillshare log`, newest first. */
+export interface ActivityEntry {
+  /** RFC 3339 with the CLI's offset. */
+  ts: string;
+  cmd: string;
+  status: 'ok' | 'error' | 'partial' | 'blocked';
+  message: string | null;
+  durationMs: number | null;
+  /** Skills or targets the operation touched. */
+  subjects: string[];
+  /** A count summary such as "7 targets, 1 failed". */
+  detail: string | null;
+}
+
 export interface OnboardingStatus {
   completed: boolean;
   cliReady: boolean;
@@ -105,6 +122,9 @@ export const tauriBridge = {
   getNotifyUpdate: () => invoke<boolean>('get_notify_update'),
   setNotifyUpdate: (enabled: boolean) => invoke<void>('set_notify_update', { enabled }),
   resetAllData: () => invoke<void>('reset_all_data'),
+
+  // Activity commands
+  getActivity: () => invoke<ActivityEntry[]>('get_activity'),
 
   // Terminal commands
   getPtyEnv: () => invoke<Record<string, string>>('get_pty_env'),

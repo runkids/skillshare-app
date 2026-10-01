@@ -5,9 +5,9 @@ React 19 + TypeScript + Vite 8 + Tailwind CSS 4, rendered in a Tauri 2 webview. 
 ## Layout
 
 - `src/main.tsx` mounts `App` in `StrictMode` and imports `src/index.css`.
-- `src/App.tsx` nests providers in this order: `QueryClientProvider` > `ThemeProvider` > `TauriProvider` > `ProjectProvider` > `TerminalProvider` > `BrowserRouter` > `ErrorBoundary`. It renders `UpdateCheckListener`, then an `OnboardingGuard` around three routes: `/onboarding`, `/settings`, and `/*` (`MainView`).
+- `src/App.tsx` nests providers in this order: `QueryClientProvider` > `ThemeProvider` > `TauriProvider` > `ProjectProvider` > `TerminalProvider` > `BrowserRouter` > `ErrorBoundary`. It renders `UpdateCheckListener`, then an `OnboardingGuard` around four routes: `/onboarding`, `/settings`, `/activity`, and `/*` (`MainView`).
 - `src/desktop/api/tauri-bridge.ts`: every Rust `invoke` call plus the shared types (`AppInfo`, `Project`, `AvailableUpdates`, ...).
-- `src/desktop/pages/`: `OnboardingPage`, `SettingsPage`.
+- `src/desktop/pages/`: `OnboardingPage`, `SettingsPage`, `ActivityPage` (`/activity`, opened from the title bar; day grouping and relative times in `utils/activity.ts`).
 - `src/desktop/components/`: `MainView`, `TitleBar`, `ProjectDropdown`, `CliWebView` (iframe host), `UpdateCheckListener`, `TerminalAccess`; subfolders `OnboardingSteps/` (steps, a pure `onboarding-flow.ts` reducer, `onboarding.css` with `ob-*` classes), `settings/` (one component per tab), `terminal/` (xterm UI, currently hidden by `SHOW_TERMINAL = false` in `MainView`).
 - `src/desktop/context/`: `TauriContext` (`useTauri`: `appInfo`, `loading`, `refresh`), `ProjectContext` (`useProjects`: projects, `activeProject`, `switching`, `switchWithRestart`, `reloadKey`/`reloadView`), `TerminalContext` (`useTerminal`).
 - `src/desktop/hooks/`: `useUpdates` and `useAppUpdate` (module-level stores read with `useSyncExternalStore`), `useCliManager`, plus terminal hooks `usePtySpawn`, `useTerminalInstance`.
@@ -31,7 +31,7 @@ Rust events (names verified in `src-tauri/src`), all subscribed with `listen` fr
 - `server-restarted` (payload: port) and `server-stopped`: `CliWebView`.
 - `updates-available` (payload: `AvailableUpdates`): `useUpdates`.
 - `check-for-updates` (menu/tray): `UpdateCheckListener` opens `/settings?tab=about` and rechecks.
-- `sync-completed` (tray Quick Sync): `ProjectContext` calls `reloadView`.
+- `sync-completed` (`SYNC_COMPLETED_EVENT`, tray or auto Quick Sync): `ProjectContext` calls `reloadView`; `ActivityPage` re-reads the log.
 - `cli-install-output` (`CLI_INSTALL_OUTPUT_EVENT`): `useCliManager`.
 
 App self-update uses `check()` from `@tauri-apps/plugin-updater` in `useAppUpdate`, not the bridge.
