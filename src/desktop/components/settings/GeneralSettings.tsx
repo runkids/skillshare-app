@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { isTauri } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import Button from '../../../components/Button';
 import Card from '../../../components/Card';
 import Input from '../../../components/Input';
 import Switch from '../../../components/Switch';
-import { tauriBridge } from '../../api/tauri-bridge';
+import { tauriBridge, AUTO_SYNC_CHANGED_EVENT } from '../../api/tauri-bridge';
 import { useTauri } from '../../context/TauriContext';
 import { useProjects } from '../../context/ProjectContext';
 import QuickActionsSettings from './QuickActionsSettings';
@@ -36,6 +38,16 @@ export default function GeneralSettings() {
       .getAutoSync()
       .then(setAutoSync)
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!isTauri()) return;
+    const unlisten = listen<boolean>(AUTO_SYNC_CHANGED_EVENT, (event) =>
+      setAutoSync(event.payload)
+    );
+    return () => {
+      void unlisten.then((off) => off());
+    };
   }, []);
 
   const handleNotifyUpdate = async (enabled: boolean) => {

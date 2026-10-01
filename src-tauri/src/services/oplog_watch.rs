@@ -91,7 +91,8 @@ pub async fn refresh_badges(app: &AppHandle) {
 }
 
 async fn watch(app: AppHandle) {
-    let (dir, is_project) = project_store::active_project_mode(&project_store::load());
+    let store = project_store::load();
+    let (dir, is_project) = project_store::active_project_mode(&store);
     let path = log_path(dir.as_deref().filter(|_| is_project).map(Path::new));
     let Some(logs) = path.parent().map(Path::to_path_buf) else {
         return;
@@ -122,6 +123,11 @@ async fn watch(app: AppHandle) {
         };
     log::info!("Operation log watch: watching {}", path.display());
 
+    if let Ok(history) = std::fs::read_to_string(&path) {
+        if let Some(time) = history.lines().filter_map(successful_sync_time).max() {
+            crate::tray::record_sync(&app, store.active_project_id.as_deref(), time);
+        }
+    }
     let mut tail = Tail::at_end(path);
     let mut debounce = Debounce::default();
     // A CLI upgrade changes the version the update check compares against.
@@ -132,6 +138,9 @@ async fn watch(app: AppHandle) {
             Some(event) = events.recv() => {
                 if touches_log(&event) {
                     let lines = tail.read_new();
+                    if let Some(time) = lines.iter().filter_map(|line| successful_sync_time(line)).max() {
+                        crate::tray::record_sync(&app, store.active_project_id.as_deref(), time);
+                    }
                     let upgrade = lines.iter().any(|l| is_upgrade(l));
                     upgraded |= upgrade;
                     if upgrade || lines.iter().any(|l| is_mutating(l)) {
@@ -231,6 +240,30 @@ fn is_upgrade(line: &str) -> bool {
     })
 }
 
+/// Successful real syncs from the CLI web UI, terminal or app all update the tray time.
+fn successful_sync_time(line: &str) -> Option<chrono::DateTime<chrono::Utc>> {
+    #[derive(serde::Deserialize)]
+    struct Entry {
+        ts: String,
+        cmd: String,
+        status: String,
+        #[serde(default)]
+        args: serde_json::Map<String, serde_json::Value>,
+    }
+    let entry: Entry = serde_json::from_str(line).ok()?;
+    if !matches!(entry.cmd.as_str(), "sync" | "sync agents")
+        || entry.status != "ok"
+        || ["dry_run", "dryRun"]
+            .iter()
+            .any(|key| entry.args.get(*key) == Some(&serde_json::Value::Bool(true)))
+    {
+        return None;
+    }
+    chrono::DateTime::parse_from_rfc3339(&entry.ts)
+        .ok()
+        .map(|time| time.with_timezone(&chrono::Utc))
+}
+
 /// Reads only what was appended to the log since the last read.
 struct Tail {
     path: PathBuf,
@@ -302,6 +335,22 @@ mod tests {
 
     fn entry(cmd: &str, args: &str) -> String {
         format!(r#"{{"ts":"2026-10-01T23:05:39+08:00","cmd":"{cmd}","args":{args},"status":"ok"}}"#)
+    }
+
+    #[test]
+    fn sync_time_accepts_only_successful_real_syncs() {
+        assert!(successful_sync_time(&entry("sync", "{}")).is_some());
+        assert!(successful_sync_time(&entry("sync agents", "{}")).is_some());
+        assert!(successful_sync_time(&entry("sync", r#"{"dry_run":true}"#)).is_none());
+        assert!(successful_sync_time(&entry("sync", r#"{"dryRun":true}"#)).is_none());
+        assert!(successful_sync_time(&entry("sync", "{}").replace("ok", "partial")).is_none());
+        assert!(successful_sync_time(&entry("sync", "{}").replace("ok", "error")).is_none());
+        assert!(successful_sync_time(&entry("check", "{}")).is_none());
+        assert!(successful_sync_time("invalid").is_none());
+        assert!(successful_sync_time(
+            &entry("sync", "{}").replace("2026-10-01T23:05:39+08:00", "bad time")
+        )
+        .is_none());
     }
 
     fn temp_log(name: &str) -> PathBuf {

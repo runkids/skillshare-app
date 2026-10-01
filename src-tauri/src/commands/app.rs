@@ -84,6 +84,7 @@ pub fn set_auto_sync(app: tauri::AppHandle, enabled: bool) -> Result<(), String>
     meta.auto_sync = Some(enabled);
     cli_manager::save_meta(&meta)?;
     auto_sync::refresh(&app);
+    crate::tray::refresh_auto_sync(&app);
     Ok(())
 }
 
@@ -185,6 +186,7 @@ pub async fn reset_all_data(
     let store = crate::models::project::ProjectStore::default();
     project_store::save(&store)?;
     crate::refresh_tray_project_label(&app);
+    crate::tray::refresh_auto_sync(&app);
     auto_sync::refresh(&app);
     crate::services::oplog_watch::refresh(&app);
 

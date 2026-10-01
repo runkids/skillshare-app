@@ -33,6 +33,8 @@ Rust events (names verified in `src-tauri/src`), all subscribed with `listen` fr
 - `updates-available` (payload: `AvailableUpdates`): `useUpdates`.
 - `source-health` (`SOURCE_HEALTH_EVENT`, payload: `SourceHealth`): `useSourceHealth`, shown by `SourceHealthBadge` in `TitleBar`, which opens the Web UI `/sync` (target drift) or `/git`.
 - `audit-report` (`AUDIT_EVENT`, payload: `AuditFinding[]`): `useAudit`, shown by `AuditBadge` in `TitleBar`; its list links each CRITICAL/HIGH/MEDIUM finding to the Web UI `/skills/<name>` or `/agents/<name>`, counts LOW ones, and opens `/audit`.
+- `tray-project-requested` (project ID): `ProjectContext` calls `switchWithRestart`, using the same switch lock and server lifecycle as the in-app switcher.
+- `auto-sync-changed` (boolean): General settings follows changes made from the tray; the setter updates both the tray checkmark and watcher.
 - `check-for-updates` (menu/tray): `UpdateCheckListener` opens `/settings?tab=about` and rechecks.
 - `sync-completed` (`SYNC_COMPLETED_EVENT`, tray or auto Quick Sync): `ProjectContext` calls `reloadView`; `ActivityPage` re-reads the log.
 - `cli-install-output` (`CLI_INSTALL_OUTPUT_EVENT`): `useCliManager`.

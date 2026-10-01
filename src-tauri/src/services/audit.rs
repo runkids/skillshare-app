@@ -215,6 +215,7 @@ pub async fn run(app: &AppHandle) {
     findings.sort_by_key(|f| rank(&f.severity));
 
     *app.state::<AuditState>().0.lock().await = findings.clone();
+    crate::tray::refresh_audit(app, &findings);
     if let Err(e) = app.emit(AUDIT_EVENT, &findings) {
         log::warn!("Failed to emit audit findings: {e}");
     }
@@ -247,6 +248,7 @@ pub fn project_changed(app: &AppHandle) {
     tauri::async_runtime::spawn(async move {
         let _running = AUDIT_LOCK.lock().await;
         app.state::<AuditState>().0.lock().await.clear();
+        crate::tray::refresh_audit(&app, &[]);
         let _ = app.emit(AUDIT_EVENT, Vec::<AuditFinding>::new());
     });
 }

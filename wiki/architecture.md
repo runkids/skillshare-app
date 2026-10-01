@@ -16,13 +16,13 @@ How the Rust backend in `src-tauri/` fits together.
   - Navigation: web links to non-local hosts open in the browser. `localhost`, `127.0.0.1`, `[::1]` and `tauri.localhost` stay in the window.
   - Downloads: the default destination is kept, with a notification when done.
 - Closing the window hides it unless `APP_QUITTING` is set. Only the tray's Quit sets it; Quit stops the server, then calls `exit(0)`. `RunEvent::ExitRequested` also stops the server. On macOS, `RunEvent::Reopen` shows the window.
-- Tray menu: Quick Sync, Update All (N) (disabled at zero or while running), the source actions from `source_health` (only those with work), Quick Actions…, Open, the active project label (disabled, `TrayProjectItem`), Check for Updates…, Quit. Left-click shows the window.
+- `tray.rs` owns the grouped menu: disabled last-sync and nonzero resource-update/drift/unpushed/HIGH-CRITICAL counts; Quick Sync, Update All (N), source actions, Quick Actions…; a checked project submenu and Open Source Folder; Auto Sync; Open, Check for Updates…, Quit. Existing handles update in place; only membership changes insert/remove items (Linux also reinserts a renamed project submenu to refresh its AppIndicator heading). Left-click shows the window. Project requests use `ProjectContext.switchWithRestart`, the same flow as the in-app switcher; source-folder lookup uses scoped `status --json` on click (15s timeout).
 - On macOS, "Check for Updates…" is also inserted under About. `app.on_menu_event` handles it from both menus and emits `check-for-updates`.
 
 ## Backend modules
 
 - `commands/cli.rs`: detect, version, download, upgrade, install or cancel the CLI; `run_cli`; link the CLI for terminal use.
-- `commands/project.rs`: project CRUD and switch. Each change refreshes the tray label, both watchers and source health.
+- `commands/project.rs`: project CRUD and switch. Each change refreshes the tray project submenu, both watchers and source health.
 - `commands/server.rs`: start, stop, health check and port.
 - `commands/app.rs`: app state, settings in `CliMeta`, updates, logs folder, diagnostics, `reset_all_data`.
 - `commands/quick_actions.rs`: debounced search support, non-interactive skill install/create, active-project checks and shortcut settings.
@@ -76,6 +76,7 @@ Auto-sync, update checks, the operation log watcher, source health and the audit
 - `CliMeta` fields:
   - install: `version`, `path`, `source`, `installed_at`, `binary_modified_ms`;
   - settings: `preferred_port`, `notify_sync`, `notify_update`, `auto_sync`, `quick_actions_enabled`, `quick_actions_shortcut`;
+  - sync tracking: `last_successful_sync` (project ID to RFC 3339 timestamp; tray age refreshes every minute);
   - update tracking: `last_update_check`, `notified_cli_version`, `notified_app_version`, `notified_skill_updates`, `notified_repository_updates`, `notified_agent_updates`, `notified_plugin_updates`, `notified_source_health`, `notified_audit_findings`.
 - Project store rules:
   - A corrupt `projects.json` is moved to `projects.json.corrupt-<ts>`.
@@ -105,6 +106,8 @@ Auto-sync, update checks, the operation log watcher, source health and the audit
 | `audit-report` | `audit.rs:AUDIT_EVENT` | `AuditFinding[]` |
 | `check-for-updates` | `update_watch.rs:CHECK_REQUESTED_EVENT` (emitted in `lib.rs`) | none |
 | `sync-completed` | `lib.rs:SYNC_COMPLETED_EVENT` | none |
+| `tray-project-requested` | `tray.rs:PROJECT_REQUESTED_EVENT` | project ID |
+| `auto-sync-changed` | `tray.rs:AUTO_SYNC_CHANGED_EVENT` | enabled (boolean) |
 | `quick-actions-opened` | `quick_actions.rs:OPENED_EVENT` | none |
 | `cli-install-output` | `cli_manager.rs:INSTALL_OUTPUT_EVENT` | `{stream, line}` |
 

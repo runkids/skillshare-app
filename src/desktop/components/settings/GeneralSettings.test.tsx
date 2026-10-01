@@ -1,16 +1,29 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import GeneralSettings from './GeneralSettings';
 
 const mocks = vi.hoisted(() => ({
+  handlers: new Map<string, (event: { payload: boolean }) => void>(),
+  off: vi.fn(),
   getNotifySync: vi.fn(() => Promise.resolve(true)),
   setNotifySync: vi.fn<(enabled: boolean) => Promise<void>>(() => Promise.resolve()),
   setAutoSync: vi.fn<(enabled: boolean) => Promise<void>>(() => Promise.resolve()),
 }));
 
+vi.mock('@tauri-apps/api/core', () => ({ isTauri: () => true }));
+vi.mock('@tauri-apps/api/event', () => ({
+  listen: (event: string, handler: (event: { payload: boolean }) => void) => {
+    mocks.handlers.set(event, handler);
+    return Promise.resolve(mocks.off);
+  },
+}));
+
 vi.mock('../../api/tauri-bridge', () => ({
+  AUTO_SYNC_CHANGED_EVENT: 'auto-sync-changed',
   tauriBridge: {
+    getQuickActionsSettings: () =>
+      Promise.resolve({ enabled: true, shortcut: 'Command+Shift+K', error: null }),
     getPreferredPort: () => Promise.resolve(19420),
     getNotifyUpdate: () => Promise.resolve(true),
     getNotifySync: mocks.getNotifySync,
@@ -28,6 +41,7 @@ function syncSwitch() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.handlers.clear();
 });
 
 describe('GeneralSettings sync notifications', () => {
@@ -59,6 +73,27 @@ describe('GeneralSettings sync notifications', () => {
 });
 
 describe('GeneralSettings auto-sync', () => {
+  it('follows tray changes without saving them again and cleans up its subscription', async () => {
+    const { unmount } = render(
+      <MemoryRouter>
+        <GeneralSettings />
+      </MemoryRouter>
+    );
+    await act(async () => {});
+    act(() => mocks.handlers.get('auto-sync-changed')?.({ payload: true }));
+    expect(screen.getByRole('switch', { name: 'Auto-sync' }).getAttribute('aria-checked')).toBe(
+      'true'
+    );
+    expect(mocks.setAutoSync).not.toHaveBeenCalled();
+    act(() => mocks.handlers.get('auto-sync-changed')?.({ payload: false }));
+    expect(screen.getByRole('switch', { name: 'Auto-sync' }).getAttribute('aria-checked')).toBe(
+      'false'
+    );
+    unmount();
+    await act(async () => {});
+    expect(mocks.off).toHaveBeenCalled();
+  });
+
   it('starts off and persists turning it on', async () => {
     render(
       <MemoryRouter>
