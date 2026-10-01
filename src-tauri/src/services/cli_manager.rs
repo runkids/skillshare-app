@@ -41,7 +41,7 @@ pub fn save_meta(meta: &CliMeta) -> Result<(), String> {
         std::fs::create_dir_all(parent).ok();
     }
     let data = serde_json::to_string_pretty(meta).map_err(|e| format!("Serialize error: {e}"))?;
-    std::fs::write(&path, data).map_err(|e| format!("Write error: {e}"))
+    crate::utils::fs::write_atomic(&path, data.as_bytes()).map_err(|e| format!("Write error: {e}"))
 }
 
 // ── CLI detection ──────────────────────────────────────────────────
