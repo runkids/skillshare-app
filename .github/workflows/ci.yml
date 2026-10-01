@@ -71,13 +71,24 @@ jobs:
       - name: Install Rust components
         run: rustup component add rustfmt clippy
 
+      # The runner's apt mirror often stalls on single packages; keep the
+      # downloaded .debs so most runs need the network only for the index.
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        with:
+          path: ~/apt-cache
+          key: apt-${{ runner.os }}-webkit2gtk-4.1-v1
+
       - name: Install Linux dependencies
         timeout-minutes: 10
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+          mkdir -p ~/apt-cache/partial
+          apt_opts=(-o Dir::Cache::Archives="$HOME/apt-cache" -o Acquire::Retries=5 -o Acquire::http::Timeout=20)
+          sudo apt-get "${apt_opts[@]}" update
+          sudo apt-get "${apt_opts[@]}" install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+          sudo chown -R "$USER" ~/apt-cache
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
