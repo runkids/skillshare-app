@@ -98,7 +98,7 @@ export default function SettingsPage() {
       </aside>
 
       <main className="flex-1 overflow-y-auto px-16 py-12">
-        <div className="max-w-[720px]">{renderContent()}</div>
+        <div className="max-w-[720px] mx-auto">{renderContent()}</div>
       </main>
     </div>
   );
