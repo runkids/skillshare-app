@@ -145,8 +145,6 @@ export const tauriBridge = {
     invoke<SkillSearchResult[]>('quick_search', { query, projectId }),
   quickInstall: (source: string, skill: string, projectId: string) =>
     invoke<string>('quick_install', { source, skill, projectId }),
-  quickNewSkill: (name: string, projectId: string) =>
-    invoke<{ path: string; openError: string | null }>('quick_new_skill', { name, projectId }),
 
   // CLI commands
   detectCli: () => invoke<string | null>('detect_cli'),

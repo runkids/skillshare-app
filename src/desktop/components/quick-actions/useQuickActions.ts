@@ -8,6 +8,20 @@ import {
   type SkillSearchResult,
 } from '../../api/tauri-bridge';
 
+/** A pasted install source (URL, git address or owner/repo) rather than search words. */
+export function sourceFromQuery(query: string): string | null {
+  const q = query.trim();
+  if (!q || /\s/.test(q) || q.startsWith('-')) return null;
+  if (/^(https?:\/\/|git@)/.test(q)) return q;
+  if (/^[\w.-]+\/[\w.-]+(\/[\w./-]*)?$/.test(q)) return q;
+  return null;
+}
+
+/** The single result offered for a pasted source; an empty skill installs all it holds. */
+function sourceResult(source: string): SkillSearchResult {
+  return { name: source, description: 'Install from this source', source, skill: '' };
+}
+
 export function useQuickActions() {
   const [context, setContext] = useState<QuickActionsContext | null>(null);
   const [query, setQuery] = useState('');
@@ -16,8 +30,6 @@ export function useQuickActions() {
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [install, setInstall] = useState<SkillSearchResult | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [name, setName] = useState('');
   const [progress, setProgress] = useState<string | null>(null);
   const [output, setOutput] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -25,7 +37,7 @@ export function useQuickActions() {
 
   useEffect(() => {
     input.current?.focus();
-  }, [context, install, creating]);
+  }, [context, install]);
 
   useEffect(() => {
     let active = true;
@@ -56,7 +68,7 @@ export function useQuickActions() {
   }, []);
 
   useEffect(() => {
-    if (!query.trim() || !context || install || creating) return;
+    if (!query.trim() || !context || install || sourceFromQuery(query)) return;
     let active = true;
     const timer = setTimeout(() => {
       setSearching(true);
@@ -79,7 +91,7 @@ export function useQuickActions() {
       active = false;
       clearTimeout(timer);
     };
-  }, [query, context, install, creating]);
+  }, [query, context, install]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -97,16 +109,9 @@ export function useQuickActions() {
     setError(null);
     setOutput(null);
     running.current = true;
-    setProgress(creating ? 'Creating skill…' : 'Installing skill…');
+    setProgress('Installing skill…');
     try {
-      if (creating) {
-        const result = await tauriBridge.quickNewSkill(name.trim(), context.projectId);
-        setOutput(
-          result.openError
-            ? `Created ${result.path}. Could not open the editor: ${result.openError}`
-            : `Created and opened ${result.path}`
-        );
-      } else if (install) {
+      if (install) {
         const result = await tauriBridge.quickInstall(
           install.source,
           install.skill,
@@ -124,16 +129,16 @@ export function useQuickActions() {
 
   const back = () => {
     setInstall(null);
-    setCreating(false);
     setOutput(null);
     setError(null);
   };
 
   const changeQuery = (value: string) => {
+    const source = sourceFromQuery(value);
     setQuery(value);
-    setResults([]);
+    setResults(source ? [sourceResult(source)] : []);
     setSelected(0);
-    setSearching(!!value.trim());
+    setSearching(!source && !!value.trim());
     setError(null);
   };
 
@@ -157,13 +162,9 @@ export function useQuickActions() {
     searching,
     error,
     install,
-    creating,
-    name,
     progress,
     output,
     input,
-    setName,
-    setCreating,
     setInstall,
     setSelected,
     runAction,

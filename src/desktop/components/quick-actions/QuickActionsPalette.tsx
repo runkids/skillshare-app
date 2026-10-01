@@ -1,12 +1,11 @@
 import Button from '../../../components/Button';
-import Input from '../../../components/Input';
 import Spinner from '../../../components/Spinner';
 import { useQuickActions } from './useQuickActions';
 
 type Actions = ReturnType<typeof useQuickActions>;
 
 function QuickActionForm({ actions }: { actions: Actions }) {
-  const { context, creating, name, setName, progress, output, install, runAction, back } = actions;
+  const { context, progress, output, install, runAction, back } = actions;
   return (
     <form
       onSubmit={(event) => {
@@ -15,40 +14,22 @@ function QuickActionForm({ actions }: { actions: Actions }) {
       }}
       className="space-y-4"
     >
-      {creating ? (
-        <Input
-          label="New skill name"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder="my-skill"
-          disabled={!!progress || !!output}
-          autoFocus
-          required
-          pattern="[a-z][a-z0-9-]*"
-        />
-      ) : (
-        <div className="rounded-[var(--r-ctl)] border border-[var(--line-2)] p-3">
-          <p className="font-medium">Install {install?.name}?</p>
-          <p className="text-sm text-pencil-light mt-1 break-all">{install?.source}</p>
-          {install?.skill && (
-            <p className="text-xs text-pencil-light">Selected skill: {install.skill}</p>
-          )}
-          {!install?.skill && (
-            <p className="text-xs text-pencil-light mt-1">
-              All skills discovered at this source will be installed.
-            </p>
-          )}
-          <p className="text-xs mt-3">This adds the skill to the source directory shown above.</p>
-        </div>
-      )}
+      <div className="rounded-[var(--r-ctl)] border border-[var(--line-2)] p-3">
+        <p className="font-medium">Install {install?.name}?</p>
+        <p className="text-sm text-pencil-light mt-1 break-all">{install?.source}</p>
+        {install?.skill && (
+          <p className="text-xs text-pencil-light">Selected skill: {install.skill}</p>
+        )}
+        {!install?.skill && (
+          <p className="text-xs text-pencil-light mt-1">
+            All skills discovered at this source will be installed.
+          </p>
+        )}
+        <p className="text-xs mt-3">This adds the skill to the source directory shown above.</p>
+      </div>
       <div className="flex gap-2">
-        <Button
-          type="submit"
-          autoFocus={!creating}
-          loading={!!progress}
-          disabled={!context || !!output}
-        >
-          {creating ? 'Create and open' : 'Install'}
+        <Button type="submit" autoFocus loading={!!progress} disabled={!context || !!output}>
+          Install
         </Button>
         <Button type="button" variant="secondary" disabled={!!progress} onClick={back}>
           Back
@@ -65,7 +46,6 @@ function SkillSearch({ actions }: { actions: Actions }) {
     context,
     changeQuery,
     moveSelection,
-    setCreating,
     searching,
     error,
     results,
@@ -85,7 +65,7 @@ function SkillSearch({ actions }: { actions: Actions }) {
         <input
           ref={input}
           aria-label="Search skills"
-          placeholder="Search skills…"
+          placeholder="Search skills, or paste a GitHub URL or owner/repo…"
           className="ss-input w-full px-3 py-2 rounded-[var(--r-ctl)] border border-[var(--line-2)] bg-surface"
           value={query}
           disabled={!context}
@@ -101,14 +81,6 @@ function SkillSearch({ actions }: { actions: Actions }) {
           }}
         />
       </form>
-      <Button
-        className="mt-3"
-        variant="secondary"
-        disabled={!context}
-        onClick={() => setCreating(true)}
-      >
-        New skill…
-      </Button>
       {searching && (
         <p role="status" className="flex items-center gap-2 text-sm mt-4">
           <Spinner size="sm" /> Searching…
@@ -145,7 +117,7 @@ function SkillSearch({ actions }: { actions: Actions }) {
 
 export default function QuickActionsPalette() {
   const actions = useQuickActions();
-  const { context, install, creating, progress, error, output, close } = actions;
+  const { context, install, progress, error, output, close } = actions;
 
   return (
     <main className="h-screen overflow-auto bg-surface p-5 text-pencil">
@@ -158,11 +130,7 @@ export default function QuickActionsPalette() {
       <p className="text-xs text-pencil-light mb-4 break-all">
         {context ? `${context.projectName} · ${context.sourceDir}` : 'Loading active project…'}
       </p>
-      {install || creating ? (
-        <QuickActionForm actions={actions} />
-      ) : (
-        <SkillSearch actions={actions} />
-      )}
+      {install ? <QuickActionForm actions={actions} /> : <SkillSearch actions={actions} />}
       {progress && (
         <p role="status" className="mt-4 text-sm">
           {progress}

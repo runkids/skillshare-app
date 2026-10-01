@@ -92,9 +92,9 @@ Auto-sync, update checks, the operation log watcher, source health and the audit
 
 - The default global shortcut is Command+Shift+K on macOS, Control+Shift+K elsewhere. General settings can change or disable it; the tray action still works when disabled. A registration conflict is shown in settings and never prevents app startup.
 - The `quick-actions` window opens `index.html?quick-actions=1`, stays above other windows, and hides on Escape or close. Window creation runs on a blocking worker outside event handlers to avoid a WebView2 deadlock on Windows. The official `tauri-plugin-global-shortcut` runs entirely in Rust; the main capability allows shortcut registration, unregistration and status reads, and the palette capability permits events only.
-- CLI calls use the active project's directory and explicit `--project`/`--global` mode. Before install/create, the backend checks the project ID shown by the palette so switching projects cannot silently redirect the mutation.
+- CLI calls use the active project's directory and explicit `--project`/`--global` mode. Before install, the backend checks the project ID shown by the palette so switching projects cannot silently redirect the mutation.
 - Search parses the CLI's PascalCase JSON and times out after 20s. Install uses `--kind skill` with either `--yes` (all skills at the reviewed source) or `--skill` (the search result's selector), with a 120s timeout; `--yes` and `--skill` are mutually exclusive; it keeps audits and overwrite checks. Never use install `--json` here: it implies `--force --all`.
-- New skill uses `--pattern none` to avoid the interactive wizard, times out after 30s, then opens the created SKILL.md through the opener plugin (reveals it if opening fails). All execution uses `cli_manager::exec` with `kill_on_drop`.
+- All execution uses `cli_manager::exec` with `kill_on_drop`.
 
 ## Events and commands
 
