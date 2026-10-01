@@ -63,6 +63,26 @@ export interface InstallOutput {
 }
 
 export const CLI_INSTALL_OUTPUT_EVENT = 'cli-install-output';
+export const QUICK_ACTIONS_OPENED_EVENT = 'quick-actions-opened';
+
+export interface QuickActionsSettings {
+  enabled: boolean;
+  shortcut: string;
+  error: string | null;
+}
+
+export interface QuickActionsContext {
+  projectId: string;
+  projectName: string;
+  sourceDir: string;
+}
+
+export interface SkillSearchResult {
+  name: string;
+  description: string;
+  source: string;
+  skill: string;
+}
 
 /** Emitted after a tray or auto Quick Sync succeeds. */
 export const SYNC_COMPLETED_EVENT = 'sync-completed';
@@ -97,6 +117,19 @@ export interface AppInfo {
 }
 
 export const tauriBridge = {
+  // Quick Actions commands
+  getQuickActionsSettings: () => invoke<QuickActionsSettings>('get_quick_actions_settings'),
+  setQuickActionsSettings: (enabled: boolean, shortcut: string) =>
+    invoke<void>('set_quick_actions_settings', { enabled, shortcut }),
+  getQuickActionsContext: () => invoke<QuickActionsContext>('get_quick_actions_context'),
+  closeQuickActions: () => invoke<void>('close_quick_actions'),
+  quickSearch: (query: string, projectId: string) =>
+    invoke<SkillSearchResult[]>('quick_search', { query, projectId }),
+  quickInstall: (source: string, skill: string, projectId: string) =>
+    invoke<string>('quick_install', { source, skill, projectId }),
+  quickNewSkill: (name: string, projectId: string) =>
+    invoke<{ path: string; openError: string | null }>('quick_new_skill', { name, projectId }),
+
   // CLI commands
   detectCli: () => invoke<string | null>('detect_cli'),
   getCliVersion: (cliPath: string) => invoke<string>('get_cli_version', { cliPath }),
