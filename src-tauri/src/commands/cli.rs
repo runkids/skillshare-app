@@ -1,4 +1,4 @@
-use crate::services::{cli_manager, server_manager::ServerManager, update_watch};
+use crate::services::{cli_manager, project_store, server_manager::ServerManager, update_watch};
 use tauri::State;
 
 #[tauri::command]
@@ -56,23 +56,41 @@ pub async fn check_cli_update() -> Result<Option<String>, String> {
     }
 }
 
+/// Upgrade the CLI with its own `upgrade` command and return the new version.
+/// The CLI knows how it was installed (Homebrew, sudo, Windows exe swap), so a
+/// Homebrew or PATH install is upgraded where it lives instead of next to it.
 #[tauri::command]
 pub async fn upgrade_cli(server: State<'_, ServerManager>) -> Result<String, String> {
-    let (version, url) = cli_manager::check_latest_release().await?;
-    let path = cli_manager::download_cli(&url).await?;
-    cli_manager::save_release_meta(version, &path)?;
+    let cli_path = cli_manager::detect_cli().await.ok_or("CLI not found")?;
 
-    // Restart server if it was running
-    if server.is_running().await {
-        let store = crate::services::project_store::load();
-        let (project_dir, is_project_mode) =
-            crate::services::project_store::active_project_mode(&store);
-        server
-            .restart(&path, project_dir.as_deref(), is_project_mode)
-            .await?;
+    // The old binary must not keep serving the Web UI, and Windows cannot replace a running exe.
+    let was_running = server.is_running().await;
+    if was_running {
+        server.stop().await?;
     }
 
-    Ok(path)
+    let upgraded = cli_manager::exec(
+        &cli_path,
+        &["upgrade".to_string(), "--force".to_string()],
+        None,
+    )
+    .await;
+
+    // Bring the server back even if the upgrade failed, for the active project like a normal start.
+    let restarted = if was_running {
+        let store = project_store::load();
+        let (project_dir, is_project_mode) = project_store::active_project_mode(&store);
+        server
+            .start(&cli_path, project_dir.as_deref(), is_project_mode)
+            .await
+            .map(|_| ())
+    } else {
+        Ok(())
+    };
+
+    upgraded?;
+    restarted?;
+    get_cli_version(cli_path).await
 }
 
 #[tauri::command]
