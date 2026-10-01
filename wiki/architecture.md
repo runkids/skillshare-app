@@ -26,6 +26,7 @@ How the Rust backend in `src-tauri/` fits together.
 - `commands/server.rs`: start, stop, health check and port.
 - `commands/app.rs`: app state, settings in `CliMeta`, updates, logs folder, diagnostics, `reset_all_data`.
 - `commands/terminal.rs`: `get_pty_env`.
+- `commands/activity.rs`: `get_activity` runs `skillshare log --json --since 7d --tail 200` for the active project (15s timeout) and returns entries newest first, dropping successful `check` runs.
 - `services/cli_manager.rs`: CLI discovery (`which`/`where`, then `%LOCALAPPDATA%\Programs\skillshare` on Windows, then app `bin/`), `exec`, version cache, installers, release download, terminal symlink, `CliMeta` load and save.
 - `services/server_manager.rs`: the server supervisor.
 - `services/auto_sync.rs`: the source watcher and auto-sync.

@@ -80,6 +80,8 @@ pub fn run() {
             commands::app::set_notify_update,
             commands::app::reset_all_data,
             commands::source_health::get_source_health,
+            // Activity commands
+            commands::activity::get_activity,
             // Terminal commands
             commands::terminal::get_pty_env,
         ])
