@@ -127,6 +127,12 @@ pub fn set_quick_actions_settings(
     quick_actions::configure(&app, enabled, shortcut.trim())
 }
 
+/// Open the palette from the title bar, the same way the shortcut and the tray do.
+#[tauri::command]
+pub fn open_quick_actions(app: tauri::AppHandle) {
+    quick_actions::request_open(&app);
+}
+
 #[tauri::command]
 pub fn close_quick_actions(app: tauri::AppHandle) -> Result<(), String> {
     use tauri::Manager;

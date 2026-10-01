@@ -139,6 +139,7 @@ export const tauriBridge = {
   setQuickActionsSettings: (enabled: boolean, shortcut: string) =>
     invoke<void>('set_quick_actions_settings', { enabled, shortcut }),
   getQuickActionsContext: () => invoke<QuickActionsContext>('get_quick_actions_context'),
+  openQuickActions: () => invoke<void>('open_quick_actions'),
   closeQuickActions: () => invoke<void>('close_quick_actions'),
   quickSearch: (query: string, projectId: string) =>
     invoke<SkillSearchResult[]>('quick_search', { query, projectId }),
@@ -192,6 +193,8 @@ export const tauriBridge = {
   resetAllData: () => invoke<void>('reset_all_data'),
   getSourceHealth: () => invoke<SourceHealth>('get_source_health'),
   getAuditReport: () => invoke<AuditFinding[]>('get_audit_report'),
+  /** Resolves with the sync summary; rejects with the error message. */
+  quickSync: () => invoke<string>('quick_sync'),
   checkStatusNow: () => invoke<void>('check_status_now'),
 
   // Activity commands
