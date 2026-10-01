@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.0.11](https://github.com/runkids/skillshare-app/compare/v0.0.10...v0.0.11) (2026-10-01)
+
+
+### Features
+
+* check for app and CLI updates and make the app's CLI usable in terminals ([#10](https://github.com/runkids/skillshare-app/issues/10)) ([574c676](https://github.com/runkids/skillshare-app/commit/574c676ea4de75b7690a039f468268626c2f0fea))
+
+
+### Bug Fixes
+
+* **server:** only kill orphaned skillshare servers listening on our ports ([#12](https://github.com/runkids/skillshare-app/issues/12)) ([e0a4e3a](https://github.com/runkids/skillshare-app/commit/e0a4e3a9440c696e391675955499e0167071f027))
+
 ## [0.0.10](https://github.com/runkids/skillshare-app/compare/v0.0.9...v0.0.10) (2026-09-30)
 
 
