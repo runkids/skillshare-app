@@ -15,6 +15,8 @@ const updates = vi.hoisted(() => ({
 }));
 
 vi.mock('../hooks/useUpdates', () => ({ useUpdates: () => updates }));
+const screenState = vi.hoisted(() => ({ fullscreen: false }));
+vi.mock('../hooks/useFullscreen', () => ({ useFullscreen: () => screenState.fullscreen }));
 
 function LocationProbe() {
   const { pathname, search } = useLocation();
@@ -50,6 +52,7 @@ function renderWithUA(ui: React.ReactElement, userAgent: string) {
 }
 
 afterEach(() => {
+  screenState.fullscreen = false;
   updates.cli = null;
   updates.app = null;
   updates.skills = [];
@@ -66,6 +69,12 @@ describe('TitleBar platform chrome', () => {
     const { container } = renderWithUA(<TitleBar />, MAC_UA);
     expect(container.firstChild).toHaveStyle({ paddingLeft: '84px' });
     expect(screen.queryByTestId('app-mark')).not.toBeInTheDocument();
+  });
+
+  it('drops the traffic-light gap in macOS full screen', () => {
+    screenState.fullscreen = true;
+    const { container } = renderWithUA(<TitleBar />, MAC_UA);
+    expect(container.firstChild).toHaveStyle({ paddingLeft: '12px' });
   });
 
   it('shows the app mark with tight padding on Windows/Linux', () => {
@@ -95,73 +104,6 @@ describe('TitleBar update badge', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Settings, update available' }));
     expect(screen.getByTestId('location')).toHaveTextContent('/settings?tab=cli');
-  });
-});
-
-describe('TitleBar skill updates badge', () => {
-  it('is hidden when no skill has an update', () => {
-    renderWithUA(<TitleBar />, MAC_UA);
-    expect(screen.queryByRole('button', { name: /\d+ updates?/ })).not.toBeInTheDocument();
-  });
-
-  it('opens the Web UI updates tab with the count shown', () => {
-    updates.skills = ['pdf', 'xlsx'];
-    renderWithUA(
-      <>
-        <TitleBar />
-        <LocationProbe />
-      </>,
-      MAC_UA
-    );
-    fireEvent.click(screen.getByRole('button', { name: '2 updates' }));
-    fireEvent.click(screen.getByRole('link', { name: /2 skills/ }));
-    expect(screen.getByTestId('location')).toHaveTextContent('/skills?tab=updates');
-  });
-});
-
-describe('TitleBar combined resource updates', () => {
-  it('counts every kind once and links each list to its review page', () => {
-    updates.skills = ['pdf', 'xlsx', 'docx'];
-    updates.plugins = ['hud'];
-    updates.agents = ['tutor'];
-    updates.repositories = ['_team'];
-    renderWithUA(
-      <>
-        <TitleBar />
-        <LocationProbe />
-      </>,
-      MAC_UA
-    );
-    const badge = screen.getByRole('button', { name: '6 updates' });
-    expect(badge).toHaveAttribute(
-      'title',
-      '3 skills, 1 plugin, 1 agent, 1 repository have updates'
-    );
-    fireEvent.click(badge);
-    expect(screen.getByRole('link', { name: /3 skills/ })).toHaveAttribute(
-      'href',
-      '/skills?tab=updates'
-    );
-    expect(screen.getByRole('link', { name: /1 repository/ })).toHaveAttribute(
-      'href',
-      '/skills?tab=updates'
-    );
-    expect(screen.getByRole('link', { name: /1 agent/ })).toHaveAttribute(
-      'href',
-      '/agents?tab=updates'
-    );
-    fireEvent.click(screen.getByRole('link', { name: /1 plugin/ }));
-    expect(screen.getByTestId('location')).toHaveTextContent('/plugins');
-    expect(screen.queryByRole('link', { name: /1 plugin/ })).not.toBeInTheDocument();
-  });
-
-  it('shows plugin-only updates and dismisses the list on Escape', () => {
-    updates.plugins = ['hud'];
-    renderWithUA(<TitleBar />, MAC_UA);
-    fireEvent.click(screen.getByRole('button', { name: '1 update' }));
-    expect(screen.getByRole('link', { name: /1 plugin/ })).toBeInTheDocument();
-    fireEvent.keyDown(document, { key: 'Escape' });
-    expect(screen.queryByRole('link', { name: /1 plugin/ })).not.toBeInTheDocument();
   });
 });
 

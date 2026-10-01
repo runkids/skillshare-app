@@ -54,6 +54,9 @@ export interface AuditFinding {
 
 export const AUDIT_EVENT = 'audit-report';
 
+/** An action the title bar status panel runs through the same code as the tray. */
+export type StatusAction = 'update_all' | 'sync' | 'collect' | 'push' | 'pull';
+
 export interface PathHint {
   dir: string;
   command: string;
@@ -192,6 +195,8 @@ export const tauriBridge = {
   resetAllData: () => invoke<void>('reset_all_data'),
   getSourceHealth: () => invoke<SourceHealth>('get_source_health'),
   getAuditReport: () => invoke<AuditFinding[]>('get_audit_report'),
+  runStatusAction: (action: StatusAction) => invoke<void>('run_status_action', { action }),
+  checkStatusNow: () => invoke<void>('check_status_now'),
 
   // Activity commands
   getActivity: () => invoke<ActivityEntry[]>('get_activity'),
