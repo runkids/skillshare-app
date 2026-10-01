@@ -14,6 +14,20 @@ static APP_QUITTING: AtomicBool = AtomicBool::new(false);
 #[allow(clippy::expect_used)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .level(log::LevelFilter::Info)
+                .targets([
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Folder {
+                        path: utils::paths::logs_dir(),
+                        file_name: Some("app".into()),
+                    }),
+                ])
+                .max_file_size(1_000_000)
+                .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepOne)
+                .build(),
+        )
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_pty::init())
         .plugin(tauri_plugin_shell::init())
@@ -59,6 +73,7 @@ pub fn run() {
             commands::app::get_notify_sync,
             commands::app::set_notify_sync,
             commands::app::get_available_updates,
+            commands::app::open_logs_folder,
             commands::app::check_updates_now,
             commands::app::get_notify_update,
             commands::app::set_notify_update,
@@ -79,6 +94,8 @@ pub fn run() {
             });
 
             services::update_watch::spawn_background(app.handle().clone());
+
+            tauri::async_runtime::spawn(utils::env::load_login_shell_path());
 
             // Auto-start Go server if onboarding is complete (non-blocking)
             let server = app.state::<ServerManager>().inner().clone();
