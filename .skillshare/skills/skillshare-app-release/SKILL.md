@@ -96,7 +96,7 @@ Check every one of these. A green run alone is not proof that users can update.
 ```bash
 gh release view vX.Y.Z --json isDraft,assets -q '"draft=\(.isDraft) assets=\(.assets|length)"'   # draft=false, 20 assets
 gh release list --limit 1                                                                          # vX.Y.Z  Latest
-curl -sL https://github.com/runkids/skillshare-app/releases/latest/download/latest.json | jq -r .version
+curl -sL "https://github.com/runkids/skillshare-app/releases/latest/download/latest.json?t=$(date +%s)" | jq -r .version   # cache-buster: the plain URL can serve the old file for a few minutes
 gh run view "$id" --json jobs -q '.jobs[]|select(.name|test("homebrew"))|"\(.name): \(.conclusion)"'
 ```
 

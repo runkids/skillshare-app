@@ -29,7 +29,12 @@ Release Please honours a `Release-As: X.Y.Z` line in the body of a commit on `ma
   1. Read the log: `gh run view <id> --log-failed`.
   2. A transient failure (runner, network, notarization timeout) can be retried
      with `gh run rerun <id> --failed`. A rerun uploads to the same draft and
-     publishes it once every build passes.
+     publishes it once every build passes. Right after `rerun`, `gh run watch`
+     can return at once, before the rerun has started. Poll until
+     `gh run view <id> --json status -q .status` says `completed` instead.
+     Example: v0.0.17's Linux upload failed with `other side closed`, and one
+     rerun fixed it. The `could not find Cargo.toml` line in the same log is
+     harmless and also appears in good runs.
   3. A real code problem needs a fix PR, then a new release. The failed version
      stays a draft. Tell the user it was skipped and why. Don't move or delete the
      tag.
