@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Settings, Monitor, TerminalSquare, RotateCw, ArrowUpCircle } from 'lucide-react';
+import { Settings, Monitor, TerminalSquare, RotateCw, ArrowUpCircle, History } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ProjectDropdown from './ProjectDropdown';
 import { useTerminal } from '../context/TerminalContext';
@@ -119,6 +119,15 @@ export default function TitleBar() {
         aria-label="Reload"
       >
         <RotateCw size={15} className={switching ? 'motion-safe:animate-spin' : undefined} />
+      </button>
+      <button
+        type="button"
+        onClick={() => navigate('/activity')}
+        className="w-[30px] h-[30px] flex items-center justify-center rounded-[var(--r-ctl)] hover:bg-[var(--sel)] transition-colors text-[var(--ink-2)] hover:text-[var(--ink)]"
+        title="Activity"
+        aria-label="Activity"
+      >
+        <History size={16} />
       </button>
       <button
         type="button"
