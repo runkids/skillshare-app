@@ -8,6 +8,9 @@ pub struct CliMeta {
     pub source: Option<String>,
     pub installed_at: Option<String>,
     pub last_update_check: Option<String>,
+    /// Last successful sync per project, so the tray never shows another project's time.
+    #[serde(default)]
+    pub last_successful_sync: std::collections::BTreeMap<String, String>,
     pub preferred_port: Option<u16>,
     pub notify_sync: Option<bool>,
     pub notify_update: Option<bool>,

@@ -2,6 +2,7 @@ mod commands;
 mod main_window;
 mod models;
 mod services;
+mod tray;
 mod utils;
 
 use services::server_manager::ServerManager;
@@ -101,7 +102,7 @@ pub fn run() {
         ])
         .setup(|app| {
             main_window::build(app)?;
-            setup_system_tray(app)?;
+            tray::setup(app)?;
             services::quick_actions::setup(app.handle());
             #[cfg(target_os = "macos")]
             setup_app_menu(app)?;
@@ -182,136 +183,10 @@ fn show_main_window(app: &tauri::AppHandle) {
     }
 }
 
-fn setup_system_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
-    use tauri::menu::{MenuBuilder, MenuItemBuilder};
-    use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-
-    let quick_sync = MenuItemBuilder::with_id("quick_sync", "Quick Sync").build(app)?;
-    let update_all = MenuItemBuilder::with_id("update_all", "Update All (0)")
-        .enabled(false)
-        .build(app)?;
-    app.manage(TrayUpdateItem(update_all.clone()));
-    let quick_actions = MenuItemBuilder::with_id("quick_actions", "Quick Actions…").build(app)?;
-    let open_app = MenuItemBuilder::with_id("open_app", "Open Skillshare App").build(app)?;
-
-    let active_project = MenuItemBuilder::with_id("active_project", active_project_label())
-        .enabled(false)
-        .build(app)?;
-    app.manage(TrayProjectItem(active_project.clone()));
-
-    let check_updates = check_updates_item(app)?;
-    let quit = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
-
-    let menu = MenuBuilder::new(app)
-        .item(&quick_sync)
-        .item(&update_all)
-        .item(&quick_actions)
-        .separator()
-        .item(&open_app)
-        .item(&active_project)
-        .separator()
-        .item(&check_updates)
-        .item(&quit)
-        .build()?;
-    services::source_health::attach_tray(app, &menu)?;
-
-    let mut tray = TrayIconBuilder::new();
-    // macOS menu bar icons are monochrome templates that the system tints
-    // for light and dark menu bars; other platforms keep the colour icon.
-    #[cfg(target_os = "macos")]
-    let template_icon =
-        tauri::image::Image::from_bytes(include_bytes!("../icons/tray-template.png"))
-            .inspect_err(|e| log::warn!("Failed to load tray template icon: {e}"))
-            .ok();
-    #[cfg(not(target_os = "macos"))]
-    let template_icon: Option<tauri::image::Image<'static>> = None;
-    if let Some(icon) = template_icon {
-        tray = tray.icon(icon).icon_as_template(true);
-    } else if let Some(icon) = app.default_window_icon() {
-        tray = tray.icon(icon.clone());
-    }
-    let _tray = tray
-        .tooltip("Skillshare App")
-        .menu(&menu)
-        .show_menu_on_left_click(false)
-        .on_menu_event(move |app, event| match event.id().as_ref() {
-            "quick_sync" => {
-                let app = app.clone();
-                tauri::async_runtime::spawn(async move {
-                    handle_quick_sync(&app).await;
-                    services::oplog_watch::refresh_badges(&app).await;
-                });
-            }
-            "update_all" => {
-                let app = app.clone();
-                tauri::async_runtime::spawn(async move {
-                    services::update_all::run(&app).await;
-                    services::source_health::refresh(&app, false).await;
-                });
-            }
-            "open_app" => {
-                show_main_window(app);
-            }
-            "quick_actions" => {
-                services::quick_actions::request_open(app);
-            }
-            "quit" => {
-                APP_QUITTING.store(true, Ordering::SeqCst);
-                // Stop the CLI server before exiting to avoid orphaned processes
-                let app_handle = app.clone();
-                tauri::async_runtime::spawn(async move {
-                    let server = app_handle.state::<ServerManager>();
-                    let _ = server.stop().await;
-                    app_handle.exit(0);
-                });
-            }
-            _ => {}
-        })
-        .on_tray_icon_event(|tray, event| {
-            if let TrayIconEvent::Click {
-                button: MouseButton::Left,
-                button_state: MouseButtonState::Up,
-                ..
-            } = event
-            {
-                show_main_window(tray.app_handle());
-            }
-        })
-        .build(app)?;
-
-    Ok(())
-}
-
-/// The tray's resource update action, refreshed after each check.
-struct TrayUpdateItem(tauri::menu::MenuItem<tauri::Wry>);
-
-pub(crate) fn refresh_tray_update_count(app: &tauri::AppHandle, count: usize) {
-    if let Some(item) = app.try_state::<TrayUpdateItem>() {
-        let _ = item.0.set_text(format!("Update All ({count})"));
-        let _ = item
-            .0
-            .set_enabled(count > 0 && !services::update_all::is_running());
-    }
-}
-
-/// The tray's disabled item showing the active project, kept so its text can follow switches.
-struct TrayProjectItem(tauri::menu::MenuItem<tauri::Wry>);
-
-fn active_project_label() -> String {
-    services::project_store::load()
-        .active_project()
-        .map(|p| p.name.clone())
-        .unwrap_or_else(|| "No active project".to_string())
-}
-
-/// Re-read the active project and update the tray label; call after the store changes.
-pub(crate) fn refresh_tray_project_label(app: &tauri::AppHandle) {
-    if let Some(item) = app.try_state::<TrayProjectItem>() {
-        if let Err(e) = item.0.set_text(active_project_label()) {
-            log::warn!("Failed to update tray project label: {e}");
-        }
-    }
-}
+pub(crate) use tray::{
+    refresh_projects as refresh_tray_project_label,
+    refresh_update_count as refresh_tray_update_count,
+};
 
 /// Emitted after a tray Quick Sync succeeds so the web view can show the new state.
 const SYNC_COMPLETED_EVENT: &str = "sync-completed";
@@ -345,6 +220,7 @@ async fn handle_quick_sync(app: &tauri::AppHandle) {
 
     match &result {
         Ok(_) => {
+            tray::record_sync(app, store.active_project_id.as_deref(), chrono::Utc::now());
             let _ = app.emit(SYNC_COMPLETED_EVENT, ());
         }
         Err(e) => log::warn!("Quick Sync failed: {e}"),

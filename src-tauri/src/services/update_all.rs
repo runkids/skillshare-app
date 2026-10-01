@@ -86,7 +86,8 @@ pub async fn run(app: &AppHandle) {
 
     // Keep Quick Sync and auto-sync from racing writes during updates and syncs.
     let syncing = crate::SYNC_LOCK.lock().await;
-    let (dir, is_project) = project_store::active_project_mode(&project_store::load());
+    let store = project_store::load();
+    let (dir, is_project) = project_store::active_project_mode(&store);
     let mode = if is_project { "--project" } else { "--global" };
     let mut errors = Vec::new();
     if let Some(cli) = cli_manager::detect_cli().await {
@@ -109,6 +110,7 @@ pub async fn run(app: &AppHandle) {
             }
         }
         if synced {
+            crate::tray::record_sync(app, store.active_project_id.as_deref(), chrono::Utc::now());
             let _ = app.emit(crate::SYNC_COMPLETED_EVENT, ());
         }
     } else {

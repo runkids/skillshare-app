@@ -102,6 +102,8 @@ export interface SkillSearchResult {
 
 /** Emitted after a tray or auto Quick Sync succeeds. */
 export const SYNC_COMPLETED_EVENT = 'sync-completed';
+export const TRAY_PROJECT_REQUESTED_EVENT = 'tray-project-requested';
+export const AUTO_SYNC_CHANGED_EVENT = 'auto-sync-changed';
 
 /** One operation from `skillshare log`, newest first. */
 export interface ActivityEntry {

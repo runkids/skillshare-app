@@ -2,9 +2,22 @@ import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProjectProvider, useProjects } from './ProjectContext';
-import { tauriBridge, type Project } from '../api/tauri-bridge';
+import { tauriBridge, TRAY_PROJECT_REQUESTED_EVENT, type Project } from '../api/tauri-bridge';
+
+const events = vi.hoisted(() => ({
+  handlers: new Map<string, (event: { payload: string }) => void>(),
+  off: vi.fn(),
+}));
+vi.mock('@tauri-apps/api/core', () => ({ isTauri: () => true }));
+vi.mock('@tauri-apps/api/event', () => ({
+  listen: (event: string, handler: (event: { payload: string }) => void) => {
+    events.handlers.set(event, handler);
+    return Promise.resolve(events.off);
+  },
+}));
 
 vi.mock('../api/tauri-bridge', () => ({
+  TRAY_PROJECT_REQUESTED_EVENT: 'tray-project-requested',
   tauriBridge: {
     listProjects: vi.fn(),
     getActiveProject: vi.fn(),
@@ -33,6 +46,7 @@ async function renderProjects() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  events.handlers.clear();
   bridge.listProjects.mockResolvedValue([global, repo]);
   bridge.detectCli.mockResolvedValue('/bin/skillshare');
   bridge.startServer.mockResolvedValue(19420);
@@ -66,5 +80,46 @@ describe('removeProject', () => {
     await act(() => result.current.removeProject('g'));
 
     expect(bridge.stopServer).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('tray project selection', () => {
+  it('uses the in-app stop/switch/start sequence and refreshes the active project', async () => {
+    bridge.getActiveProject.mockResolvedValue(global);
+    const { result, unmount } = await renderProjects();
+    bridge.getActiveProject.mockResolvedValue(repo);
+    await act(async () => {
+      events.handlers.get(TRAY_PROJECT_REQUESTED_EVENT)?.({ payload: 'r' });
+    });
+    expect(bridge.stopServer).toHaveBeenCalledTimes(1);
+    expect(bridge.switchProject).toHaveBeenCalledWith('r');
+    expect(bridge.startServer).toHaveBeenCalledWith('/bin/skillshare', '/r');
+    expect(bridge.stopServer.mock.invocationCallOrder[0]).toBeLessThan(
+      bridge.switchProject.mock.invocationCallOrder[0]
+    );
+    expect(bridge.switchProject.mock.invocationCallOrder[0]).toBeLessThan(
+      bridge.startServer.mock.invocationCallOrder[0]
+    );
+    expect(result.current.activeProject?.id).toBe('r');
+    unmount();
+    await act(async () => {});
+    expect(events.off).toHaveBeenCalled();
+  });
+
+  it('ignores the active project and overlapping requests', async () => {
+    bridge.getActiveProject.mockResolvedValue(global);
+    await renderProjects();
+    await act(async () => {
+      events.handlers.get(TRAY_PROJECT_REQUESTED_EVENT)?.({ payload: 'g' });
+    });
+    expect(bridge.stopServer).not.toHaveBeenCalled();
+    bridge.getActiveProject.mockResolvedValue(repo);
+    await act(async () => {
+      const handler = events.handlers.get(TRAY_PROJECT_REQUESTED_EVENT);
+      handler?.({ payload: 'r' });
+      handler?.({ payload: 'r' });
+    });
+    expect(bridge.stopServer).toHaveBeenCalledTimes(1);
+    expect(bridge.switchProject).toHaveBeenCalledTimes(1);
   });
 });

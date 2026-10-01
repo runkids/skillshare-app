@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef } f
 import type { ReactNode, RefObject } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { tauriBridge, type Project } from '../api/tauri-bridge';
+import { tauriBridge, TRAY_PROJECT_REQUESTED_EVENT, type Project } from '../api/tauri-bridge';
 
 export interface SwitchOptions {
   newSession?: boolean;
@@ -118,6 +118,20 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     },
     [refresh]
   );
+
+  // Tray and in-app project choices use the same lock, state and server lifecycle.
+  useEffect(() => {
+    if (!isTauri()) return;
+    const unlisten = listen<string>(TRAY_PROJECT_REQUESTED_EVENT, (event) => {
+      if (event.payload === activeProject?.id) return;
+      void switchWithRestart(event.payload).catch((error: unknown) => {
+        console.error('Tray project switch failed', error);
+      });
+    });
+    return () => {
+      void unlisten.then((off) => off());
+    };
+  }, [activeProject?.id, switchWithRestart]);
 
   const removeProject = useCallback(
     async (id: string) => {

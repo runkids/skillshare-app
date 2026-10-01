@@ -4,8 +4,7 @@
 
 use crate::services::{cli_manager, project_store};
 use std::time::Duration;
-use tauri::menu::{Menu, MenuItem, MenuItemBuilder};
-use tauri::{AppHandle, Emitter, Manager, Wry};
+use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 use tauri_plugin_notification::NotificationExt;
 
@@ -21,8 +20,6 @@ const GIT_TIMEOUT: Duration = Duration::from_secs(10);
 /// Same budget as Quick Sync: long enough for a slow push or pull, short enough not to hang.
 const ACTION_TIMEOUT: Duration = Duration::from_secs(120);
 
-/// The tray item the source actions are listed after.
-const ANCHOR_MENU_ID: &str = "quick_sync";
 const COLLECT_MENU_ID: &str = "source_collect";
 const PUSH_MENU_ID: &str = "source_push";
 const PULL_MENU_ID: &str = "source_pull";
@@ -267,85 +264,13 @@ fn plural(n: usize) -> &'static str {
     }
 }
 
-/// Tray labels for the actions that have something to do, in menu order.
-fn tray_labels(health: &SourceHealth) -> Vec<(&'static str, String)> {
-    let mut items = Vec::new();
-    let n = health.local_skills.len();
-    if n > 0 {
-        items.push((
-            COLLECT_MENU_ID,
-            format!("Collect {n} Local Skill{}…", plural(n)),
-        ));
-    }
-    if let Some(git) = &health.git {
-        let changes = git.uncommitted + git.ahead;
-        if changes > 0 {
-            items.push((
-                PUSH_MENU_ID,
-                format!("Push {changes} Change{}", plural(changes)),
-            ));
-        }
-        if git.behind > 0 {
-            items.push((
-                PULL_MENU_ID,
-                format!("Pull {} Update{}", git.behind, plural(git.behind)),
-            ));
-        }
-    }
-    items
-}
-
-/// The tray menu and the action items shown in it when they have something to do.
-struct TrayActions {
-    menu: Menu<Wry>,
-    items: Vec<MenuItem<Wry>>,
-}
-
-/// Let the source actions appear in `menu` and handle their clicks.
-pub fn attach_tray(app: &tauri::App, menu: &Menu<Wry>) -> tauri::Result<()> {
-    let items = [COLLECT_MENU_ID, PUSH_MENU_ID, PULL_MENU_ID]
-        .iter()
-        .map(|id| MenuItemBuilder::with_id(*id, *id).build(app))
-        .collect::<tauri::Result<Vec<_>>>()?;
-    app.manage(TrayActions {
-        menu: menu.clone(),
-        items,
-    });
-    app.on_menu_event(|app, event| match event.id().as_ref() {
+/// Dispatch source actions from the grouped tray without changing their execution.
+pub fn on_menu_event(app: &AppHandle, id: &str) {
+    match id {
         COLLECT_MENU_ID => confirm_collect(app),
         PUSH_MENU_ID => spawn_action(app, &["push"], "Push"),
         PULL_MENU_ID => spawn_action(app, &["pull"], "Pull"),
         _ => {}
-    });
-    Ok(())
-}
-
-fn update_tray(app: &AppHandle, health: &SourceHealth) {
-    let Some(tray) = app.try_state::<TrayActions>() else {
-        return;
-    };
-    let result = (|| -> tauri::Result<()> {
-        for item in &tray.items {
-            // Not in the menu yet on the first update; nothing to remove then.
-            let _ = tray.menu.remove(item);
-        }
-        let mut pos = tray
-            .menu
-            .items()?
-            .iter()
-            .position(|i| i.id() == ANCHOR_MENU_ID)
-            .map_or(0, |i| i + 1);
-        for (id, label) in tray_labels(health) {
-            if let Some(item) = tray.items.iter().find(|i| i.id() == id) {
-                item.set_text(label)?;
-                tray.menu.insert(item, pos)?;
-                pos += 1;
-            }
-        }
-        Ok(())
-    })();
-    if let Err(e) = result {
-        log::warn!("Failed to update tray source actions: {e}");
     }
 }
 
@@ -472,7 +397,7 @@ pub async fn refresh(app: &AppHandle, fetch: bool) {
 }
 
 fn publish(app: &AppHandle, health: &SourceHealth) {
-    update_tray(app, health);
+    crate::tray::refresh_source_health(app, health);
     if let Err(e) = app.emit(SOURCE_HEALTH_EVENT, health) {
         log::warn!("Failed to emit source health: {e}");
     }
@@ -611,30 +536,5 @@ mod tests {
         let mut notified = Vec::new();
         unannounced(&health(&[], 1), &mut notified);
         assert_eq!(unannounced(&health(&[], 3), &mut notified).len(), 1);
-    }
-
-    #[test]
-    fn tray_offers_only_actions_with_work() {
-        let mut h = health(&["a", "b"], 0);
-        h.git = Some(GitState {
-            uncommitted: 1,
-            ahead: 1,
-            behind: 0,
-        });
-        assert_eq!(
-            tray_labels(&h),
-            vec![
-                (COLLECT_MENU_ID, "Collect 2 Local Skills…".to_string()),
-                (PUSH_MENU_ID, "Push 2 Changes".to_string()),
-            ]
-        );
-    }
-
-    #[test]
-    fn tray_offers_pull_when_behind() {
-        assert_eq!(
-            tray_labels(&health(&[], 1)),
-            vec![(PULL_MENU_ID, "Pull 1 Update".to_string())]
-        );
     }
 }
