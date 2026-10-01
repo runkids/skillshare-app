@@ -1,4 +1,5 @@
 mod commands;
+mod main_window;
 mod models;
 mod services;
 mod utils;
@@ -82,6 +83,7 @@ pub fn run() {
             commands::terminal::get_pty_env,
         ])
         .setup(|app| {
+            main_window::build(app)?;
             setup_system_tray(app)?;
             #[cfg(target_os = "macos")]
             setup_app_menu(app)?;
