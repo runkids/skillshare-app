@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.1.0](https://github.com/runkids/skillshare-app/compare/v0.0.17...v0.1.0) (2026-10-01)
+
+
+### Features
+
+* **activity:** add a day-grouped Activity timeline from skillshare log ([#41](https://github.com/runkids/skillshare-app/issues/41)) ([7c4c0ad](https://github.com/runkids/skillshare-app/commit/7c4c0ad9618ec040a78edbad104c78d79e8876c0))
+* **audit:** audit skills after changes that bring in third-party content ([#48](https://github.com/runkids/skillshare-app/issues/48)) ([f8f94e2](https://github.com/runkids/skillshare-app/commit/f8f94e2de204a40b72923c0fc318628d8a4f4805))
+* **badges:** refresh update and source-health badges from the CLI operation log ([#46](https://github.com/runkids/skillshare-app/issues/46)) ([03ac84b](https://github.com/runkids/skillshare-app/commit/03ac84b8a3ae818c6e841ba7079e3957c5721285))
+* **desktop:** add global quick actions palette ([#45](https://github.com/runkids/skillshare-app/issues/45)) ([b3a4930](https://github.com/runkids/skillshare-app/commit/b3a4930275bb365e222b187d827e3c096a7dd989))
+* **desktop:** show server status as a dot and surface a stopped server ([#47](https://github.com/runkids/skillshare-app/issues/47)) ([8df97dd](https://github.com/runkids/skillshare-app/commit/8df97dd2041f90c8ee6e20d17cb1b69f6f6917f8))
+* **desktop:** unify title bar status into one button and panel ([#52](https://github.com/runkids/skillshare-app/issues/52)) ([98178ec](https://github.com/runkids/skillshare-app/commit/98178ec93b9cf612d8341b08f7fbd4c174061be6))
+* **source-health:** surface target drift and source git state ([#42](https://github.com/runkids/skillshare-app/issues/42)) ([528b199](https://github.com/runkids/skillshare-app/commit/528b199c53b0884c03719becff95d90bc5606c38))
+* unify managed resource updates and add tray Update All ([#43](https://github.com/runkids/skillshare-app/issues/43)) ([6939e3b](https://github.com/runkids/skillshare-app/commit/6939e3bcce973fa9f0e22501b9c3638e93c30518))
+
+
+### Bug Fixes
+
+* **desktop:** drop the traffic-light gap in macOS full screen ([#51](https://github.com/runkids/skillshare-app/issues/51)) ([cc25503](https://github.com/runkids/skillshare-app/commit/cc25503639f64b12ea848e686664805c408d40f3))
+* **updates:** re-check the CLI version after an upgrade outside the app ([#50](https://github.com/runkids/skillshare-app/issues/50)) ([d62b89d](https://github.com/runkids/skillshare-app/commit/d62b89d683307d80ef2a994db82e20912d89a614))
+
 ## [0.0.17](https://github.com/runkids/skillshare-app/compare/v0.0.16...v0.0.17) (2026-10-01)
 
 
