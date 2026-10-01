@@ -30,9 +30,8 @@ By participating in this project, you agree to maintain a respectful and inclusi
 
 ### Prerequisites
 
-- Node.js 18+
-- Rust 1.70+
-- pnpm
+- The Node.js, pnpm and Rust versions pinned in `mise.toml` (`mise install` sets them up)
+- Or Docker only: `make devc` runs the app in a container (see the README)
 
 ### Installation
 
@@ -55,14 +54,16 @@ pnpm dev:tauri
 
 ```
 ├── src/                    # React frontend
-│   ├── components/         # UI components
-│   ├── hooks/              # Custom React hooks
-│   ├── lib/                # Utilities & Tauri API
-│   └── types/              # TypeScript types
+│   ├── components/         # Shared UI primitives
+│   ├── context/            # Theme
+│   └── desktop/            # The app: api/ (Tauri bridge), components/, pages/, hooks/, context/, utils/
 ├── src-tauri/              # Rust backend
 │   └── src/
 │       ├── commands/       # Tauri IPC handlers
-│       └── models/         # Data structures
+│       ├── services/       # CLI install, server supervisor, auto-sync, update checks
+│       ├── models/         # Data structures
+│       └── utils/          # Paths, environment, file helpers
+└── wiki/                   # Agent and maintainer docs (start at wiki/README.md)
 ```
 
 ## How to Contribute
