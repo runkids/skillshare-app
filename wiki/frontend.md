@@ -8,7 +8,7 @@ React 19 + TypeScript + Vite 8 + Tailwind CSS 4, rendered in a Tauri 2 webview. 
 - `src/App.tsx` nests providers in this order: `QueryClientProvider` > `ThemeProvider` > `TauriProvider` > `ProjectProvider` > `TerminalProvider` > `BrowserRouter` > `ErrorBoundary`. It renders `UpdateCheckListener`, then an `OnboardingGuard` around three routes: `/onboarding`, `/settings`, and `/*` (`MainView`).
 - `src/desktop/api/tauri-bridge.ts`: every Rust `invoke` call plus the shared types (`AppInfo`, `Project`, `AvailableUpdates`, ...).
 - `src/desktop/pages/`: `OnboardingPage`, `SettingsPage`.
-- `src/desktop/components/`: `MainView`, `TitleBar`, `ProjectDropdown`, `CliWebView` (iframe host), `UpdateCheckListener`, `TerminalAccess`; subfolders `OnboardingSteps/` (steps, a pure `onboarding-flow.ts` reducer, `onboarding.css` with `ob-*` classes), `settings/` (one component per tab), `terminal/` (xterm UI, currently hidden by `SHOW_TERMINAL = false` in `MainView`).
+- `src/desktop/components/`: `MainView`, `TitleBar`, `ProjectDropdown`, `CliWebView` (iframe host), `UpdateCheckListener`, `ResourceUpdatesBadge`, `TerminalAccess`; subfolders `OnboardingSteps/` (steps, a pure `onboarding-flow.ts` reducer, `onboarding.css` with `ob-*` classes), `settings/` (one component per tab), `terminal/` (xterm UI, currently hidden by `SHOW_TERMINAL = false` in `MainView`).
 - `src/desktop/context/`: `TauriContext` (`useTauri`: `appInfo`, `loading`, `refresh`), `ProjectContext` (`useProjects`: projects, `activeProject`, `switching`, `switchWithRestart`, `reloadKey`/`reloadView`), `TerminalContext` (`useTerminal`).
 - `src/desktop/hooks/`: `useUpdates` and `useAppUpdate` (module-level stores read with `useSyncExternalStore`), `useCliManager`, plus terminal hooks `usePtySpawn`, `useTerminalInstance`.
 - `src/desktop/utils/`: `platform.ts` (`detectPlatform`, `isMacOS` from the user agent), `path.ts` (`shortPath`).
@@ -24,7 +24,8 @@ React 19 + TypeScript + Vite 8 + Tailwind CSS 4, rendered in a Tauri 2 webview. 
 2. `OnboardingPage` drives three steps (`WelcomeStep` finds or installs the CLI, `ProjectSetupStep`, `FirstSyncStep`) through `flowReducer`. On finish it calls `startServer(cliPath)`, refreshes app and project state, then navigates to `/`.
 3. `MainView` shows `TitleBar` and `CliWebView`. `CliWebView` uses `http://localhost:${appInfo.serverPort}` when the server already runs; otherwise it calls `detectCli` then `startServer(cliPath, activeProject.path)` once and uses the returned port. The iframe `src` is that origin plus the shell path (a shell route like `/skills?tab=updates` opens that CLI page) and a `?theme=` param.
 4. `CliWebView` polls `healthCheck` every 30 s; three failures show the "server-down" card with Restart. A `reloadKey` change (title bar reload, `sync-completed`) reloads the iframe, or restarts the server when unhealthy. Finishing a project switch remounts the iframe.
-5. `/settings?tab=general|appearance|projects|cli|about` picks the tab via `useSearchParams`; the nav shows an "Update" badge from `useUpdates`/`useAppUpdate`.
+5. `TitleBar` shows one resource update count (skills, repositories, agents, plugins); clicking it lists each kind and links to the CLI's corresponding review page. App/CLI versions keep their settings indicator.
+6. `/settings?tab=general|appearance|projects|cli|about` picks the tab via `useSearchParams`; the nav shows an "Update" badge from `useUpdates`/`useAppUpdate`.
 
 Rust events (names verified in `src-tauri/src`), all subscribed with `listen` from `@tauri-apps/api/event` inside a `useEffect` guarded by `isTauri()`, and unsubscribed with `unlisten.then((off) => off())`:
 

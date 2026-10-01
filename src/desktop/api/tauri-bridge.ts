@@ -17,8 +17,11 @@ export interface InstallPlatform {
 export interface AvailableUpdates {
   cli: string | null;
   app: string | null;
-  /** Skills and tracked repos in the active project with upstream changes. */
+  /** Per-kind resources in the active project with upstream changes. */
   skills: string[];
+  repositories: string[];
+  agents: string[];
+  plugins: string[];
 }
 
 export interface PathHint {
