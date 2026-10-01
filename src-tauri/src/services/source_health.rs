@@ -419,6 +419,7 @@ fn spawn_action(app: &AppHandle, args: &[&str], label: &'static str) {
             let _ = app.notification().builder().title(title).body(body).show();
         }
         refresh(&app, false).await;
+        crate::services::update_watch::refresh_skills(&app).await;
     });
 }
 
