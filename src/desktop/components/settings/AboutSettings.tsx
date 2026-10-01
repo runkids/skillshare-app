@@ -5,11 +5,15 @@ import Card from '../../../components/Card';
 import Button from '../../../components/Button';
 import { useTauri } from '../../context/TauriContext';
 import { useAppUpdate, type UpdateCheckStatus } from '../../hooks/useAppUpdate';
+import { useUpdates } from '../../hooks/useUpdates';
+import { useNavigate } from 'react-router-dom';
 
 type UpdateStatus = UpdateCheckStatus | 'downloading' | 'installing' | 'complete';
 
 export default function AboutSettings() {
   const { appInfo } = useTauri();
+  const { cli: cliUpdate } = useUpdates();
+  const navigate = useNavigate();
   const { update: updateObj, status: checkStatus, error: checkError, recheck } = useAppUpdate();
   const [appVersion, setAppVersion] = useState('0.1.0');
   // Download/install phases are local; the check result comes from the shared hook.
@@ -83,7 +87,18 @@ export default function AboutSettings() {
 
         <div className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
           <p className="text-sm font-medium text-pencil">CLI Version</p>
-          <span className="text-sm text-pencil-light">{appInfo?.cliVersion || 'Unknown'}</span>
+          <span className="flex items-center gap-2 text-sm text-pencil-light">
+            {appInfo?.cliVersion || 'Unknown'}
+            {cliUpdate && (
+              <button
+                type="button"
+                onClick={() => navigate('/settings?tab=cli')}
+                className="text-[11px] font-bold px-[7px] py-0.5 rounded-[var(--r-btn)] bg-[var(--accent-bg)] text-[var(--accent)] hover:underline"
+              >
+                {cliUpdate} available
+              </button>
+            )}
+          </span>
         </div>
 
         <div className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">

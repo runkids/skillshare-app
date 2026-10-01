@@ -293,3 +293,15 @@ body {
 /* Card tilt */
 .card-tilt:nth-child(odd) { transform: rotate(-0.15deg); }
 .card-tilt:nth-child(even) { transform: rotate(0.15deg); }
+
+/* On/off switch, matching the skillshare web UI (.ss-sw). */
+.ss-sw { width: 34px; height: 20px; flex: none; padding: 2px; display: flex; border-radius: 99px; background: var(--line-2); cursor: pointer; transition: background-color .15s; }
+.ss-sw i { width: 16px; height: 16px; border-radius: 99px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.ss-sw.on { background: var(--ink); justify-content: flex-end; }
+.ss-sw.on i { background: var(--surface); }
+.ss-sw:disabled { opacity: .42; cursor: not-allowed; }
+.ss-sw:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+:root[data-theme="playful"] .ss-sw { width: 38px; height: 22px; background: var(--surface); border: 2px solid var(--line); padding: 2px; box-shadow: 2px 2px 0 var(--line); }
+:root[data-theme="playful"] .ss-sw i { width: 14px; height: 14px; background: var(--ink-3); box-shadow: none; }
+:root[data-theme="playful"] .ss-sw.on { background: var(--ok-bg); }
+:root[data-theme="playful"] .ss-sw.on i { background: var(--ok); }

@@ -8,6 +8,7 @@ import AboutSettings from '../components/settings/AboutSettings';
 import { isMacOS } from '../utils/platform';
 import { useEffect } from 'react';
 import { useAppUpdate } from '../hooks/useAppUpdate';
+import { useUpdates } from '../hooks/useUpdates';
 import { useTauri } from '../context/TauriContext';
 
 const TABS = [
@@ -21,7 +22,11 @@ const TABS = [
 export default function SettingsPage() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
-  const { available: updateAvailable } = useAppUpdate();
+  const { available: appUpdateAvailable } = useAppUpdate();
+  const updates = useUpdates();
+  const hasUpdate = (tab: string) =>
+    (tab === 'about' && (appUpdateAvailable || Boolean(updates.app))) ||
+    (tab === 'cli' && Boolean(updates.cli));
   const { refresh: refreshAppInfo } = useTauri();
   // The CLI can be upgraded from its web UI or a terminal; re-read versions on open.
   useEffect(() => {
@@ -73,7 +78,7 @@ export default function SettingsPage() {
               type="button"
               onClick={() => setParams({ tab: id })}
               aria-current={activeTab === id ? 'page' : undefined}
-              aria-label={id === 'about' && updateAvailable ? 'About, update available' : undefined}
+              aria-label={hasUpdate(id) ? `${label}, update available` : undefined}
               className={`w-full flex items-center gap-2.5 h-9 px-3 text-sm rounded-[var(--r-ctl)] transition-colors ${
                 activeTab === id
                   ? 'bg-[var(--sel)] text-[var(--sel-ink)] font-semibold'
@@ -82,7 +87,7 @@ export default function SettingsPage() {
             >
               <Icon size={18} />
               <span className="flex-1 text-left">{label}</span>
-              {id === 'about' && updateAvailable && (
+              {hasUpdate(id) && (
                 <span className="text-[11px] font-bold px-[7px] py-0.5 rounded-[var(--r-btn)] bg-[var(--accent-bg)] text-[var(--accent)]">
                   Update
                 </span>

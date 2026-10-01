@@ -6,6 +6,7 @@ import { useTerminal } from '../context/TerminalContext';
 import { useTauri } from '../context/TauriContext';
 import { useProjects } from '../context/ProjectContext';
 import { isMacOS } from '../utils/platform';
+import { useUpdates } from '../hooks/useUpdates';
 import appIcon from '../../../src-tauri/icons/64x64.png';
 
 // TODO: re-enable Web UI / Terminal tab switcher when terminal feature is ready
@@ -13,6 +14,8 @@ const SHOW_VIEW_TABS = false;
 
 export default function TitleBar() {
   const navigate = useNavigate();
+  const updates = useUpdates();
+  const hasUpdate = Boolean(updates.app || updates.cli);
   const { activeView, setActiveView, hasUnreadAny } = useTerminal();
   const { appInfo } = useTauri();
   const { switching, reloadView } = useProjects();
@@ -106,12 +109,17 @@ export default function TitleBar() {
       </button>
       <button
         type="button"
-        onClick={() => navigate('/settings')}
-        className="w-[30px] h-[30px] flex items-center justify-center rounded-[var(--r-ctl)] hover:bg-[var(--sel)] transition-colors text-[var(--ink-2)] hover:text-[var(--ink)]"
-        title="Settings"
-        aria-label="Settings"
+        onClick={() =>
+          navigate(hasUpdate ? `/settings?tab=${updates.app ? 'about' : 'cli'}` : '/settings')
+        }
+        className="relative w-[30px] h-[30px] flex items-center justify-center rounded-[var(--r-ctl)] hover:bg-[var(--sel)] transition-colors text-[var(--ink-2)] hover:text-[var(--ink)]"
+        title={hasUpdate ? 'Settings — update available' : 'Settings'}
+        aria-label={hasUpdate ? 'Settings, update available' : 'Settings'}
       >
         <Settings size={16} />
+        {hasUpdate && (
+          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[var(--accent)]" />
+        )}
       </button>
     </div>
   );

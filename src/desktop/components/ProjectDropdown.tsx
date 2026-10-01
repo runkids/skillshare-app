@@ -4,9 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { useProjects } from '../context/ProjectContext';
 import type { Project } from '../api/tauri-bridge';
 import { isMacOS } from '../utils/platform';
+import { shortPath } from '../utils/path';
 
 // Display-only: shorten the home directory to ~ for the mono path labels.
-const shortPath = (path: string) => path.replace(/^\/(?:Users|home)\/[^/]+/, '~');
 
 const CLOSE_MS = 130;
 
@@ -38,7 +38,8 @@ export default function ProjectDropdown() {
     return () => clearTimeout(t);
   }, [menu]);
 
-  // Close on click outside or Escape — only listen when dropdown is open
+  // Close on click outside or Escape — only listen when dropdown is open.
+  // Clicks inside the CLI iframe never reach this document; they blur the window instead.
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
@@ -49,9 +50,11 @@ export default function ProjectDropdown() {
     };
     document.addEventListener('mousedown', handler);
     document.addEventListener('keydown', keyHandler);
+    window.addEventListener('blur', close);
     return () => {
       document.removeEventListener('mousedown', handler);
       document.removeEventListener('keydown', keyHandler);
+      window.removeEventListener('blur', close);
     };
   }, [open, close]);
 

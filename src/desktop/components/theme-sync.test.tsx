@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../../context/ThemeContext';
@@ -6,14 +6,23 @@ import { useTheme } from '../../context/useTheme';
 import { tauriBridge } from '../api/tauri-bridge';
 import CliWebView from './CliWebView';
 
-const { refresh } = vi.hoisted(() => ({ refresh: vi.fn() }));
+const { refresh, project } = vi.hoisted(() => ({
+  refresh: vi.fn(),
+  project: { reloadKey: 0 },
+}));
 
 vi.mock('@tauri-apps/api/core', () => ({ isTauri: () => true }));
 vi.mock('../context/TauriContext', () => ({
   useTauri: () => ({ appInfo: { serverPort: 19420 }, refresh }),
 }));
 vi.mock('../api/tauri-bridge', () => ({
-  tauriBridge: { setPreferredTheme: vi.fn().mockResolvedValue(undefined) },
+  tauriBridge: {
+    setPreferredTheme: vi.fn().mockResolvedValue(undefined),
+    healthCheck: vi.fn().mockResolvedValue(true),
+  },
+}));
+vi.mock('../context/ProjectContext', () => ({
+  useProjects: () => ({ switching: false, activeProject: null, reloadKey: project.reloadKey }),
 }));
 
 function Controls() {
@@ -27,8 +36,8 @@ function Controls() {
   );
 }
 
-function setup() {
-  render(
+function Tree() {
+  return (
     <MemoryRouter>
       <ThemeProvider>
         <Controls />
@@ -36,6 +45,10 @@ function setup() {
       </ThemeProvider>
     </MemoryRouter>
   );
+}
+
+function setup() {
+  const { rerender } = render(<Tree />);
   const iframe = screen.getByTitle('skillshare UI') as HTMLIFrameElement;
   const post = vi.spyOn(iframe.contentWindow!, 'postMessage');
   fireEvent.load(iframe);
@@ -48,12 +61,13 @@ function setup() {
         })
       );
     });
-  return { iframe, post, receive };
+  return { iframe, post, receive, rerender };
 }
 
 beforeEach(() => {
   localStorage.clear();
   vi.clearAllMocks();
+  project.reloadKey = 0;
   vi.stubGlobal('matchMedia', () => ({
     matches: false,
     addEventListener: vi.fn(),
@@ -112,6 +126,20 @@ describe('desktop and CLI theme synchronization', () => {
       '*'
     );
     expect(tauriBridge.setPreferredTheme).toHaveBeenLastCalledWith('system');
+  });
+
+  it('reloads the iframe with the style picked inside it, not the one it first loaded with', async () => {
+    localStorage.setItem('skillshare-style', 'playful');
+    const { receive, rerender } = setup();
+    receive('clean');
+    project.reloadKey = 1;
+    rerender(<Tree />);
+    await waitFor(() =>
+      expect(screen.getByTitle('skillshare UI')).toHaveAttribute(
+        'src',
+        'http://localhost:19420?theme=clean'
+      )
+    );
   });
 
   it('keeps System preference when the iframe echoes its resolved mode', () => {

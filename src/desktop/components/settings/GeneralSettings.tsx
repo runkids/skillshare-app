@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Button from '../../../components/Button';
 import Card from '../../../components/Card';
 import Input from '../../../components/Input';
+import Switch from '../../../components/Switch';
 import { tauriBridge } from '../../api/tauri-bridge';
 import { useTauri } from '../../context/TauriContext';
 import { useProjects } from '../../context/ProjectContext';
@@ -16,10 +17,25 @@ export default function GeneralSettings() {
   const [error, setError] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [notifyUpdate, setNotifyUpdate] = useState(true);
 
   useEffect(() => {
     tauriBridge.getPreferredPort().then((p) => setPort(String(p)));
+    tauriBridge
+      .getNotifyUpdate()
+      .then(setNotifyUpdate)
+      .catch(() => {});
   }, []);
+
+  const handleNotifyUpdate = async (enabled: boolean) => {
+    setNotifyUpdate(enabled);
+    try {
+      await tauriBridge.setNotifyUpdate(enabled);
+    } catch (err) {
+      setNotifyUpdate(!enabled);
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
 
   const handleSave = async () => {
     const num = parseInt(port, 10);
@@ -83,7 +99,7 @@ export default function GeneralSettings() {
                 setPort(e.target.value);
                 setSaved(false);
               }}
-              className="!w-24 !py-1.5 text-sm"
+              className="!w-32 !py-1.5 text-sm"
             />
             <Button size="sm" onClick={handleSave}>
               {saved ? 'Saved' : 'Save'}
@@ -91,6 +107,25 @@ export default function GeneralSettings() {
           </div>
         </div>
         {error && <p className="text-danger text-xs mt-2">{error}</p>}
+      </Card>
+
+      <Card>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p id="notify-update" className="text-sm font-medium text-pencil">
+              Update notifications
+            </p>
+            <p id="notify-update-hint" className="text-xs text-pencil-light mt-0.5">
+              Notify me about new app and CLI versions while the app is in the background
+            </p>
+          </div>
+          <Switch
+            checked={notifyUpdate}
+            onChange={handleNotifyUpdate}
+            labelledBy="notify-update"
+            describedBy="notify-update-hint"
+          />
+        </div>
       </Card>
 
       {/* Danger zone */}
@@ -102,9 +137,9 @@ export default function GeneralSettings() {
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-sm font-medium text-pencil">Reset All Data</p>
+                <p className="text-sm font-medium text-pencil">Reset app data</p>
                 <p className="text-xs text-pencil-light mt-0.5">
-                  Clear all settings, projects, and CLI config.
+                  Return the app to first launch and run setup again.
                 </p>
               </div>
               <Button
@@ -117,9 +152,27 @@ export default function GeneralSettings() {
                 {confirmReset ? 'Confirm' : 'Reset'}
               </Button>
             </div>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="rounded-[var(--r-ctl)] bg-[var(--bad-bg)] px-3 py-2.5">
+                <p className="font-semibold text-[var(--bad)]">Cleared</p>
+                <ul className="mt-1 space-y-0.5 text-[var(--ink-2)] list-disc pl-4">
+                  <li>The app’s project list</li>
+                  <li>Server port and update notification settings</li>
+                  <li>Remembered CLI location and version</li>
+                </ul>
+              </div>
+              <div className="rounded-[var(--r-ctl)] bg-[var(--sunken)] px-3 py-2.5">
+                <p className="font-semibold text-[var(--ink)]">Kept</p>
+                <ul className="mt-1 space-y-0.5 text-[var(--ink-2)] list-disc pl-4">
+                  <li>Your skills and the CLI’s own config</li>
+                  <li>Project folders on disk</li>
+                  <li>The skillshare CLI, including a copy the app downloaded</li>
+                </ul>
+              </div>
+            </div>
             {confirmReset && (
               <p className="text-xs text-danger">
-                This will erase everything and restart onboarding.{' '}
+                The local server stops and setup starts over. Nothing on the Kept list is touched.{' '}
                 <button
                   type="button"
                   onClick={() => setConfirmReset(false)}

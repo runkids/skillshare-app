@@ -1,17 +1,28 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Card from '../../../components/Card';
 import Badge from '../../../components/Badge';
 import Button from '../../../components/Button';
 import { useTauri } from '../../context/TauriContext';
 import { tauriBridge } from '../../api/tauri-bridge';
+import TerminalAccess from '../TerminalAccess';
+import { checkUpdatesNow, useUpdates } from '../../hooks/useUpdates';
 
 type UpgradeStatus = 'idle' | 'upgrading' | 'success' | 'up-to-date' | 'error';
 
 export default function CliSettings() {
   const { appInfo, refresh } = useTauri();
+  const { cli: cliUpdate } = useUpdates();
   const [status, setStatus] = useState<UpgradeStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [newVersion, setNewVersion] = useState<string | null>(null);
+  const [cliPath, setCliPath] = useState<string | null>(null);
+
+  useEffect(() => {
+    tauriBridge
+      .detectCli()
+      .then(setCliPath)
+      .catch(() => {});
+  }, []);
 
   const handleUpgrade = async () => {
     setStatus('upgrading');
@@ -26,6 +37,7 @@ export default function CliSettings() {
       // Re-detect version after upgrade and refresh app state
       const updatedVersion = await tauriBridge.getCliVersion(cliPath);
       await refresh();
+      void checkUpdatesNow().catch(() => {});
 
       if (updatedVersion && updatedVersion !== oldVersion) {
         setNewVersion(updatedVersion);
@@ -74,7 +86,8 @@ export default function CliSettings() {
           <div>
             <p className="text-sm font-medium text-pencil">Update</p>
             <p className="text-xs text-pencil-light mt-0.5">
-              {status === 'idle' && 'Upgrade CLI to the latest version'}
+              {status === 'idle' &&
+                (cliUpdate ? `${cliUpdate} is available` : 'Upgrade CLI to the latest version')}
               {status === 'upgrading' && 'Upgrading CLI...'}
               {status === 'success' && `Updated to ${newVersion}`}
               {status === 'up-to-date' && 'Already on the latest version'}
@@ -105,6 +118,21 @@ export default function CliSettings() {
           </div>
         </div>
       </Card>
+
+      {cliPath && (
+        <Card>
+          <p className="text-sm font-medium text-pencil">Terminal</p>
+          <p className="text-xs text-pencil-light mt-0.5 mb-3">Run skillshare outside the app</p>
+          <TerminalAccess
+            cliPath={cliPath}
+            fallback={
+              <p className="text-xs text-pencil-light">
+                skillshare is on your PATH and ready to use.
+              </p>
+            }
+          />
+        </Card>
+      )}
     </div>
   );
 }
