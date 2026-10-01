@@ -46,6 +46,12 @@ pub async fn get_app_state(server: State<'_, ServerManager>) -> Result<AppInfo, 
     })
 }
 
+/// Run the tray's Quick Sync from the title bar, which shows the summary or error itself.
+#[tauri::command]
+pub async fn quick_sync(app: tauri::AppHandle) -> Result<String, String> {
+    crate::handle_quick_sync(&app, false).await
+}
+
 #[tauri::command]
 pub fn get_preferred_port() -> u16 {
     cli_manager::load_meta().preferred_port.unwrap_or(19420)

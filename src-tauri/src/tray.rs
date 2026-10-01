@@ -438,7 +438,7 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             "quick_sync" => {
                 let app = app.clone();
                 tauri::async_runtime::spawn(async move {
-                    crate::handle_quick_sync(&app).await;
+                    let _ = crate::handle_quick_sync(&app, true).await;
                     services::oplog_watch::refresh_badges(&app).await;
                 });
             }
