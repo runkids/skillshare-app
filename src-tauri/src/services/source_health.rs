@@ -350,7 +350,7 @@ fn update_tray(app: &AppHandle, health: &SourceHealth) {
 }
 
 /// Collect copies skills into the source, so ask before changing it.
-fn confirm_collect(app: &AppHandle) {
+pub(crate) fn confirm_collect(app: &AppHandle) {
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
         let skills = app
@@ -387,7 +387,7 @@ fn confirm_collect(app: &AppHandle) {
 }
 
 /// Run a CLI action for the active project, report the result, then re-check.
-fn spawn_action(app: &AppHandle, args: &[&str], label: &'static str) {
+pub(crate) fn spawn_action(app: &AppHandle, args: &[&str], label: &'static str) {
     let app = app.clone();
     let args: Vec<String> = args.iter().map(|a| a.to_string()).collect();
     tauri::async_runtime::spawn(async move {
