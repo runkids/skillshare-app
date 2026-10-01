@@ -291,8 +291,8 @@ pub async fn exec(
         let raw = String::from_utf8_lossy(&output.stdout).trim().to_string();
         Ok(strip_ansi(&raw))
     } else {
-        let stderr = strip_ansi(&String::from_utf8_lossy(&output.stderr).trim().to_string());
-        let stdout = strip_ansi(&String::from_utf8_lossy(&output.stdout).trim().to_string());
+        let stderr = strip_ansi(String::from_utf8_lossy(&output.stderr).trim());
+        let stdout = strip_ansi(String::from_utf8_lossy(&output.stdout).trim());
         Err(format!(
             "CLI exited with {}: {}",
             output.status,

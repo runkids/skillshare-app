@@ -28,14 +28,17 @@ const sizeClasses = {
   md: 'px-2 py-0.5 text-xs',
 };
 
-export default function Badge({ children, variant = 'default', size = 'sm', dot = false }: BadgeProps) {
+export default function Badge({
+  children,
+  variant = 'default',
+  size = 'sm',
+  dot = false,
+}: BadgeProps) {
   return (
     <span
       className={`ss-badge inline-flex items-center gap-1 font-medium rounded-[var(--radius-sm)] ${variants[variant]} ${sizeClasses[size]}`}
     >
-      {dot && (
-        <span className={`w-1.5 h-1.5 rounded-full ${dotColors[variant]}`} />
-      )}
+      {dot && <span className={`w-1.5 h-1.5 rounded-full ${dotColors[variant]}`} />}
       {children}
     </span>
   );

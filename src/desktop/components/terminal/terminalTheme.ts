@@ -1,8 +1,8 @@
 import type { ITheme, ITerminalOptions } from '@xterm/xterm';
 
 export const terminalTheme: ITheme = {
-  background: '#030712',    // gray-950
-  foreground: '#e5e7eb',    // gray-200
+  background: '#030712', // gray-950
+  foreground: '#e5e7eb', // gray-200
   cursor: '#e5e7eb',
   cursorAccent: '#030712',
   selectionBackground: '#374151', // gray-700
