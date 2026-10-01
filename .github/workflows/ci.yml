@@ -58,6 +58,10 @@ jobs:
         with:
           version: 2026.9.11
 
+      # mise installs Rust with the minimal profile, which omits these.
+      - name: Install Rust components
+        run: rustup component add rustfmt clippy
+
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
