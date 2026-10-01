@@ -4,7 +4,7 @@ How the Rust backend in `src-tauri/` fits together.
 
 ## Process model
 
-- `lib.rs:run` registers the plugins, the managed state (`ServerManager`, `UpdateState`, `AutoSyncState`) and the commands. `setup` then:
+- `lib.rs:run` registers the plugins, the managed state (`ServerManager`, `UpdateState`, `AutoSyncState`, `QuickActionsState`) and the commands. `setup` then:
   - builds the window, the tray and the macOS menu;
   - spawns `update_watch::spawn_background` and `auto_sync::refresh`;
   - loads the login-shell PATH;
@@ -16,7 +16,7 @@ How the Rust backend in `src-tauri/` fits together.
   - Navigation: web links to non-local hosts open in the browser. `localhost`, `127.0.0.1`, `[::1]` and `tauri.localhost` stay in the window.
   - Downloads: the default destination is kept, with a notification when done.
 - Closing the window hides it unless `APP_QUITTING` is set. Only the tray's Quit sets it; Quit stops the server, then calls `exit(0)`. `RunEvent::ExitRequested` also stops the server. On macOS, `RunEvent::Reopen` shows the window.
-- Tray menu: Quick Sync, Open, the active project label (disabled, `TrayProjectItem`), Check for Updates…, Quit. Left-click shows the window.
+- Tray menu: Quick Sync, Quick Actions…, Open, the active project label (disabled, `TrayProjectItem`), Check for Updates…, Quit. Left-click shows the window.
 - On macOS, "Check for Updates…" is also inserted under About. `app.on_menu_event` handles it from both menus and emits `check-for-updates`.
 
 ## Backend modules
@@ -25,6 +25,8 @@ How the Rust backend in `src-tauri/` fits together.
 - `commands/project.rs`: project CRUD and switch. Each change refreshes the tray label and the watcher.
 - `commands/server.rs`: start, stop, health check and port.
 - `commands/app.rs`: app state, settings in `CliMeta`, updates, logs folder, diagnostics, `reset_all_data`.
+- `commands/quick_actions.rs`: debounced search support, non-interactive skill install/create, active-project checks and shortcut settings.
+- `services/quick_actions.rs`: official global-shortcut plugin, registration and the small `quick-actions` window.
 - `commands/terminal.rs`: `get_pty_env`.
 - `services/cli_manager.rs`: CLI discovery (`which`/`where`, then `%LOCALAPPDATA%\Programs\skillshare` on Windows, then app `bin/`), `exec`, version cache, installers, release download, terminal symlink, `CliMeta` load and save.
 - `services/server_manager.rs`: the server supervisor.
@@ -81,7 +83,7 @@ How the Rust backend in `src-tauri/` fits together.
   - `logs/app.log` (Info level, 1 MB, one rotated file) and `logs/server.log`.
 - `CliMeta` fields:
   - install: `version`, `path`, `source`, `installed_at`, `binary_modified_ms`;
-  - settings: `preferred_port`, `notify_sync`, `notify_update`, `auto_sync`;
+  - settings: `preferred_port`, `notify_sync`, `notify_update`, `auto_sync`, `quick_actions_enabled`, `quick_actions_shortcut`;
   - update tracking: `last_update_check`, `notified_cli_version`, `notified_app_version`, `notified_skill_updates`.
 - Project store rules:
   - A corrupt `projects.json` is moved to `projects.json.corrupt-<ts>`.
@@ -92,6 +94,14 @@ How the Rust backend in `src-tauri/` fits together.
 - `build_env_for_child` builds PATH in this order: the login PATH, the tool dirs (Volta, fnm, Homebrew, `/usr/local/bin`, Cargo, Go, `~/bin`, `~/.local/bin`), then the process PATH. Duplicates are dropped, joined with the platform separator. It also sets `HOME`, `LANG`/`LC_ALL`, `TERM`, `SSH_AUTH_SOCK` and `SHELL`.
 - On Windows, `install_cli` skips this environment and spawns with `CREATE_NO_WINDOW`.
 
+## Quick Actions
+
+- The default global shortcut is Command+Shift+K on macOS, Control+Shift+K elsewhere. General settings can change or disable it; the tray action still works when disabled. A registration conflict is shown in settings and never prevents app startup.
+- The `quick-actions` window opens `index.html?quick-actions=1`, stays above other windows, and hides on Escape or close. Window creation runs on a blocking worker outside event handlers to avoid a WebView2 deadlock on Windows. The official `tauri-plugin-global-shortcut` runs entirely in Rust; the main capability allows shortcut registration, unregistration and status reads, and the palette capability permits events only.
+- CLI calls use the active project's directory and explicit `--project`/`--global` mode. Before install/create, the backend checks the project ID shown by the palette so switching projects cannot silently redirect the mutation.
+- Search parses the CLI's PascalCase JSON and times out after 20s. Install uses `--kind skill` with either `--yes` (all skills at the reviewed source) or `--skill` (the search result's selector), with a 120s timeout; `--yes` and `--skill` are mutually exclusive; it keeps audits and overwrite checks. Never use install `--json` here: it implies `--force --all`.
+- New skill uses `--pattern none` to avoid the interactive wizard, times out after 30s, then opens the created SKILL.md through the opener plugin (reveals it if opening fails). All execution uses `cli_manager::exec` with `kill_on_drop`.
+
 ## Events and commands
 
 | Event | Constant | Payload |
@@ -101,6 +111,7 @@ How the Rust backend in `src-tauri/` fits together.
 | `updates-available` | `update_watch.rs:UPDATES_EVENT` | `AvailableUpdates` |
 | `check-for-updates` | `update_watch.rs:CHECK_REQUESTED_EVENT` (emitted in `lib.rs`) | none |
 | `sync-completed` | `lib.rs:SYNC_COMPLETED_EVENT` | none |
+| `quick-actions-opened` | `quick_actions.rs:OPENED_EVENT` | none |
 | `cli-install-output` | `cli_manager.rs:INSTALL_OUTPUT_EVENT` | `{stream, line}` |
 
 To add a command:
