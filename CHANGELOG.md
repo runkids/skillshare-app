@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/runkids/skillshare-app/compare/v0.2.0...v0.3.0) (2026-10-01)
+
+
+### Features
+
+* **status:** open the Web UI page instead of running panel actions ([#56](https://github.com/runkids/skillshare-app/issues/56)) ([55a3010](https://github.com/runkids/skillshare-app/commit/55a3010301bf27ff1fb79cc60d0483958a2bca41))
+
 ## [0.2.0](https://github.com/runkids/skillshare-app/compare/v0.1.0...v0.2.0) (2026-10-01)
 
 
