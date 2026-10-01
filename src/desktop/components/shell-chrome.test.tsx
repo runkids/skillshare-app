@@ -111,7 +111,8 @@ describe('TitleBar shortcuts', () => {
   it('shows the Quick Sync summary when it finishes', async () => {
     renderWithUA(<TitleBar />, MAC_UA);
     fireEvent.click(screen.getByRole('button', { name: 'Quick Sync' }));
-    expect(await screen.findByText(/^Synced to 1 target/)).toHaveAttribute('role', 'status');
+    await screen.findByText(/^Synced to 1 target/);
+    expect(screen.getByRole('status')).toHaveTextContent('Synced to 1 target');
   });
 
   it('shows the Quick Sync error when it fails', async () => {
