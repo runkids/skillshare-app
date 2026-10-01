@@ -7,6 +7,7 @@ import { useTauri } from '../context/TauriContext';
 import { useProjects } from '../context/ProjectContext';
 import { isMacOS } from '../utils/platform';
 import { useUpdates } from '../hooks/useUpdates';
+import SourceHealthBadge from './SourceHealthBadge';
 import appIcon from '../../../src-tauri/icons/64x64.png';
 
 // TODO: re-enable Web UI / Terminal tab switcher when terminal feature is ready
@@ -101,6 +102,7 @@ export default function TitleBar() {
           {skillUpdates} skill update{skillUpdates === 1 ? '' : 's'}
         </button>
       )}
+      <SourceHealthBadge />
       {appInfo?.serverRunning && (
         <span className="flex items-center gap-1.5 h-[26px] px-2.5 rounded-[var(--r-btn)] bg-[var(--ok-bg)] text-[var(--ok)] text-xs">
           <span className="w-1.5 h-1.5 rounded-full bg-[var(--ok)]" />

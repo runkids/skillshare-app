@@ -21,6 +21,9 @@ pub struct CliMeta {
     /// Skills with updates as of the last notification, so the same set is announced once.
     #[serde(default)]
     pub notified_skill_updates: Vec<String>,
+    /// Source health findings as of the last notification, so each is announced once.
+    #[serde(default)]
+    pub notified_source_health: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
