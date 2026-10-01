@@ -1,8 +1,15 @@
 name: Update Homebrew
 
 on:
+  # A release published by hand. Releases published by release.yml use a token
+  # whose events start no workflows, so it calls this workflow directly.
   release:
     types: [published]
+  workflow_call:
+    inputs:
+      tag_name:
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -10,13 +17,13 @@ permissions:
 jobs:
   update-homebrew:
     runs-on: ubuntu-latest
-    if: startsWith(github.event.release.tag_name, 'v')
+    if: startsWith(inputs.tag_name || github.event.release.tag_name, 'v')
 
     steps:
       - name: Get version from release tag
         id: version
         env:
-          TAG_NAME: ${{ github.event.release.tag_name }}
+          TAG_NAME: ${{ inputs.tag_name || github.event.release.tag_name }}
         run: |
           echo "VERSION=${TAG_NAME#v}" >> "$GITHUB_OUTPUT"
 

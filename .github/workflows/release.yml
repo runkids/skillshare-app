@@ -219,11 +219,20 @@ jobs:
     needs: [prepare-release, build-macos, build-windows, build-linux]
     runs-on: ubuntu-latest
     steps:
-      - name: Report completed draft
+      # Only reached when every platform built, so a failed build stays a draft.
+      - name: Publish release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ needs.prepare-release.outputs.tag_name }}
         run: |
+          gh release edit "$RELEASE_TAG" --draft=false --latest
           RELEASE_URL=$(gh release view "$RELEASE_TAG" --json url --jq '.url')
-          echo "All three platform builds succeeded. [Review and publish the draft]($RELEASE_URL). Publishing triggers the Homebrew update." >> "$GITHUB_STEP_SUMMARY"
+          echo "All three platform builds succeeded and [the release]($RELEASE_URL) is published." >> "$GITHUB_STEP_SUMMARY"
+
+  update-homebrew:
+    needs: [prepare-release, release-ready]
+    uses: ./.github/workflows/update-homebrew.yml
+    with:
+      tag_name: ${{ needs.prepare-release.outputs.tag_name }}
+    secrets: inherit
