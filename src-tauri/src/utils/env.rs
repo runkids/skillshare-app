@@ -39,8 +39,9 @@ fn merge_path(parts: &[String]) -> String {
 }
 
 /// Build a HashMap of environment variables suitable for child PTY processes.
-/// Prepends common tool paths (Volta, fnm, Homebrew, Cargo, Go, ~/bin, ~/.local/bin)
-/// to the system PATH so that CLIs installed via those managers are discoverable.
+/// PATH is the login shell's PATH, then common tool paths (Volta, fnm, Homebrew,
+/// Cargo, Go, ~/bin, ~/.local/bin), then the process PATH, so that CLIs installed
+/// via those managers are discoverable.
 pub fn build_env_for_child() -> HashMap<String, String> {
     let mut env: HashMap<String, String> = HashMap::new();
 

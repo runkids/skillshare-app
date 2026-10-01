@@ -179,7 +179,6 @@ fn unannounced(
     lines
 }
 
-/// Check the CLI, the app, and skills, publish the result, and notify while the app is in the background.
 /// Re-check only skills after the skills source changed, e.g. when the user updated
 /// them in the Web UI, so the badge clears without waiting for the daily check.
 pub async fn refresh_skills(app: &AppHandle) {
@@ -214,6 +213,7 @@ fn forget_cleared(notified: &mut Vec<String>, current: &[String]) -> bool {
     notified.len() != before
 }
 
+/// Check the CLI, the app, and skills, publish the result, and notify while the app is in the background.
 pub async fn check(app: &AppHandle, notify: bool) -> AvailableUpdates {
     let mut meta = cli_manager::load_meta();
     if let Err(e) = cli_manager::refresh_cached_version(&mut meta).await {
