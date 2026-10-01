@@ -5,7 +5,11 @@ import TitleBar from './TitleBar';
 import ProjectDropdown from './ProjectDropdown';
 
 const { reloadView } = vi.hoisted(() => ({ reloadView: vi.fn() }));
-const updates = vi.hoisted(() => ({ cli: null as string | null, app: null as string | null }));
+const updates = vi.hoisted(() => ({
+  cli: null as string | null,
+  app: null as string | null,
+  skills: [] as string[],
+}));
 
 vi.mock('../hooks/useUpdates', () => ({ useUpdates: () => updates }));
 
@@ -45,6 +49,7 @@ function renderWithUA(ui: React.ReactElement, userAgent: string) {
 afterEach(() => {
   updates.cli = null;
   updates.app = null;
+  updates.skills = [];
   vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -84,6 +89,26 @@ describe('TitleBar update badge', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Settings, update available' }));
     expect(screen.getByTestId('location')).toHaveTextContent('/settings?tab=cli');
+  });
+});
+
+describe('TitleBar skill updates badge', () => {
+  it('is hidden when no skill has an update', () => {
+    renderWithUA(<TitleBar />, MAC_UA);
+    expect(screen.queryByRole('button', { name: /skill update/ })).not.toBeInTheDocument();
+  });
+
+  it('opens the Web UI updates tab with the count shown', () => {
+    updates.skills = ['pdf', 'xlsx'];
+    renderWithUA(
+      <>
+        <TitleBar />
+        <LocationProbe />
+      </>,
+      MAC_UA
+    );
+    fireEvent.click(screen.getByRole('button', { name: '2 skill updates' }));
+    expect(screen.getByTestId('location')).toHaveTextContent('/skills?tab=updates');
   });
 });
 

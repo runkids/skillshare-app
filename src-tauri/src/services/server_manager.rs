@@ -225,7 +225,7 @@ fn with_server_output(message: String) -> String {
     }
 }
 
-fn tail(text: &str, lines: usize) -> &str {
+pub(crate) fn tail(text: &str, lines: usize) -> &str {
     let text = text.trim_end();
     let start = text
         .rmatch_indices('\n')

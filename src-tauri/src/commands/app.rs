@@ -1,6 +1,8 @@
 use crate::models::app_state::{AppInfo, OnboardingStatus};
 use crate::models::project::ProjectType;
-use crate::services::{cli_manager, project_store, server_manager::ServerManager, update_watch};
+use crate::services::{
+    auto_sync, cli_manager, project_store, server_manager::ServerManager, update_watch,
+};
 use tauri::State;
 
 /// Check if the Global project's config.yaml actually exists on disk.
@@ -82,6 +84,20 @@ pub fn set_notify_sync(enabled: bool) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn get_auto_sync() -> bool {
+    cli_manager::load_meta().auto_sync.unwrap_or(false)
+}
+
+#[tauri::command]
+pub fn set_auto_sync(app: tauri::AppHandle, enabled: bool) -> Result<(), String> {
+    let mut meta = cli_manager::load_meta();
+    meta.auto_sync = Some(enabled);
+    cli_manager::save_meta(&meta)?;
+    auto_sync::refresh(&app);
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn get_available_updates(
     state: State<'_, update_watch::UpdateState>,
 ) -> Result<update_watch::AvailableUpdates, String> {
@@ -117,6 +133,49 @@ pub fn open_logs_folder(app: tauri::AppHandle) -> Result<(), String> {
         .map_err(|e| format!("Could not open {}: {e}", dir.display()))
 }
 
+/// Write a diagnostics report to Downloads and reveal it, so users can attach it to a bug report.
+#[tauri::command]
+pub async fn export_diagnostics(
+    app: tauri::AppHandle,
+    server: State<'_, ServerManager>,
+) -> Result<String, String> {
+    use crate::services::diagnostics::{build_report, redact_home, DiagnosticsInput};
+    use tauri_plugin_opener::OpenerExt;
+
+    crate::utils::env::load_login_shell_path().await;
+    let logs = crate::utils::paths::logs_dir();
+    let input = DiagnosticsInput {
+        app_version: app.package_info().version.to_string(),
+        os: std::env::consts::OS.to_string(),
+        arch: std::env::consts::ARCH.to_string(),
+        meta: cli_manager::load_meta(),
+        server_running: server.is_running().await,
+        server_port: server.get_port().await,
+        login_shell_path: crate::utils::env::login_shell_path(),
+        app_log: std::fs::read_to_string(logs.join("app.log")).unwrap_or_default(),
+        server_log: std::fs::read_to_string(logs.join("server.log")).unwrap_or_default(),
+    };
+    let home = dirs::home_dir().map(|h| h.to_string_lossy().into_owned());
+    let report = build_report(&input, home.as_deref());
+
+    let dir = dirs::download_dir()
+        .or_else(dirs::home_dir)
+        .ok_or("Could not find the Downloads folder")?;
+    let stamp = chrono::Local::now().format("%Y%m%d-%H%M%S");
+    let path = dir.join(format!("skillshare-app-diagnostics-{stamp}.txt"));
+    std::fs::write(&path, report)
+        .map_err(|e| format!("Could not write {}: {e}", path.display()))?;
+    app.opener()
+        .reveal_item_in_dir(&path)
+        .map_err(|e| format!("Could not reveal {}: {e}", path.display()))?;
+
+    let shown = path.to_string_lossy();
+    Ok(match home.as_deref() {
+        Some(home) => redact_home(&shown, home),
+        None => shown.into_owned(),
+    })
+}
+
 #[tauri::command]
 pub async fn reset_all_data(
     app: tauri::AppHandle,
@@ -133,6 +192,7 @@ pub async fn reset_all_data(
     let store = crate::models::project::ProjectStore::default();
     project_store::save(&store)?;
     crate::refresh_tray_project_label(&app);
+    auto_sync::refresh(&app);
 
     Ok(())
 }

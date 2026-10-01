@@ -18,6 +18,11 @@ pub async fn load_login_shell_path() {
         .await;
 }
 
+/// The login shell's PATH, if it has been read.
+pub fn login_shell_path() -> Option<String> {
+    LOGIN_SHELL_PATH.get().cloned().flatten()
+}
+
 /// Join PATH entries in order, keeping the first copy of each directory.
 /// Uses the platform separator (`:` on Unix, `;` on Windows).
 fn merge_path(parts: &[String]) -> String {
