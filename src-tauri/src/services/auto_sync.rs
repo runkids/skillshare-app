@@ -79,6 +79,7 @@ async fn watch(app: AppHandle) {
                             crate::handle_quick_sync(&app).await;
                         }
                         update_watch::refresh_skills(&app).await;
+                        crate::services::source_health::refresh(&app, false).await;
                         let _ = done_tx.send(());
                     });
                 }
