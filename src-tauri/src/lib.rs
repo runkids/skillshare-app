@@ -188,7 +188,18 @@ fn setup_system_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
         .build()?;
 
     let mut tray = TrayIconBuilder::new();
-    if let Some(icon) = app.default_window_icon() {
+    // macOS menu bar icons are monochrome templates that the system tints
+    // for light and dark menu bars; other platforms keep the colour icon.
+    #[cfg(target_os = "macos")]
+    let template_icon =
+        tauri::image::Image::from_bytes(include_bytes!("../icons/tray-template.png"))
+            .inspect_err(|e| log::warn!("Failed to load tray template icon: {e}"))
+            .ok();
+    #[cfg(not(target_os = "macos"))]
+    let template_icon: Option<tauri::image::Image<'static>> = None;
+    if let Some(icon) = template_icon {
+        tray = tray.icon(icon).icon_as_template(true);
+    } else if let Some(icon) = app.default_window_icon() {
         tray = tray.icon(icon.clone());
     }
     let _tray = tray
