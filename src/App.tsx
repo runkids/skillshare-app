@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/queryClient';
-import { ToastProvider } from './components/Toast';
 import { ThemeProvider } from './context/ThemeContext';
 import { TauriProvider, useTauri } from './desktop/context/TauriContext';
 import { ProjectProvider } from './desktop/context/ProjectContext';
@@ -27,28 +26,26 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <ToastProvider>
-          <TauriProvider>
-            <ProjectProvider>
-              <TerminalProvider>
-                <BrowserRouter>
-                  <ErrorBoundary>
-                    <UpdateCheckListener />
-                    <div className="h-screen flex flex-col">
-                      <OnboardingGuard>
-                        <Routes>
-                          <Route path="/onboarding" element={<OnboardingPage />} />
-                          <Route path="/settings" element={<SettingsPage />} />
-                          <Route path="/*" element={<MainView />} />
-                        </Routes>
-                      </OnboardingGuard>
-                    </div>
-                  </ErrorBoundary>
-                </BrowserRouter>
-              </TerminalProvider>
-            </ProjectProvider>
-          </TauriProvider>
-        </ToastProvider>
+        <TauriProvider>
+          <ProjectProvider>
+            <TerminalProvider>
+              <BrowserRouter>
+                <ErrorBoundary>
+                  <UpdateCheckListener />
+                  <div className="h-screen flex flex-col">
+                    <OnboardingGuard>
+                      <Routes>
+                        <Route path="/onboarding" element={<OnboardingPage />} />
+                        <Route path="/settings" element={<SettingsPage />} />
+                        <Route path="/*" element={<MainView />} />
+                      </Routes>
+                    </OnboardingGuard>
+                  </div>
+                </ErrorBoundary>
+              </BrowserRouter>
+            </TerminalProvider>
+          </ProjectProvider>
+        </TauriProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

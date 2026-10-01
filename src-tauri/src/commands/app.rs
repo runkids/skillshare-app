@@ -45,22 +45,6 @@ pub async fn get_app_state(server: State<'_, ServerManager>) -> Result<AppInfo, 
 }
 
 #[tauri::command]
-pub fn get_onboarding_status() -> Result<OnboardingStatus, String> {
-    let meta = cli_manager::load_meta();
-    let store = project_store::load();
-
-    let cli_ready = meta.version.is_some();
-    let config_exists = global_config_exists(&store);
-
-    Ok(OnboardingStatus {
-        completed: cli_ready && config_exists,
-        cli_ready,
-        first_project_created: config_exists,
-        first_sync_done: false,
-    })
-}
-
-#[tauri::command]
 pub fn get_preferred_port() -> u16 {
     cli_manager::load_meta().preferred_port.unwrap_or(19420)
 }
@@ -73,13 +57,6 @@ pub fn set_preferred_port(port: u16) -> Result<(), String> {
     let mut meta = cli_manager::load_meta();
     meta.preferred_port = Some(port);
     cli_manager::save_meta(&meta)
-}
-
-#[tauri::command]
-pub fn get_preferred_theme() -> String {
-    cli_manager::load_meta()
-        .preferred_theme
-        .unwrap_or_else(|| "system".to_string())
 }
 
 #[tauri::command]
