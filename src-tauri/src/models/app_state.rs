@@ -12,6 +12,8 @@ pub struct CliMeta {
     pub preferred_theme: Option<String>,
     pub notify_sync: Option<bool>,
     pub notify_update: Option<bool>,
+    /// Sync automatically when the skills source changes; off unless the user opts in.
+    pub auto_sync: Option<bool>,
     /// Binary mtime (ms since epoch) when `version` was read; detects upgrades made outside the app.
     pub binary_modified_ms: Option<u64>,
     /// Last versions announced by a notification, so each release is announced once.
