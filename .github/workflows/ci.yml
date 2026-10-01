@@ -73,13 +73,16 @@ jobs:
 
       # The runner's apt mirror often stalls on single packages; keep the
       # downloaded .debs so most runs need the network only for the index.
-      - name: Cache apt packages
-        uses: actions/cache@v4
+      - name: Restore apt packages
+        id: apt-restore
+        uses: actions/cache/restore@v4
         with:
           path: ~/apt-cache
-          key: apt-${{ runner.os }}-webkit2gtk-4.1-v1
+          key: apt-${{ runner.os }}-webkit2gtk-4.1-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: apt-${{ runner.os }}-webkit2gtk-4.1-v1-
 
       - name: Install Linux dependencies
+        id: apt-install
         timeout-minutes: 10
         env:
           DEBIAN_FRONTEND: noninteractive
@@ -88,7 +91,20 @@ jobs:
           apt_opts=(-o Dir::Cache::Archives="$HOME/apt-cache" -o Acquire::Retries=5 -o Acquire::http::Timeout=20)
           sudo apt-get "${apt_opts[@]}" update
           sudo apt-get "${apt_opts[@]}" install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
-          sudo chown -R "$USER" ~/apt-cache
+
+      # Save on a miss, and even after a timeout, so the packages fetched so far
+      # are kept for the rerun. A run that restored and installed adds nothing.
+      - name: Prepare apt packages for saving
+        id: apt-prepare
+        if: always() && (steps.apt-restore.outputs.cache-matched-key == '' || steps.apt-install.outcome != 'success')
+        run: sudo chown -R "$USER" ~/apt-cache && rm -rf ~/apt-cache/partial ~/apt-cache/lock
+
+      - name: Save apt packages
+        if: always() && steps.apt-prepare.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/apt-cache
+          key: apt-${{ runner.os }}-webkit2gtk-4.1-v1-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
