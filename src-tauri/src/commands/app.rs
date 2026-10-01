@@ -165,9 +165,10 @@ pub async fn export_diagnostics(
     let path = dir.join(format!("skillshare-app-diagnostics-{stamp}.txt"));
     std::fs::write(&path, report)
         .map_err(|e| format!("Could not write {}: {e}", path.display()))?;
-    app.opener()
-        .reveal_item_in_dir(&path)
-        .map_err(|e| format!("Could not reveal {}: {e}", path.display()))?;
+    // The report is saved either way; a missing file manager must not read as a failed export.
+    if let Err(e) = app.opener().reveal_item_in_dir(&path) {
+        log::warn!("Could not reveal {}: {e}", path.display());
+    }
 
     let shown = path.to_string_lossy();
     Ok(match home.as_deref() {
