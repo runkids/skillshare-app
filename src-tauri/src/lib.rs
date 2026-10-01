@@ -74,6 +74,7 @@ pub fn run() {
             commands::app::set_notify_sync,
             commands::app::get_available_updates,
             commands::app::open_logs_folder,
+            commands::app::export_diagnostics,
             commands::app::check_updates_now,
             commands::app::get_notify_update,
             commands::app::set_notify_update,
