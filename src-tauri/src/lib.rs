@@ -44,7 +44,6 @@ pub fn run() {
             commands::cli::detect_cli,
             commands::cli::get_cli_version,
             commands::cli::download_cli,
-            commands::cli::check_cli_update,
             commands::cli::upgrade_cli,
             commands::cli::run_cli,
             commands::cli::get_global_config_dir,
@@ -62,15 +61,12 @@ pub fn run() {
             // Server commands
             commands::server::start_server,
             commands::server::stop_server,
-            commands::server::restart_server,
             commands::server::server_health_check,
             commands::server::get_server_port,
             // App commands
             commands::app::get_app_state,
-            commands::app::get_onboarding_status,
             commands::app::get_preferred_port,
             commands::app::set_preferred_port,
-            commands::app::get_preferred_theme,
             commands::app::set_preferred_theme,
             commands::app::get_notify_sync,
             commands::app::set_notify_sync,

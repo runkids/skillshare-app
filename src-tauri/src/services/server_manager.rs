@@ -179,17 +179,6 @@ impl ServerManager {
         Ok(())
     }
 
-    /// Restart the server with updated parameters.
-    /// Note: start() already calls stop() internally, no need to double-stop.
-    pub async fn restart(
-        &self,
-        cli_path: &str,
-        project_dir: Option<&str>,
-        is_project_mode: bool,
-    ) -> Result<u16, String> {
-        self.start(cli_path, project_dir, is_project_mode).await
-    }
-
     /// Check if the server is currently responding on its port.
     pub async fn is_running(&self) -> bool {
         let port = self.get_port().await;
