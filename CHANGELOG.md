@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.12](https://github.com/runkids/skillshare-app/compare/v0.0.11...v0.0.12) (2026-10-01)
+
+
+### Bug Fixes
+
+* keep logs and give the CLI server the user's PATH ([#13](https://github.com/runkids/skillshare-app/issues/13)) ([d5766ad](https://github.com/runkids/skillshare-app/commit/d5766adaa7be8d5c74bbc6fa9e7032959f813b88))
+
 ## [0.0.11](https://github.com/runkids/skillshare-app/compare/v0.0.10...v0.0.11) (2026-10-01)
 
 
