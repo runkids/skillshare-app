@@ -1,6 +1,8 @@
 use crate::models::app_state::{AppInfo, OnboardingStatus};
 use crate::models::project::ProjectType;
-use crate::services::{cli_manager, project_store, server_manager::ServerManager, update_watch};
+use crate::services::{
+    auto_sync, cli_manager, project_store, server_manager::ServerManager, update_watch,
+};
 use tauri::State;
 
 /// Check if the Global project's config.yaml actually exists on disk.
@@ -105,6 +107,20 @@ pub fn set_notify_sync(enabled: bool) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn get_auto_sync() -> bool {
+    cli_manager::load_meta().auto_sync.unwrap_or(false)
+}
+
+#[tauri::command]
+pub fn set_auto_sync(app: tauri::AppHandle, enabled: bool) -> Result<(), String> {
+    let mut meta = cli_manager::load_meta();
+    meta.auto_sync = Some(enabled);
+    cli_manager::save_meta(&meta)?;
+    auto_sync::refresh(&app);
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn get_available_updates(
     state: State<'_, update_watch::UpdateState>,
 ) -> Result<update_watch::AvailableUpdates, String> {
@@ -199,6 +215,7 @@ pub async fn reset_all_data(
     let store = crate::models::project::ProjectStore::default();
     project_store::save(&store)?;
     crate::refresh_tray_project_label(&app);
+    auto_sync::refresh(&app);
 
     Ok(())
 }

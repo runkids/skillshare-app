@@ -38,6 +38,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(ServerManager::new())
         .manage(services::update_watch::UpdateState::default())
+        .manage(services::auto_sync::AutoSyncState::default())
         .invoke_handler(tauri::generate_handler![
             // CLI commands
             commands::cli::detect_cli,
@@ -73,6 +74,8 @@ pub fn run() {
             commands::app::set_preferred_theme,
             commands::app::get_notify_sync,
             commands::app::set_notify_sync,
+            commands::app::get_auto_sync,
+            commands::app::set_auto_sync,
             commands::app::get_available_updates,
             commands::app::open_logs_folder,
             commands::app::export_diagnostics,
@@ -97,6 +100,7 @@ pub fn run() {
             });
 
             services::update_watch::spawn_background(app.handle().clone());
+            services::auto_sync::refresh(app.handle());
 
             tauri::async_runtime::spawn(utils::env::load_login_shell_path());
 
@@ -267,7 +271,11 @@ const SYNC_COMPLETED_EVENT: &str = "sync-completed";
 /// Long enough for a slow git pull, short enough that a hung prompt doesn't block forever.
 const QUICK_SYNC_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(120);
 
+/// Held for a whole sync so tray and auto-sync runs never overlap.
+static SYNC_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
 async fn handle_quick_sync(app: &tauri::AppHandle) {
+    let _running = SYNC_LOCK.lock().await;
     let meta = services::cli_manager::load_meta();
     let cli_path = match services::cli_manager::detect_cli().await {
         Some(p) => p,

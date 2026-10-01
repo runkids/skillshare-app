@@ -1,3 +1,4 @@
+pub mod auto_sync;
 pub mod cli_manager;
 pub mod diagnostics;
 pub mod project_store;
