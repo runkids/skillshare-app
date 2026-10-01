@@ -40,6 +40,7 @@ pub fn run() {
         .manage(services::update_watch::UpdateState::default())
         .manage(services::auto_sync::AutoSyncState::default())
         .manage(services::source_health::SourceHealthState::default())
+        .manage(services::audit::AuditState::default())
         .invoke_handler(tauri::generate_handler![
             // CLI commands
             commands::cli::detect_cli,
@@ -80,6 +81,7 @@ pub fn run() {
             commands::app::set_notify_update,
             commands::app::reset_all_data,
             commands::source_health::get_source_health,
+            commands::audit::get_audit_report,
             // Activity commands
             commands::activity::get_activity,
             // Terminal commands

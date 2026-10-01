@@ -4,7 +4,7 @@ How the Rust backend in `src-tauri/` fits together.
 
 ## Process model
 
-- `lib.rs:run` registers the plugins, the managed state (`ServerManager`, `UpdateState`, `AutoSyncState`, `SourceHealthState`) and the commands. `setup` then:
+- `lib.rs:run` registers the plugins, the managed state (`ServerManager`, `UpdateState`, `AutoSyncState`, `SourceHealthState`, `AuditState`) and the commands. `setup` then:
   - builds the window, the tray and the macOS menu;
   - spawns `update_watch::spawn_background`, `auto_sync::refresh` and `source_health::spawn_background`;
   - loads the login-shell PATH;
@@ -33,6 +33,7 @@ How the Rust backend in `src-tauri/` fits together.
 - `services/update_watch.rs`: app, CLI and per-kind resource update checks; `services/update_all.rs`: tray resource updates and sync.
 - `services/source_health.rs`: target drift and the source's git remote state; tray collect/push/pull.
 - `commands/source_health.rs`: `get_source_health`.
+- `services/audit.rs`: the security audit after changes; `commands/audit.rs`: `get_audit_report`.
 - `services/diagnostics.rs`: the report text, with home redacted to `~`.
 - `services/project_store.rs`: `projects.json`, the active project, `active_project_mode`.
 - `utils/env.rs`: the login-shell PATH and the child-process environment.
@@ -64,7 +65,7 @@ How the Rust backend in `src-tauri/` fits together.
   - The source dir comes from `skillshare status --json`; `notify` watches it recursively.
   - `is_source_change` ignores access events, `.git/` and editor or OS temp files.
   - `Scheduler` waits for 2s of quiet (`SETTLE`), never overlaps runs, and folds changes made during a run into one follow-up.
-  - Each run calls `handle_quick_sync` only if `auto_sync` is on (default off), then always calls `update_watch::refresh_skills` and `source_health::refresh(app, false)`.
+  - Each run calls `handle_quick_sync` and `audit::run` only if `auto_sync` is on (default off), then always calls `update_watch::refresh_skills` and `source_health::refresh(app, false)`.
 - `update_watch.rs`
   - `spawn_background` checks at launch, then wakes hourly and checks once 24h have passed since `last_update_check`. Only due checks may notify.
   - `check` gets the latest CLI (GitHub, `is_newer`), the latest app (updater), skills/repositories (`check --json`), agents (`check agents --json`, array or null), and managed plugins (`plugin check --json`, `update-available` changes deduplicated by package). Each CLI check has a 60s timeout; failures keep that kind's last list. Checks use the active project scope and serialize publication.
@@ -80,6 +81,11 @@ How the Rust backend in `src-tauri/` fits together.
   - Global mode only, since `push`/`pull` use the global config: `git status --porcelain=v2 --branch` in the source dir counts uncommitted paths and ahead/behind. A `fetch` (15s, `GIT_TERMINAL_PROMPT=0`) runs only on the timed check; a failed fetch keeps the last remote state.
   - Tray items are inserted after Quick Sync: "Collect N Local Skills…" (confirm dialog, then `collect --all --json`), "Push N Changes" (`push`, default message), "Pull N Updates" (`pull`). Each runs with a 120s timeout and notifies like Quick Sync.
   - Notifies only when unfocused and `notify_update` is on, for keys new to `notified_source_health` (`local:<skill>`, `behind:<n>`). Drift and unpushed work are badge-only.
+- `audit.rs`
+  - `run` is called at the end of Update All, a successful tray Pull and an auto-sync run. It only reports; nothing is blocked or rolled back.
+  - It runs `audit --format json --yes` and `audit agents --format json --yes` with the active mode (60s timeout each, `kill_on_drop`) over the whole source: Pull and auto-sync do not know which skills changed. `audit` exits non-zero at its block threshold, so stdout is parsed regardless of the exit code; a failed audit keeps the last findings.
+  - It stores LOW to CRITICAL findings (INFO dropped) in `AuditState`, most severe first, and emits `audit-report`. `AUDIT_LOCK` serializes runs; `project_changed` (project add/remove/switch) waits for it, then clears and emits.
+  - Notifies, if `notify_sync` is on, for HIGH/CRITICAL keys (`<kind>:<skill>:<fingerprint>`) new to `notified_audit_findings`, which is replaced by the current keys. LOW/MEDIUM are badge-only.
 - Diagnostics: `commands/app.rs:export_diagnostics` writes `skillshare-app-diagnostics-<stamp>.txt` to Downloads, reveals it, and returns the redacted path. It includes the last 200 lines of each log.
 
 ## State and files
@@ -93,7 +99,7 @@ How the Rust backend in `src-tauri/` fits together.
 - `CliMeta` fields:
   - install: `version`, `path`, `source`, `installed_at`, `binary_modified_ms`;
   - settings: `preferred_port`, `notify_sync`, `notify_update`, `auto_sync`;
-  - update tracking: `last_update_check`, `notified_cli_version`, `notified_app_version`, `notified_skill_updates`, `notified_repository_updates`, `notified_agent_updates`, `notified_plugin_updates`, `notified_source_health`.
+  - update tracking: `last_update_check`, `notified_cli_version`, `notified_app_version`, `notified_skill_updates`, `notified_repository_updates`, `notified_agent_updates`, `notified_plugin_updates`, `notified_source_health`, `notified_audit_findings`.
 - Project store rules:
   - A corrupt `projects.json` is moved to `projects.json.corrupt-<ts>`.
   - Duplicate paths are rejected after canonicalizing.
@@ -111,6 +117,7 @@ How the Rust backend in `src-tauri/` fits together.
 | `server-stopped` | `server_manager.rs:SERVER_STOPPED_EVENT` | none |
 | `updates-available` | `update_watch.rs:UPDATES_EVENT` | `AvailableUpdates` |
 | `source-health` | `source_health.rs:SOURCE_HEALTH_EVENT` | `SourceHealth` |
+| `audit-report` | `audit.rs:AUDIT_EVENT` | `AuditFinding[]` |
 | `check-for-updates` | `update_watch.rs:CHECK_REQUESTED_EVENT` (emitted in `lib.rs`) | none |
 | `sync-completed` | `lib.rs:SYNC_COMPLETED_EVENT` | none |
 | `cli-install-output` | `cli_manager.rs:INSTALL_OUTPUT_EVENT` | `{stream, line}` |

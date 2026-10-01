@@ -77,6 +77,7 @@ async fn watch(app: AppHandle) {
                         if cli_manager::load_meta().auto_sync.unwrap_or(false) {
                             log::info!("Auto-sync: source changed, syncing");
                             crate::handle_quick_sync(&app).await;
+                            crate::services::audit::run(&app).await;
                         }
                         update_watch::refresh_skills(&app).await;
                         crate::services::source_health::refresh(&app, false).await;

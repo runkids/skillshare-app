@@ -126,6 +126,7 @@ pub async fn run(app: &AppHandle) {
         let (title, body) = notification(&errors, checked, remaining);
         let _ = app.notification().builder().title(title).body(body).show();
     }
+    super::audit::run(app).await;
 }
 
 #[cfg(test)]
