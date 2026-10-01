@@ -15,6 +15,8 @@ const updates = vi.hoisted(() => ({
 }));
 
 vi.mock('../hooks/useUpdates', () => ({ useUpdates: () => updates }));
+const screenState = vi.hoisted(() => ({ fullscreen: false }));
+vi.mock('../hooks/useFullscreen', () => ({ useFullscreen: () => screenState.fullscreen }));
 
 function LocationProbe() {
   const { pathname, search } = useLocation();
@@ -50,6 +52,7 @@ function renderWithUA(ui: React.ReactElement, userAgent: string) {
 }
 
 afterEach(() => {
+  screenState.fullscreen = false;
   updates.cli = null;
   updates.app = null;
   updates.skills = [];
@@ -66,6 +69,12 @@ describe('TitleBar platform chrome', () => {
     const { container } = renderWithUA(<TitleBar />, MAC_UA);
     expect(container.firstChild).toHaveStyle({ paddingLeft: '84px' });
     expect(screen.queryByTestId('app-mark')).not.toBeInTheDocument();
+  });
+
+  it('drops the traffic-light gap in macOS full screen', () => {
+    screenState.fullscreen = true;
+    const { container } = renderWithUA(<TitleBar />, MAC_UA);
+    expect(container.firstChild).toHaveStyle({ paddingLeft: '12px' });
   });
 
   it('shows the app mark with tight padding on Windows/Linux', () => {

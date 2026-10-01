@@ -6,6 +6,7 @@ import { useTerminal } from '../context/TerminalContext';
 import { useProjects } from '../context/ProjectContext';
 import { isMacOS } from '../utils/platform';
 import { useUpdates } from '../hooks/useUpdates';
+import { useFullscreen } from '../hooks/useFullscreen';
 import StatusButton from './status/StatusButton';
 import ServerStatus from './ServerStatus';
 import appIcon from '../../../src-tauri/icons/64x64.png';
@@ -19,8 +20,10 @@ export default function TitleBar() {
   const hasUpdate = Boolean(updates.app || updates.cli);
   const { activeView, setActiveView, hasUnreadAny } = useTerminal();
   const { switching, reloadView } = useProjects();
-  // macOS draws native traffic lights over the window (titleBarStyle: Overlay).
-  const mac = isMacOS();
+  // macOS draws native traffic lights over the window (titleBarStyle: Overlay),
+  // except in full screen, where they are hidden.
+  const fullscreen = useFullscreen();
+  const mac = isMacOS() && !fullscreen;
   useEffect(() => {
     if (!SHOW_VIEW_TABS) return;
     function handleKeyDown(e: KeyboardEvent) {
