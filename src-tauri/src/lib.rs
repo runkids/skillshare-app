@@ -90,7 +90,6 @@ pub fn run() {
             commands::quick_actions::close_quick_actions,
             commands::quick_actions::quick_search,
             commands::quick_actions::quick_install,
-            commands::quick_actions::quick_new_skill,
             commands::source_health::get_source_health,
             commands::audit::get_audit_report,
             commands::status::check_status_now,

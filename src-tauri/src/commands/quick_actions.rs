@@ -1,7 +1,6 @@
 use crate::services::{cli_manager, project_store, quick_actions};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use tauri_plugin_opener::OpenerExt;
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all(deserialize = "PascalCase", serialize = "camelCase"))]
@@ -112,18 +111,6 @@ fn install_args(source: &str, skill: &str, mode: &str) -> Result<Vec<String>, St
     Ok(args)
 }
 
-fn validate_name(name: &str) -> Result<(), String> {
-    if name.is_empty()
-        || !name
-            .bytes()
-            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-')
-        || !name.as_bytes()[0].is_ascii_lowercase()
-    {
-        return Err("Use a lowercase name starting with a letter, with digits or hyphens.".into());
-    }
-    Ok(())
-}
-
 #[tauri::command]
 pub fn get_quick_actions_settings(
     app: tauri::AppHandle,
@@ -197,51 +184,6 @@ pub async fn quick_install(
     Ok(output)
 }
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct NewSkillResult {
-    path: String,
-    open_error: Option<String>,
-}
-
-#[tauri::command]
-pub async fn quick_new_skill(
-    app: tauri::AppHandle,
-    name: String,
-    project_id: String,
-) -> Result<NewSkillResult, String> {
-    validate_name(&name)?;
-    let context = cli_context(Some(&project_id)).await?;
-    let source = source_dir(&context).await?;
-    run(
-        &context,
-        vec![
-            "new".into(),
-            name.clone(),
-            "--pattern".into(),
-            "none".into(),
-            context.mode.into(),
-        ],
-        30,
-    )
-    .await?;
-    let path = std::path::Path::new(&source).join(name).join("SKILL.md");
-    let path = std::fs::canonicalize(&path)
-        .map_err(|e| format!("Skill created but could not locate SKILL.md: {e}"))?;
-    let open_error = app
-        .opener()
-        .open_path(path.to_string_lossy(), None::<&str>)
-        .err()
-        .map(|e| e.to_string());
-    if open_error.is_some() {
-        let _ = app.opener().reveal_item_in_dir(&path);
-    }
-    Ok(NewSkillResult {
-        path: path.to_string_lossy().into_owned(),
-        open_error,
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -281,13 +223,5 @@ mod tests {
         assert!(!selected.iter().any(|arg| arg == "--yes"));
         assert!(install_args("--force", "", "--global").is_err());
         assert!(install_args("", "", "--global").is_err());
-    }
-
-    #[test]
-    fn skill_names_cannot_escape_the_source_directory() {
-        for name in ["", "../outside", "Upper", "--force", "a/b", "a b"] {
-            assert!(validate_name(name).is_err(), "{name}");
-        }
-        assert!(validate_name("my-skill-2").is_ok());
     }
 }

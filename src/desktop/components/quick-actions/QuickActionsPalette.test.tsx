@@ -1,12 +1,12 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import QuickActionsPalette from './QuickActionsPalette';
+import { sourceFromQuery } from './useQuickActions';
 
 const mocks = vi.hoisted(() => ({
   context: vi.fn(),
   search: vi.fn(),
   install: vi.fn(),
-  create: vi.fn(),
   close: vi.fn(),
 }));
 vi.mock('@tauri-apps/api/core', () => ({ isTauri: () => false }));
@@ -16,7 +16,6 @@ vi.mock('../../api/tauri-bridge', () => ({
     getQuickActionsContext: mocks.context,
     quickSearch: mocks.search,
     quickInstall: mocks.install,
-    quickNewSkill: mocks.create,
     closeQuickActions: mocks.close,
   },
 }));
@@ -27,7 +26,6 @@ beforeEach(() => {
   mocks.context.mockResolvedValue({ projectId: 'p1', projectName: 'Work', sourceDir: '/skills' });
   mocks.search.mockResolvedValue([result]);
   mocks.install.mockResolvedValue('Installed pdf');
-  mocks.create.mockResolvedValue({ path: '/skills/new-skill/SKILL.md', openError: null });
   mocks.close.mockResolvedValue(undefined);
 });
 afterEach(() => vi.useRealTimers());
@@ -107,21 +105,15 @@ describe('Quick Actions', () => {
     expect(screen.getByText('Installed pdf')).toBeInTheDocument();
   });
 
-  it('creates a named skill and reports an editor failure without losing the created path', async () => {
-    await ready();
-    mocks.create.mockResolvedValueOnce({
-      path: '/skills/new-skill/SKILL.md',
-      openError: 'No editor',
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'New skill…' }));
-    fireEvent.change(screen.getByRole('textbox', { name: 'New skill name' }), {
-      target: { value: 'new-skill' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Create and open' }));
-    await screen.findByText(
-      'Created /skills/new-skill/SKILL.md. Could not open the editor: No editor'
-    );
-    expect(mocks.create).toHaveBeenCalledWith('new-skill', 'p1');
+  it('installs a pasted owner/repo source without searching', async () => {
+    const input = await ready();
+    fireEvent.change(input, { target: { value: 'anthropics/skills' } });
+    fireEvent.submit(input.closest('form')!);
+    expect(screen.getByText('Install anthropics/skills?')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Install' }));
+    await screen.findByText('Installed pdf');
+    expect(mocks.install).toHaveBeenCalledWith('anthropics/skills', '', 'p1');
+    expect(mocks.search).not.toHaveBeenCalled();
   });
 
   it('reports a failed installation and closes on Escape', async () => {
@@ -132,5 +124,20 @@ describe('Quick Actions', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Audit blocked installation');
     fireEvent.keyDown(window, { key: 'Escape' });
     await waitFor(() => expect(mocks.close).toHaveBeenCalledOnce());
+  });
+});
+
+describe('sourceFromQuery', () => {
+  it.each([
+    'https://github.com/org/repo',
+    'git@github.com:org/repo.git',
+    'org/repo',
+    'org/repo/skills/pdf',
+  ])('treats %s as a source', (query) => {
+    expect(sourceFromQuery(query)).toBe(query);
+  });
+
+  it.each(['pdf', 'pdf reader', '-x/y', ''])('treats %s as search words', (query) => {
+    expect(sourceFromQuery(query)).toBeNull();
   });
 });
