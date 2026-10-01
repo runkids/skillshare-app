@@ -19,6 +19,7 @@ export default function GeneralSettings() {
   const [resetting, setResetting] = useState(false);
   const [notifyUpdate, setNotifyUpdate] = useState(true);
   const [notifySync, setNotifySync] = useState(true);
+  const [autoSync, setAutoSync] = useState(false);
 
   useEffect(() => {
     tauriBridge.getPreferredPort().then((p) => setPort(String(p)));
@@ -29,6 +30,10 @@ export default function GeneralSettings() {
     tauriBridge
       .getNotifySync()
       .then(setNotifySync)
+      .catch(() => {});
+    tauriBridge
+      .getAutoSync()
+      .then(setAutoSync)
       .catch(() => {});
   }, []);
 
@@ -48,6 +53,16 @@ export default function GeneralSettings() {
       await tauriBridge.setNotifySync(enabled);
     } catch (err) {
       setNotifySync(!enabled);
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const handleAutoSync = async (enabled: boolean) => {
+    setAutoSync(enabled);
+    try {
+      await tauriBridge.setAutoSync(enabled);
+    } catch (err) {
+      setAutoSync(!enabled);
       setError(err instanceof Error ? err.message : String(err));
     }
   };
@@ -158,6 +173,25 @@ export default function GeneralSettings() {
             onChange={handleNotifySync}
             labelledBy="notify-sync"
             describedBy="notify-sync-hint"
+          />
+        </div>
+      </Card>
+
+      <Card>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p id="auto-sync" className="text-sm font-medium text-pencil">
+              Auto-sync
+            </p>
+            <p id="auto-sync-hint" className="text-xs text-pencil-light mt-0.5">
+              Sync automatically when files in the active project's skills source change
+            </p>
+          </div>
+          <Switch
+            checked={autoSync}
+            onChange={handleAutoSync}
+            labelledBy="auto-sync"
+            describedBy="auto-sync-hint"
           />
         </div>
       </Card>

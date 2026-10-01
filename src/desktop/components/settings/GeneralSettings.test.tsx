@@ -6,6 +6,7 @@ import GeneralSettings from './GeneralSettings';
 const mocks = vi.hoisted(() => ({
   getNotifySync: vi.fn(() => Promise.resolve(true)),
   setNotifySync: vi.fn<(enabled: boolean) => Promise<void>>(() => Promise.resolve()),
+  setAutoSync: vi.fn<(enabled: boolean) => Promise<void>>(() => Promise.resolve()),
 }));
 
 vi.mock('../../api/tauri-bridge', () => ({
@@ -14,6 +15,8 @@ vi.mock('../../api/tauri-bridge', () => ({
     getNotifyUpdate: () => Promise.resolve(true),
     getNotifySync: mocks.getNotifySync,
     setNotifySync: mocks.setNotifySync,
+    getAutoSync: () => Promise.resolve(false),
+    setAutoSync: mocks.setAutoSync,
   },
 }));
 vi.mock('../../context/TauriContext', () => ({ useTauri: () => ({ refresh: vi.fn() }) }));
@@ -52,5 +55,19 @@ describe('GeneralSettings sync notifications', () => {
     fireEvent.click(syncSwitch());
     await screen.findByText('disk full');
     expect(syncSwitch().getAttribute('aria-checked')).toBe('true');
+  });
+});
+
+describe('GeneralSettings auto-sync', () => {
+  it('starts off and persists turning it on', async () => {
+    render(
+      <MemoryRouter>
+        <GeneralSettings />
+      </MemoryRouter>
+    );
+    const autoSync = screen.getByRole('switch', { name: 'Auto-sync' });
+    expect(autoSync.getAttribute('aria-checked')).toBe('false');
+    fireEvent.click(autoSync);
+    await waitFor(() => expect(mocks.setAutoSync).toHaveBeenCalledWith(true));
   });
 });

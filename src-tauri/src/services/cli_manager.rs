@@ -120,24 +120,31 @@ pub async fn detect_cli() -> Option<String> {
 /// and extracting the parent of `source.path`.
 /// e.g. source.path = `~/.config/skillshare/skills` → returns `~/.config/skillshare`
 pub async fn get_global_config_dir(cli_path: &str) -> Result<String, String> {
+    let source_path = get_source_dir(cli_path, None).await?;
+
+    Ok(std::path::Path::new(&source_path)
+        .parent()
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_default())
+}
+
+/// The skills source directory (`source.path` of `skillshare status --json`).
+/// The CLI picks project or global mode from `working_dir`, like `sync` does.
+pub async fn get_source_dir(cli_path: &str, working_dir: Option<&str>) -> Result<String, String> {
     let output = exec(
         cli_path,
         &["status".to_string(), "--json".to_string()],
-        None,
+        working_dir,
     )
     .await?;
 
     let status: serde_json::Value = serde_json::from_str(&output)
         .map_err(|e| format!("Failed to parse CLI status JSON: {e}"))?;
 
-    let source_path = status["source"]["path"]
+    status["source"]["path"]
         .as_str()
-        .ok_or("CLI status JSON missing 'source.path' field")?;
-
-    Ok(std::path::Path::new(source_path)
-        .parent()
-        .map(|p| p.to_string_lossy().to_string())
-        .unwrap_or_default())
+        .map(str::to_string)
+        .ok_or_else(|| "CLI status JSON missing 'source.path' field".to_string())
 }
 
 /// Run `skillshare version` and extract the semver version string.
@@ -292,8 +299,8 @@ pub async fn exec(
         let raw = String::from_utf8_lossy(&output.stdout).trim().to_string();
         Ok(strip_ansi(&raw))
     } else {
-        let stderr = strip_ansi(&String::from_utf8_lossy(&output.stderr).trim().to_string());
-        let stdout = strip_ansi(&String::from_utf8_lossy(&output.stdout).trim().to_string());
+        let stderr = strip_ansi(String::from_utf8_lossy(&output.stderr).trim());
+        let stdout = strip_ansi(String::from_utf8_lossy(&output.stdout).trim());
         Err(format!(
             "CLI exited with {}: {}",
             output.status,

@@ -1,4 +1,5 @@
 mod commands;
+mod main_window;
 mod models;
 mod services;
 mod utils;
@@ -37,12 +38,12 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(ServerManager::new())
         .manage(services::update_watch::UpdateState::default())
+        .manage(services::auto_sync::AutoSyncState::default())
         .invoke_handler(tauri::generate_handler![
             // CLI commands
             commands::cli::detect_cli,
             commands::cli::get_cli_version,
             commands::cli::download_cli,
-            commands::cli::check_cli_update,
             commands::cli::upgrade_cli,
             commands::cli::run_cli,
             commands::cli::get_global_config_dir,
@@ -60,20 +61,20 @@ pub fn run() {
             // Server commands
             commands::server::start_server,
             commands::server::stop_server,
-            commands::server::restart_server,
             commands::server::server_health_check,
             commands::server::get_server_port,
             // App commands
             commands::app::get_app_state,
-            commands::app::get_onboarding_status,
             commands::app::get_preferred_port,
             commands::app::set_preferred_port,
-            commands::app::get_preferred_theme,
             commands::app::set_preferred_theme,
             commands::app::get_notify_sync,
             commands::app::set_notify_sync,
+            commands::app::get_auto_sync,
+            commands::app::set_auto_sync,
             commands::app::get_available_updates,
             commands::app::open_logs_folder,
+            commands::app::export_diagnostics,
             commands::app::check_updates_now,
             commands::app::get_notify_update,
             commands::app::set_notify_update,
@@ -82,6 +83,7 @@ pub fn run() {
             commands::terminal::get_pty_env,
         ])
         .setup(|app| {
+            main_window::build(app)?;
             setup_system_tray(app)?;
             #[cfg(target_os = "macos")]
             setup_app_menu(app)?;
@@ -94,6 +96,7 @@ pub fn run() {
             });
 
             services::update_watch::spawn_background(app.handle().clone());
+            services::auto_sync::refresh(app.handle());
 
             tauri::async_runtime::spawn(utils::env::load_login_shell_path());
 
@@ -265,7 +268,11 @@ const SYNC_COMPLETED_EVENT: &str = "sync-completed";
 /// Long enough for a slow git pull, short enough that a hung prompt doesn't block forever.
 const QUICK_SYNC_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(120);
 
+/// Held for a whole sync so tray and auto-sync runs never overlap.
+static SYNC_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
 async fn handle_quick_sync(app: &tauri::AppHandle) {
+    let _running = SYNC_LOCK.lock().await;
     let meta = services::cli_manager::load_meta();
     let cli_path = match services::cli_manager::detect_cli().await {
         Some(p) => p,

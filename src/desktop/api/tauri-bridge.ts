@@ -17,6 +17,8 @@ export interface InstallPlatform {
 export interface AvailableUpdates {
   cli: string | null;
   app: string | null;
+  /** Skills and tracked repos in the active project with upstream changes. */
+  skills: string[];
 }
 
 export interface PathHint {
@@ -62,7 +64,6 @@ export const tauriBridge = {
   detectCli: () => invoke<string | null>('detect_cli'),
   getCliVersion: (cliPath: string) => invoke<string>('get_cli_version', { cliPath }),
   downloadCli: () => invoke<string>('download_cli'),
-  checkCliUpdate: () => invoke<string | null>('check_cli_update'),
   upgradeCli: () => invoke<string>('upgrade_cli'),
   runCli: (cliPath: string, args: string[], workingDir?: string) =>
     invoke<string>('run_cli', { cliPath, args, workingDir }),
@@ -86,22 +87,21 @@ export const tauriBridge = {
   startServer: (cliPath: string, projectDir?: string) =>
     invoke<number>('start_server', { cliPath, projectDir }),
   stopServer: () => invoke<void>('stop_server'),
-  restartServer: (cliPath: string, projectDir?: string) =>
-    invoke<number>('restart_server', { cliPath, projectDir }),
   healthCheck: () => invoke<boolean>('server_health_check'),
   getServerPort: () => invoke<number>('get_server_port'),
 
   // App commands
   getAppState: () => invoke<AppInfo>('get_app_state'),
-  getOnboardingStatus: () => invoke<OnboardingStatus>('get_onboarding_status'),
   getPreferredPort: () => invoke<number>('get_preferred_port'),
   setPreferredPort: (port: number) => invoke<void>('set_preferred_port', { port }),
-  getPreferredTheme: () => invoke<string>('get_preferred_theme'),
   setPreferredTheme: (theme: string) => invoke<void>('set_preferred_theme', { theme }),
   getNotifySync: () => invoke<boolean>('get_notify_sync'),
   setNotifySync: (enabled: boolean) => invoke<void>('set_notify_sync', { enabled }),
+  getAutoSync: () => invoke<boolean>('get_auto_sync'),
+  setAutoSync: (enabled: boolean) => invoke<void>('set_auto_sync', { enabled }),
   getAvailableUpdates: () => invoke<AvailableUpdates>('get_available_updates'),
   openLogsFolder: () => invoke<void>('open_logs_folder'),
+  exportDiagnostics: () => invoke<string>('export_diagnostics'),
   checkUpdatesNow: () => invoke<AvailableUpdates>('check_updates_now'),
   getNotifyUpdate: () => invoke<boolean>('get_notify_update'),
   setNotifyUpdate: (enabled: boolean) => invoke<void>('set_notify_update', { enabled }),

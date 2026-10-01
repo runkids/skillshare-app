@@ -18,12 +18,14 @@ export default function TerminalSearchBar({ searchAddon, onClose }: TerminalSear
 
   useEffect(() => {
     if (!searchAddon || !query) return;
-    searchAddon.findNext(query, { decorations: {
-      matchOverviewRuler: '#eab308',
-      activeMatchColorOverviewRuler: '#f59e0b',
-      matchBackground: '#854d0e40',
-      activeMatchBackground: '#eab30880',
-    }});
+    searchAddon.findNext(query, {
+      decorations: {
+        matchOverviewRuler: '#eab308',
+        activeMatchColorOverviewRuler: '#f59e0b',
+        matchBackground: '#854d0e40',
+        activeMatchBackground: '#eab30880',
+      },
+    });
   }, [query, searchAddon]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -49,13 +51,28 @@ export default function TerminalSearchBar({ searchAddon, onClose }: TerminalSear
         className="bg-transparent text-gray-200 text-xs outline-none w-40 placeholder:text-gray-600"
         placeholder="Search..."
       />
-      <button type="button" onClick={() => searchAddon?.findPrevious(query)} className="p-0.5 text-gray-400 hover:text-gray-200">
+      <button
+        type="button"
+        onClick={() => searchAddon?.findPrevious(query)}
+        className="p-0.5 text-gray-400 hover:text-gray-200"
+      >
         <ChevronUp size={13} />
       </button>
-      <button type="button" onClick={() => searchAddon?.findNext(query)} className="p-0.5 text-gray-400 hover:text-gray-200">
+      <button
+        type="button"
+        onClick={() => searchAddon?.findNext(query)}
+        className="p-0.5 text-gray-400 hover:text-gray-200"
+      >
         <ChevronDown size={13} />
       </button>
-      <button type="button" onClick={() => { searchAddon?.clearDecorations(); onClose(); }} className="p-0.5 text-gray-400 hover:text-gray-200">
+      <button
+        type="button"
+        onClick={() => {
+          searchAddon?.clearDecorations();
+          onClose();
+        }}
+        className="p-0.5 text-gray-400 hover:text-gray-200"
+      >
         <X size={13} />
       </button>
     </div>

@@ -20,19 +20,6 @@ pub async fn stop_server(server: State<'_, ServerManager>) -> Result<(), String>
 }
 
 #[tauri::command]
-pub async fn restart_server(
-    server: State<'_, ServerManager>,
-    cli_path: String,
-    project_dir: Option<String>,
-) -> Result<u16, String> {
-    let store = project_store::load();
-    let (_, is_project_mode) = project_store::active_project_mode(&store);
-    server
-        .restart(&cli_path, project_dir.as_deref(), is_project_mode)
-        .await
-}
-
-#[tauri::command]
 pub async fn server_health_check(server: State<'_, ServerManager>) -> Result<bool, String> {
     Ok(server.is_running().await)
 }

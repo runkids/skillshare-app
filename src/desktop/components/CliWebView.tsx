@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { AlertTriangle, Check, RotateCw, Unplug } from 'lucide-react';
@@ -62,6 +62,7 @@ function StartingCard({
 
 export default function CliWebView() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { appInfo, refresh: refreshAppInfo } = useTauri();
   const { switching, activeProject, reloadKey } = useProjects();
   const { style, setStyle, resolvedMode, setModePreference } = useTheme();
@@ -117,13 +118,21 @@ export default function CliWebView() {
   const cliThemeRef = useRef(cliTheme);
   cliThemeRef.current = cliTheme;
 
+  // A shell path other than "/" (e.g. /skills?tab=updates) opens that CLI UI page.
+  const webPath = location.pathname === '/' ? '' : location.pathname;
+  const webSearch = webPath ? location.search : '';
+  // Remount on every navigation to a page, so it reopens even if the iframe moved on.
+  const navKey = webPath ? location.key : '';
+
   // Read the theme each time the iframe (re)mounts. A stale ?theme= would make the
   // reloaded CLI UI restore the old style and post it back, undoing the user's choice.
-  const iframeSrc = useMemo(
-    () => (iframeUrl ? `${iframeUrl}?theme=${cliThemeRef.current}` : null),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- iframeKey marks a remount
-    [iframeUrl, iframeKey]
-  );
+  const iframeSrc = useMemo(() => {
+    if (!iframeUrl) return null;
+    const params = new URLSearchParams(webSearch);
+    params.set('theme', cliThemeRef.current);
+    return `${iframeUrl}${webPath}?${params}`;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- iframeKey and navKey mark a remount
+  }, [iframeUrl, iframeKey, navKey, webPath, webSearch]);
 
   // Try to start server if no port available on mount
   useEffect(() => {
@@ -339,7 +348,7 @@ export default function CliWebView() {
   return (
     <iframe
       ref={iframeRef}
-      key={`${iframeUrl}-${iframeKey}`}
+      key={`${iframeUrl}-${iframeKey}-${navKey}`}
       src={iframeSrc!}
       className="flex-1 w-full border-0"
       onLoad={() => {

@@ -82,11 +82,6 @@ html.theme-transitioning .ss-dialog {
               box-shadow 0.2s ease, color 0.2s ease, border-radius 0.2s ease;
 }
 
-/* Promote toast z-index during tour so it's visible above overlay */
-.tour-active [data-toast-container] {
-  z-index: 80 !important;
-}
-
 /* Base styles */
 body {
   background-color: var(--color-paper);
@@ -263,31 +258,6 @@ body {
 }
 .animate-dialog-in {
   animation: dialogIn 0.2s ease-out;
-}
-
-/* Skeleton shimmer */
-@keyframes skeleton-shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-.animate-skeleton {
-  background: linear-gradient(90deg, var(--color-muted) 25%, color-mix(in srgb, var(--color-muted-dark) 40%, transparent) 37%, var(--color-muted) 63%);
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 1.8s ease-in-out infinite;
-}
-
-/* Toast exit */
-@keyframes toastOut {
-  to { opacity: 0; transform: translateX(100%); }
-}
-.animate-toast-out {
-  animation: toastOut 0.3s ease-in forwards;
-}
-
-/* Toast progress bar */
-@keyframes toastProgress {
-  from { width: 100%; }
-  to { width: 0%; }
 }
 
 /* Card tilt */

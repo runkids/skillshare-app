@@ -1,4 +1,4 @@
-use crate::services::{cli_manager, project_store, server_manager::ServerManager, update_watch};
+use crate::services::{cli_manager, project_store, server_manager::ServerManager};
 use tauri::State;
 
 #[tauri::command]
@@ -39,21 +39,6 @@ pub async fn download_cli() -> Result<String, String> {
     let path = cli_manager::download_cli(&url).await?;
     cli_manager::save_release_meta(version, &path)?;
     Ok(path)
-}
-
-#[tauri::command]
-pub async fn check_cli_update() -> Result<Option<String>, String> {
-    let mut meta = cli_manager::load_meta();
-    cli_manager::refresh_cached_version(&mut meta).await?;
-    let local_version = meta.version.unwrap_or_default();
-
-    let (latest_version, _url) = cli_manager::check_latest_release().await?;
-
-    if local_version.is_empty() || update_watch::is_newer(&latest_version, &local_version) {
-        Ok(Some(latest_version))
-    } else {
-        Ok(None)
-    }
 }
 
 /// Upgrade the CLI with its own `upgrade` command and return the new version.

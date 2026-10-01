@@ -14,6 +14,7 @@ const TauriContext = createContext<TauriContextValue>({
   refresh: async () => {},
 });
 
+// eslint-disable-next-line react-refresh/only-export-components -- hook lives beside its provider
 export function useTauri() {
   return useContext(TauriContext);
 }
@@ -38,8 +39,6 @@ export function TauriProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   return (
-    <TauriContext.Provider value={{ appInfo, loading, refresh }}>
-      {children}
-    </TauriContext.Provider>
+    <TauriContext.Provider value={{ appInfo, loading, refresh }}>{children}</TauriContext.Provider>
   );
 }
