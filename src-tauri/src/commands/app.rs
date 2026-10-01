@@ -130,6 +130,16 @@ pub fn set_notify_update(enabled: bool) -> Result<(), String> {
     cli_manager::save_meta(&meta)
 }
 
+/// Open the folder holding the app log and the CLI server's output.
+#[tauri::command]
+pub fn open_logs_folder(app: tauri::AppHandle) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    let dir = crate::utils::paths::logs_dir();
+    app.opener()
+        .open_path(dir.to_string_lossy(), None::<&str>)
+        .map_err(|e| format!("Could not open {}: {e}", dir.display()))
+}
+
 #[tauri::command]
 pub async fn reset_all_data(server: State<'_, ServerManager>) -> Result<(), String> {
     // Stop server if running

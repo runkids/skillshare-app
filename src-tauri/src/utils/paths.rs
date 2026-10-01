@@ -20,3 +20,10 @@ pub fn app_data_dir() -> PathBuf {
     std::fs::create_dir_all(&dir).ok();
     dir
 }
+
+/// Folder for the app's own log and the CLI server's output.
+pub fn logs_dir() -> PathBuf {
+    let dir = app_data_dir().join("logs");
+    std::fs::create_dir_all(&dir).ok();
+    dir
+}

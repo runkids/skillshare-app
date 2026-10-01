@@ -130,10 +130,22 @@ impl ServerManager {
             cmd.current_dir(&resolved);
         }
 
-        // Prevent the child from inheriting stdin and suppress stdout/stderr
+        // Finder-launched apps get a minimal PATH; the Web UI shells out to git, brew, editors.
+        cmd.envs(crate::utils::env::build_env_for_child());
         cmd.stdin(std::process::Stdio::null());
-        cmd.stdout(std::process::Stdio::null());
-        cmd.stderr(std::process::Stdio::null());
+        // Keep the server's output so a failed start can say why. Truncated on every start.
+        let log_path = server_log_path();
+        match std::fs::File::create(&log_path).and_then(|f| Ok((f.try_clone()?, f))) {
+            Ok((out, err)) => {
+                cmd.stdout(out);
+                cmd.stderr(err);
+            }
+            Err(e) => {
+                log::warn!("Cannot write {}: {e}", log_path.display());
+                cmd.stdout(std::process::Stdio::null());
+                cmd.stderr(std::process::Stdio::null());
+            }
+        }
 
         let child = cmd
             .spawn()
@@ -188,13 +200,47 @@ impl ServerManager {
             if health_check(port).await {
                 return Ok(());
             }
+            let exited = match self.process.lock().await.as_mut() {
+                Some(child) => child.try_wait().ok().flatten(),
+                None => None,
+            };
+            if let Some(status) = exited {
+                return Err(with_server_output(format!(
+                    "Server exited early ({status})"
+                )));
+            }
             tokio::time::sleep(tokio::time::Duration::from_millis(HEALTH_POLL_INTERVAL_MS)).await;
         }
-        Err(format!(
+        Err(with_server_output(format!(
             "Server on port {port} did not become ready within {}s",
             (HEALTH_POLL_INTERVAL_MS * HEALTH_POLL_MAX_RETRIES as u64) / 1000
-        ))
+        )))
     }
+}
+
+const SERVER_LOG_TAIL_LINES: usize = 20;
+
+fn server_log_path() -> std::path::PathBuf {
+    crate::utils::paths::logs_dir().join("server.log")
+}
+
+/// Append the end of the server's output to a start failure, when there is any.
+fn with_server_output(message: String) -> String {
+    let output = std::fs::read_to_string(server_log_path()).unwrap_or_default();
+    let output = crate::services::cli_manager::strip_ansi(&output);
+    match tail(output.trim_start(), SERVER_LOG_TAIL_LINES) {
+        "" => message,
+        tail => format!("{message}\n\nServer output:\n{tail}"),
+    }
+}
+
+fn tail(text: &str, lines: usize) -> &str {
+    let text = text.trim_end();
+    let start = text
+        .rmatch_indices('\n')
+        .nth(lines.saturating_sub(1))
+        .map_or(0, |(i, _)| i + 1);
+    &text[start..]
 }
 
 /// Check if the server health endpoint responds on the given port.
@@ -217,4 +263,19 @@ async fn is_port_in_use(port: u16) -> bool {
     tokio::net::TcpStream::connect(format!("127.0.0.1:{port}"))
         .await
         .is_ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::tail;
+
+    #[test]
+    fn tail_keeps_the_last_lines() {
+        assert_eq!(tail("a\nb\nc\n", 2), "b\nc");
+    }
+
+    #[test]
+    fn tail_returns_everything_when_short() {
+        assert_eq!(tail("only line\n", 20), "only line");
+    }
 }

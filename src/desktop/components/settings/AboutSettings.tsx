@@ -3,6 +3,7 @@ import { relaunch } from '@tauri-apps/plugin-process';
 import { getVersion } from '@tauri-apps/api/app';
 import Card from '../../../components/Card';
 import Button from '../../../components/Button';
+import { tauriBridge } from '../../api/tauri-bridge';
 import { useTauri } from '../../context/TauriContext';
 import { useAppUpdate, type UpdateCheckStatus } from '../../hooks/useAppUpdate';
 import { useUpdates } from '../../hooks/useUpdates';
@@ -14,6 +15,12 @@ export default function AboutSettings() {
   const { appInfo } = useTauri();
   const { cli: cliUpdate } = useUpdates();
   const navigate = useNavigate();
+  const [logsError, setLogsError] = useState<string | null>(null);
+
+  const openLogs = () => {
+    setLogsError(null);
+    tauriBridge.openLogsFolder().catch((err) => setLogsError(String(err)));
+  };
   const { update: updateObj, status: checkStatus, error: checkError, recheck } = useAppUpdate();
   const [appVersion, setAppVersion] = useState('0.1.0');
   // Download/install phases are local; the check result comes from the shared hook.
@@ -111,6 +118,18 @@ export default function AboutSettings() {
           >
             runkids/skillshare
           </a>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+          <div>
+            <p className="text-sm font-medium text-pencil">Logs</p>
+            <p className="text-xs text-pencil-light mt-0.5">
+              {logsError ?? 'The app log and the CLI server output, for bug reports'}
+            </p>
+          </div>
+          <Button size="sm" variant="secondary" onClick={openLogs}>
+            Open logs folder
+          </Button>
         </div>
       </Card>
 

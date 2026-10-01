@@ -216,7 +216,7 @@ pub async fn refresh_cached_version(meta: &mut CliMeta) -> Result<(), String> {
 }
 
 /// Strip ANSI escape codes (CSI and OSC sequences) from a string.
-fn strip_ansi(raw: &str) -> String {
+pub fn strip_ansi(raw: &str) -> String {
     let mut clean = String::with_capacity(raw.len());
     let mut chars = raw.chars().peekable();
     while let Some(ch) = chars.next() {

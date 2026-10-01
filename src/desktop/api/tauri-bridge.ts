@@ -101,6 +101,7 @@ export const tauriBridge = {
   getNotifySync: () => invoke<boolean>('get_notify_sync'),
   setNotifySync: (enabled: boolean) => invoke<void>('set_notify_sync', { enabled }),
   getAvailableUpdates: () => invoke<AvailableUpdates>('get_available_updates'),
+  openLogsFolder: () => invoke<void>('open_logs_folder'),
   checkUpdatesNow: () => invoke<AvailableUpdates>('check_updates_now'),
   getNotifyUpdate: () => invoke<boolean>('get_notify_update'),
   setNotifyUpdate: (enabled: boolean) => invoke<void>('set_notify_update', { enabled }),
