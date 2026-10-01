@@ -32,7 +32,7 @@ pub fn add_project(
         }
     }
 
-    let project = project_store::add_project(&mut store, name, path, project_type);
+    let project = project_store::add_project(&mut store, name, path, project_type)?;
     project_store::save(&store)?;
     Ok(project)
 }
