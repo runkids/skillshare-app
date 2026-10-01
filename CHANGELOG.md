@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.0.14](https://github.com/runkids/skillshare-app/compare/v0.0.13...v0.0.14) (2026-10-01)
+
+
+### Features
+
+* **about:** link the app repo and release notes, and export diagnostics ([#22](https://github.com/runkids/skillshare-app/issues/22)) ([a105b4e](https://github.com/runkids/skillshare-app/commit/a105b4e7a654a7c30eb21de6652f00c32b08ee83))
+* **server:** supervise the UI server and only clean up our own orphan ([#28](https://github.com/runkids/skillshare-app/issues/28)) ([1776959](https://github.com/runkids/skillshare-app/commit/17769593974262d13dd4b75fda8f413dc8243cb0)), closes [#16](https://github.com/runkids/skillshare-app/issues/16)
+* **sync:** auto-sync when skill source files change ([#24](https://github.com/runkids/skillshare-app/issues/24)) ([f61afc2](https://github.com/runkids/skillshare-app/commit/f61afc23b17be6c84fb8cbc9a920016466d030f6)), closes [#10](https://github.com/runkids/skillshare-app/issues/10)
+* **update:** check installed skills for updates in the background ([#25](https://github.com/runkids/skillshare-app/issues/25)) ([0d1e57b](https://github.com/runkids/skillshare-app/commit/0d1e57b43c6fda629302cfd23f6c64ca8cf169fd))
+
+
+### Bug Fixes
+
+* platform PATH separator, dead code removal, and stricter CI ([#26](https://github.com/runkids/skillshare-app/issues/26)) ([c027f6a](https://github.com/runkids/skillshare-app/commit/c027f6a4397eea7fda0edccf2ff09cdc7171798a))
+* **webview:** open CLI UI links in the browser and save its downloads ([#23](https://github.com/runkids/skillshare-app/issues/23)) ([a88b492](https://github.com/runkids/skillshare-app/commit/a88b49246d7e2c4c26e0e5706f060f5979dd766f))
+
 ## [0.0.13](https://github.com/runkids/skillshare-app/compare/v0.0.12...v0.0.13) (2026-10-01)
 
 
