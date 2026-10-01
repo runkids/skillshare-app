@@ -1,6 +1,7 @@
-//! Opt-in auto-sync: watch the active skills source and run Quick Sync once edits settle.
+//! Watch the active skills source. Once edits settle, re-check skill updates (so the
+//! badge clears after updating skills) and, with opt-in auto-sync, run Quick Sync.
 
-use crate::services::{cli_manager, project_store};
+use crate::services::{cli_manager, project_store, update_watch};
 use notify::{EventKind, RecursiveMode, Watcher};
 use std::path::Path;
 use std::time::Duration;
@@ -10,26 +11,24 @@ use tokio::time::Instant;
 /// Quiet period after the last change before syncing, so a multi-file save syncs once.
 const SETTLE: Duration = Duration::from_secs(2);
 
-/// The running watcher task, if auto-sync is on.
+/// The running watcher task.
 #[derive(Default)]
 pub struct AutoSyncState(std::sync::Mutex<Option<tauri::async_runtime::JoinHandle<()>>>);
 
-/// Stop the current watcher and start a new one if auto-sync is enabled.
-/// Call at startup and whenever the setting or the active project changes.
+/// Replace the watcher with one for the current active project.
+/// Call at startup and whenever the auto-sync setting or the active project changes.
 pub fn refresh(app: &AppHandle) {
     let state = app.state::<AutoSyncState>();
     let mut task = state.0.lock().unwrap_or_else(|e| e.into_inner());
     if let Some(old) = task.take() {
         old.abort();
     }
-    if cli_manager::load_meta().auto_sync.unwrap_or(false) {
-        *task = Some(tauri::async_runtime::spawn(watch(app.clone())));
-    }
+    *task = Some(tauri::async_runtime::spawn(watch(app.clone())));
 }
 
 async fn watch(app: AppHandle) {
     let Some(cli_path) = cli_manager::detect_cli().await else {
-        log::warn!("Auto-sync: CLI not found");
+        log::warn!("Source watch: CLI not found");
         return;
     };
     let working_dir = project_store::load()
@@ -38,7 +37,7 @@ async fn watch(app: AppHandle) {
     let source = match cli_manager::get_source_dir(&cli_path, working_dir.as_deref()).await {
         Ok(dir) => std::path::PathBuf::from(dir),
         Err(e) => {
-            log::warn!("Auto-sync: could not find the source directory: {e}");
+            log::warn!("Source watch: could not find the source directory: {e}");
             return;
         }
     };
@@ -54,11 +53,11 @@ async fn watch(app: AppHandle) {
         match watcher.and_then(|mut w| w.watch(&source, RecursiveMode::Recursive).map(|_| w)) {
             Ok(w) => w,
             Err(e) => {
-                log::warn!("Auto-sync: could not watch {}: {e}", source.display());
+                log::warn!("Source watch: could not watch {}: {e}", source.display());
                 return;
             }
         };
-    log::info!("Auto-sync: watching {}", source.display());
+    log::info!("Source watch: watching {}", source.display());
 
     let (done_tx, mut done) = tokio::sync::mpsc::unbounded_channel::<()>();
     let mut scheduler = Scheduler::default();
@@ -72,11 +71,14 @@ async fn watch(app: AppHandle) {
             }
             _ = tokio::time::sleep_until(wake.unwrap_or_else(Instant::now)), if wake.is_some() => {
                 if scheduler.start_if_due(Instant::now()) {
-                    log::info!("Auto-sync: source changed, syncing");
                     let app = app.clone();
                     let done_tx = done_tx.clone();
                     tauri::async_runtime::spawn(async move {
-                        crate::handle_quick_sync(&app).await;
+                        if cli_manager::load_meta().auto_sync.unwrap_or(false) {
+                            log::info!("Auto-sync: source changed, syncing");
+                            crate::handle_quick_sync(&app).await;
+                        }
+                        update_watch::refresh_skills(&app).await;
                         let _ = done_tx.send(());
                     });
                 }
