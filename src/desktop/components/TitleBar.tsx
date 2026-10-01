@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Settings, Monitor, TerminalSquare, RotateCw } from 'lucide-react';
+import { Settings, Monitor, TerminalSquare, RotateCw, History } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ProjectDropdown from './ProjectDropdown';
 import { useTerminal } from '../context/TerminalContext';
@@ -8,6 +8,7 @@ import { useProjects } from '../context/ProjectContext';
 import { isMacOS } from '../utils/platform';
 import { useUpdates } from '../hooks/useUpdates';
 import ResourceUpdatesBadge from './ResourceUpdatesBadge';
+import SourceHealthBadge from './SourceHealthBadge';
 import appIcon from '../../../src-tauri/icons/64x64.png';
 
 // TODO: re-enable Web UI / Terminal tab switcher when terminal feature is ready
@@ -90,6 +91,7 @@ export default function TitleBar() {
       </div>
       <div data-tauri-drag-region className="flex-1 self-stretch" />
       <ResourceUpdatesBadge updates={updates} />
+      <SourceHealthBadge />
       {appInfo?.serverRunning && (
         <span className="flex items-center gap-1.5 h-[26px] px-2.5 rounded-[var(--r-btn)] bg-[var(--ok-bg)] text-[var(--ok)] text-xs">
           <span className="w-1.5 h-1.5 rounded-full bg-[var(--ok)]" />
@@ -108,6 +110,15 @@ export default function TitleBar() {
         aria-label="Reload"
       >
         <RotateCw size={15} className={switching ? 'motion-safe:animate-spin' : undefined} />
+      </button>
+      <button
+        type="button"
+        onClick={() => navigate('/activity')}
+        className="w-[30px] h-[30px] flex items-center justify-center rounded-[var(--r-ctl)] hover:bg-[var(--sel)] transition-colors text-[var(--ink-2)] hover:text-[var(--ink)]"
+        title="Activity"
+        aria-label="Activity"
+      >
+        <History size={16} />
       </button>
       <button
         type="button"

@@ -27,6 +27,9 @@ pub struct CliMeta {
     pub notified_agent_updates: Vec<String>,
     #[serde(default)]
     pub notified_plugin_updates: Vec<String>,
+    /// Source health findings as of the last notification, so each is announced once.
+    #[serde(default)]
+    pub notified_source_health: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

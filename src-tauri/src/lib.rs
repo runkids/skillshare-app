@@ -39,6 +39,7 @@ pub fn run() {
         .manage(ServerManager::new())
         .manage(services::update_watch::UpdateState::default())
         .manage(services::auto_sync::AutoSyncState::default())
+        .manage(services::source_health::SourceHealthState::default())
         .invoke_handler(tauri::generate_handler![
             // CLI commands
             commands::cli::detect_cli,
@@ -78,6 +79,9 @@ pub fn run() {
             commands::app::get_notify_update,
             commands::app::set_notify_update,
             commands::app::reset_all_data,
+            commands::source_health::get_source_health,
+            // Activity commands
+            commands::activity::get_activity,
             // Terminal commands
             commands::terminal::get_pty_env,
         ])
@@ -96,6 +100,7 @@ pub fn run() {
 
             services::update_watch::spawn_background(app.handle().clone());
             services::auto_sync::refresh(app.handle());
+            services::source_health::spawn_background(app.handle().clone());
 
             tauri::async_runtime::spawn(utils::env::load_login_shell_path());
 
@@ -190,6 +195,7 @@ fn setup_system_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
         .item(&check_updates)
         .item(&quit)
         .build()?;
+    services::source_health::attach_tray(app, &menu)?;
 
     let mut tray = TrayIconBuilder::new();
     // macOS menu bar icons are monochrome templates that the system tints
