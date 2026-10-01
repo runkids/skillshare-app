@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.0.13](https://github.com/runkids/skillshare-app/compare/v0.0.12...v0.0.13) (2026-10-01)
+
+
+### Features
+
+* report what tray Quick Sync did and keep the tray label current ([#18](https://github.com/runkids/skillshare-app/issues/18)) ([03b22a0](https://github.com/runkids/skillshare-app/commit/03b22a0029af21d12271aa9bc1b39d09e9ec515c))
+* **update:** restart the app automatically after installing an update ([#19](https://github.com/runkids/skillshare-app/issues/19)) ([6dccee6](https://github.com/runkids/skillshare-app/commit/6dccee622dc6025ba1bb0596088a98af06953fc9))
+
+
+### Bug Fixes
+
+* **cli:** restart the UI server when upgrading the CLI from Settings ([#17](https://github.com/runkids/skillshare-app/issues/17)) ([389eb1d](https://github.com/runkids/skillshare-app/commit/389eb1d7e563629315762e70d4a3b6fe5c6458e5))
+* **projects:** never lose projects.json to a bad read or partial write ([#16](https://github.com/runkids/skillshare-app/issues/16)) ([0098ff8](https://github.com/runkids/skillshare-app/commit/0098ff883961c5dcfdcfe57b85348e191c1ddb8a))
+* **tray:** use a monochrome template icon in the macOS menu bar ([#20](https://github.com/runkids/skillshare-app/issues/20)) ([5915c19](https://github.com/runkids/skillshare-app/commit/5915c1902d75acc4aec7bd99eef66e6111373c88))
+
 ## [0.0.12](https://github.com/runkids/skillshare-app/compare/v0.0.11...v0.0.12) (2026-10-01)
 
 
