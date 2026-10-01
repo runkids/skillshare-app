@@ -4,9 +4,9 @@ How the Rust backend in `src-tauri/` fits together.
 
 ## Process model
 
-- `lib.rs:run` registers the plugins, the managed state (`ServerManager`, `UpdateState`, `AutoSyncState`, `SourceHealthState`) and the commands. `setup` then:
+- `lib.rs:run` registers the plugins, the managed state (`ServerManager`, `UpdateState`, `AutoSyncState`, `OplogWatchState`, `SourceHealthState`) and the commands. `setup` then:
   - builds the window, the tray and the macOS menu;
-  - spawns `update_watch::spawn_background`, `auto_sync::refresh` and `source_health::spawn_background`;
+  - spawns `update_watch::spawn_background`, `auto_sync::refresh`, `oplog_watch::refresh` and `source_health::spawn_background`;
   - loads the login-shell PATH;
   - runs `auto_start_server`.
 - `auto_start_server` runs only after onboarding (`CliMeta.version` is set and a project exists). It syncs the Global project path from `skillshare status --json`, then starts the server for the active project.
@@ -22,7 +22,7 @@ How the Rust backend in `src-tauri/` fits together.
 ## Backend modules
 
 - `commands/cli.rs`: detect, version, download, upgrade, install or cancel the CLI; `run_cli`; link the CLI for terminal use.
-- `commands/project.rs`: project CRUD and switch. Each change refreshes the tray label, the watcher and source health.
+- `commands/project.rs`: project CRUD and switch. Each change refreshes the tray label, both watchers and source health.
 - `commands/server.rs`: start, stop, health check and port.
 - `commands/app.rs`: app state, settings in `CliMeta`, updates, logs folder, diagnostics, `reset_all_data`.
 - `commands/terminal.rs`: `get_pty_env`.
@@ -30,6 +30,7 @@ How the Rust backend in `src-tauri/` fits together.
 - `services/cli_manager.rs`: CLI discovery (`which`/`where`, then `%LOCALAPPDATA%\Programs\skillshare` on Windows, then app `bin/`), `exec`, version cache, installers, release download, terminal symlink, `CliMeta` load and save.
 - `services/server_manager.rs`: the server supervisor.
 - `services/auto_sync.rs`: the source watcher and auto-sync.
+- `services/oplog_watch.rs`: the CLI operation log watcher that keeps the badges live.
 - `services/update_watch.rs`: app, CLI and per-kind resource update checks; `services/update_all.rs`: tray resource updates and sync.
 - `services/source_health.rs`: target drift and the source's git remote state; tray collect/push/pull.
 - `commands/source_health.rs`: `get_source_health`.
@@ -65,6 +66,12 @@ How the Rust backend in `src-tauri/` fits together.
   - `is_source_change` ignores access events, `.git/` and editor or OS temp files.
   - `Scheduler` waits for 2s of quiet (`SETTLE`), never overlaps runs, and folds changes made during a run into one follow-up.
   - Each run calls `handle_quick_sync` only if `auto_sync` is on (default off), then always calls `update_watch::refresh_skills` and `source_health::refresh(app, false)`.
+- `oplog_watch.rs`
+  - Every CLI command, including the web UI's, appends a JSONL entry to `operations.log`: `<project>/.skillshare/logs/` (or `skillshare/`) in project mode, else `$XDG_STATE_HOME/skillshare/logs/` (`%AppData%\skillshare\logs` on Windows, `~/.local/state/skillshare/logs`). `refresh` (startup, project add/remove/switch, reset) watches the active project's log dir non-recursively; a missing dir is retried every 60s and never created, since the CLI adds the project `.gitignore` entry when it creates it.
+  - Only appended complete lines are parsed. A log that shrank was trimmed by the CLI right after an append, so only its last line counts.
+  - `is_mutating` is an allowlist (`MUTATING`, plus `plugin`/`mcp`/`hooks` with a `MUTATING_VERBS` verb); dry runs never count. The badge checks log `check`, `diff` and `status`, so reacting to those would loop.
+  - After 1.5s of quiet (`SETTLE`) it awaits `refresh_badges` (`update_watch::refresh_skills`, then `source_health::refresh(app, false)`) inline, so entries logged meanwhile coalesce into one follow-up.
+  - The tray's Quick Sync calls `refresh_badges`, Update All is followed by `source_health::refresh`, and the tray source actions also call `refresh_skills`.
 - `update_watch.rs`
   - `spawn_background` checks at launch, then wakes hourly and checks once 24h have passed since `last_update_check`. Only due checks may notify.
   - `check` gets the latest CLI (GitHub, `is_newer`), the latest app (updater), skills/repositories (`check --json`), agents (`check agents --json`, array or null), and managed plugins (`plugin check --json`, `update-available` changes deduplicated by package). Each CLI check has a 60s timeout; failures keep that kind's last list. Checks use the active project scope and serialize publication.
