@@ -20,10 +20,18 @@ async fn kill_orphaned_servers(base_port: u16, end_port: u16) {
         if !is_port_in_use(port).await {
             continue;
         }
-        // lsof -ti filters by port; -c /^skillshare$/ uses regex for exact
-        // command name match (avoids matching skillshare-app).
+        // lsof ORs its filters unless -a is given: without it this matched any
+        // process on the port (or connected to it) and every `skillshare` process.
+        // Only a `skillshare` listening on this port counts as our orphan.
         let output = tokio::process::Command::new("lsof")
-            .args(["-ti", &format!("tcp:{port}"), "-c", "/^skillshare$/"])
+            .args([
+                "-t",
+                "-a",
+                &format!("-iTCP:{port}"),
+                "-sTCP:LISTEN",
+                "-c",
+                "/^skillshare$/",
+            ])
             .output()
             .await;
 
