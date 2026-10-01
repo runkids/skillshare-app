@@ -115,8 +115,12 @@ to remove the stopped container. Named volumes are preserved for the next run.
 Commits on `main` use Conventional Commits. Release Please opens or updates a
 Release PR with the next version and `CHANGELOG.md`. It keeps `package.json`,
 `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and the app entry in
-`src-tauri/Cargo.lock` in sync. While the app is below 1.0, features and fixes bump
-the patch version; breaking changes bump the minor version.
+`src-tauri/Cargo.lock` in sync. While the app is below 1.0, features and breaking
+changes bump the minor version and fixes bump the patch version.
+
+To pick the version yourself, add a `Release-As: 0.2.0` line to the body of a commit
+merged into `main` (for a squash merge, the merge commit message). The Release PR
+then uses that version.
 
 To release:
 
@@ -124,9 +128,9 @@ To release:
 2. The **Release Please** workflow creates the tag and draft, then directly calls
    **Release** to test and build macOS, Windows, and Linux with the versions in
    `mise.toml`.
-3. Wait for all three builds and the **release-ready** job to succeed. Review the
-   draft's installers and `latest.json`, then click **Publish release**. Publishing
-   triggers the existing Homebrew cask update.
+3. When all three builds succeed, **release-ready** publishes the release as Latest
+   and updates the Homebrew cask. If any build fails, the release stays a draft
+   and nothing is published.
 
 The workflow calls the build directly because tags created with `GITHUB_TOKEN`
 do not trigger another workflow. No additional release token is required. Enable
@@ -144,8 +148,8 @@ Keep these existing Actions secrets configured:
 
 For a failed build, rerun the failed jobs or manually run **Release** with the
 existing `tag_name` (for example, `v0.0.6`). It checks version consistency and
-uploads to the same draft. Published releases cannot be rebuilt through this
-workflow. Manual tag pushes remain supported; the local `pnpm bump` command is
+uploads to the same draft, then publishes it once every build succeeds. Published
+releases cannot be rebuilt through this workflow. Manual tag pushes remain supported; the local `pnpm bump` command is
 not needed for the automated Release PR flow.
 
 ## License
