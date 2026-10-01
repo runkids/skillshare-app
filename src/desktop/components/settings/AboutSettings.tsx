@@ -43,6 +43,14 @@ export default function AboutSettings() {
     await recheck();
   }, [recheck]);
 
+  const handleRestart = useCallback(async () => {
+    try {
+      await relaunch();
+    } catch {
+      setInstallError('Failed to restart. Please close and reopen the app.');
+    }
+  }, []);
+
   const handleDownload = useCallback(async () => {
     if (!updateObj) return;
     setInstallStatus('downloading');
@@ -69,16 +77,11 @@ export default function AboutSettings() {
     } catch (err) {
       setInstallError(err instanceof Error ? err.message : String(err));
       setInstallStatus('error');
+      return;
     }
-  }, [updateObj]);
-
-  const handleRestart = useCallback(async () => {
-    try {
-      await relaunch();
-    } catch {
-      setInstallError('Failed to restart. Please close and reopen the app.');
-    }
-  }, []);
+    // The user asked for the update, so apply it now instead of waiting for another click.
+    await handleRestart();
+  }, [updateObj, handleRestart]);
 
   return (
     <div className="space-y-6">
@@ -145,7 +148,7 @@ export default function AboutSettings() {
                 {status === 'available' && `Version ${newVersion} is available`}
                 {status === 'downloading' && `Downloading... ${progress}%`}
                 {status === 'installing' && 'Installing update...'}
-                {status === 'complete' && 'Update installed. Restart to apply.'}
+                {status === 'complete' && (error || 'Update installed. Restarting…')}
                 {status === 'error' && (error || 'Update check failed')}
                 {status === 'idle' && 'Check for new versions of skillshare App'}
               </p>
