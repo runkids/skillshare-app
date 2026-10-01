@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/runkids/skillshare-app/compare/v0.3.0...v0.3.1) (2026-10-01)
+
+
+### Bug Fixes
+
+* **server:** ignore servers the app did not start ([#58](https://github.com/runkids/skillshare-app/issues/58)) ([57259df](https://github.com/runkids/skillshare-app/commit/57259df0b1a97a5a84f8c9bbb69b2c55b1140269))
+
 ## [0.3.0](https://github.com/runkids/skillshare-app/compare/v0.2.0...v0.3.0) (2026-10-01)
 
 
