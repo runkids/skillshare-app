@@ -1,6 +1,6 @@
 [package]
 name = "skillshare-app"
-version = "0.2.0"
+version = "0.3.0"
 description = "Skillshare App — desktop GUI for Skillshare CLI"
 authors = ["runkids"]
 edition = "2021"
