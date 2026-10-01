@@ -369,7 +369,7 @@ fn path_hint_for(cli_dir: &str, home: &str, shell: &str, shell_path: &str) -> Op
 }
 
 /// PATH as the user's login shell sets it up (GUI apps do not inherit it).
-async fn login_shell_path(shell: &str) -> Option<String> {
+pub async fn login_shell_path(shell: &str) -> Option<String> {
     let run = tokio::process::Command::new(shell)
         .args(["-ilc", "/usr/bin/env"])
         .stdin(std::process::Stdio::null())

@@ -1,5 +1,30 @@
 use std::collections::HashMap;
 
+/// PATH from the user's login shell. A Finder-launched app only gets the system
+/// PATH, which misses tools installed via mise, nvm, ~/.local/bin and the like.
+static LOGIN_SHELL_PATH: tokio::sync::OnceCell<Option<String>> = tokio::sync::OnceCell::const_new();
+
+/// Read the login shell's PATH once. Later calls return immediately.
+pub async fn load_login_shell_path() {
+    LOGIN_SHELL_PATH
+        .get_or_init(|| async {
+            let shell = std::env::var("SHELL").ok()?;
+            crate::services::cli_manager::login_shell_path(&shell).await
+        })
+        .await;
+}
+
+/// Join PATH entries in order, keeping the first copy of each directory.
+fn merge_path(parts: &[String]) -> String {
+    let mut seen = std::collections::HashSet::new();
+    parts
+        .iter()
+        .flat_map(|p| p.split(':'))
+        .filter(|dir| !dir.is_empty() && seen.insert(*dir))
+        .collect::<Vec<_>>()
+        .join(":")
+}
+
 /// Build a HashMap of environment variables suitable for child PTY processes.
 /// Prepends common tool paths (Volta, fnm, Homebrew, Cargo, Go, ~/bin, ~/.local/bin)
 /// to the system PATH so that CLIs installed via those managers are discoverable.
@@ -37,11 +62,16 @@ pub fn build_env_for_child() -> HashMap<String, String> {
         format!("{home}/.local/bin"),
     ];
 
-    let mut path_parts: Vec<String> = prepend_dirs.into_iter().collect();
-    if !system_path.is_empty() {
-        path_parts.push(system_path);
-    }
-    env.insert("PATH".to_string(), path_parts.join(":"));
+    // The terminal's PATH wins, so the app finds the same tools the user's terminal does.
+    let mut path_parts: Vec<String> = LOGIN_SHELL_PATH
+        .get()
+        .cloned()
+        .flatten()
+        .into_iter()
+        .collect();
+    path_parts.extend(prepend_dirs);
+    path_parts.push(system_path);
+    env.insert("PATH".to_string(), merge_path(&path_parts));
 
     // ── Locale / terminal ───────────────────────────────────────────
     env.insert("HOME".to_string(), home);
@@ -58,4 +88,15 @@ pub fn build_env_for_child() -> HashMap<String, String> {
     }
 
     env
+}
+
+#[cfg(test)]
+mod tests {
+    use super::merge_path;
+
+    #[test]
+    fn merge_path_keeps_first_copy_in_order() {
+        let parts = ["/a:/b".to_string(), "/b:/c".to_string(), "/a".to_string()];
+        assert_eq!(merge_path(&parts), "/a:/b:/c");
+    }
 }

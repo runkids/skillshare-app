@@ -95,6 +95,8 @@ pub fn run() {
 
             services::update_watch::spawn_background(app.handle().clone());
 
+            tauri::async_runtime::spawn(utils::env::load_login_shell_path());
+
             // Auto-start Go server if onboarding is complete (non-blocking)
             let server = app.state::<ServerManager>().inner().clone();
             tauri::async_runtime::spawn(async move {

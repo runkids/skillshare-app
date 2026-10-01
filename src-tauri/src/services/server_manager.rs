@@ -130,7 +130,9 @@ impl ServerManager {
             cmd.current_dir(&resolved);
         }
 
-        // Finder-launched apps get a minimal PATH; the Web UI shells out to git, brew, editors.
+        // Finder-launched apps get a minimal PATH; the Web UI shells out to git, brew, editors,
+        // and finds agent CLIs (claude, codex, ...) on it.
+        crate::utils::env::load_login_shell_path().await;
         cmd.envs(crate::utils::env::build_env_for_child());
         cmd.stdin(std::process::Stdio::null());
         // Keep the server's output so a failed start can say why. Truncated on every start.
