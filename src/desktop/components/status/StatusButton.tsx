@@ -63,15 +63,11 @@ export default function StatusButton() {
   function runAction(row: StatusRow) {
     setOpen(false);
     const action = row.action;
-    if (action?.kind === 'review') navigate(action.path);
+    if (action?.kind === 'open') navigate(action.path);
     else if (action?.kind === 'restart') {
       // The header reload restarts a server that is not healthy.
       clearServerStopped();
       reloadView();
-    } else if (action?.kind === 'run') {
-      tauriBridge
-        .runStatusAction(action.action)
-        .catch((e) => console.warn(`${action.label} failed to start:`, e));
     }
   }
 

@@ -37,7 +37,7 @@ How the Rust backend in `src-tauri/` fits together.
 - `services/source_health.rs`: target drift and the source's git remote state; tray collect/push/pull.
 - `commands/source_health.rs`: `get_source_health`.
 - `services/audit.rs`: the security audit after changes; `commands/audit.rs`: `get_audit_report`.
-- `commands/status.rs`: the title bar status panel; `run_status_action` starts the tray's Update All, Quick Sync, Collect, Push or Pull, and `check_status_now` re-runs the update, source health and audit checks.
+- `commands/status.rs`: `check_status_now`, the title bar status panel's Check now; it re-runs the update, source health and audit checks.
 - `services/diagnostics.rs`: the report text, with home redacted to `~`.
 - `services/project_store.rs`: `projects.json`, the active project, `active_project_mode`.
 - `utils/env.rs`: the login-shell PATH and the child-process environment.

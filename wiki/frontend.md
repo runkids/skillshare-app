@@ -47,7 +47,7 @@ App self-update uses `check()` from `@tauri-apps/plugin-updater` in `useAppUpdat
 
 - The button renders nothing when no row has an action. It shows "N things to review" (warn dot, neutral pill), or, with any HIGH/CRITICAL finding, "N security issues" plus "+M" for the other actionable rows on `--bad-bg`. Red means security or a stopped server only.
 - The panel closes on Escape, an outside click, window blur and after any action. Only the first actionable row's button is primary.
-- Actions: Review navigates to the one skill/agent with findings, else `/audit` (LOW/MEDIUM-only findings get a neutral row). Update, Sync, Collect, Push and Pull call `runStatusAction` (`commands/status.rs`), which runs the tray's own code: Update All, Quick Sync, the Collect confirm dialog, push and pull. Restart clears the stop and calls `reloadView`.
+- Actions open a Web UI page and never change anything themselves: Review goes to the one skill/agent with findings, else `/audit` (LOW/MEDIUM-only findings get a neutral row); Update goes to `/update`, Sync to `/sync`, Collect to `/collect`, Push and Pull to `/git`. Restart clears the stop and calls `reloadView`.
 - Check now calls `checkStatusNow` (update check, source health with a fetch, audit). "Checked" is the time of the last Check now or the last new value from any store.
 
 ## Quick Actions palette

@@ -19,12 +19,10 @@ const ICONS: Record<StatusIcon, typeof ShieldAlert> = {
 
 function actionLabel(row: StatusRow) {
   switch (row.action?.kind) {
-    case 'review':
-      return 'Review';
+    case 'open':
+      return row.action.label;
     case 'restart':
       return 'Restart';
-    case 'run':
-      return row.action.label;
     default:
       return null;
   }

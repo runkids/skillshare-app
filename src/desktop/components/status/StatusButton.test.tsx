@@ -18,7 +18,6 @@ const state = vi.hoisted(() => ({
   stopped: false,
 }));
 const bridge = vi.hoisted(() => ({
-  runStatusAction: vi.fn(() => Promise.resolve()),
   checkStatusNow: vi.fn(() => Promise.resolve()),
 }));
 const { reloadView } = vi.hoisted(() => ({ reloadView: vi.fn() }));
@@ -121,21 +120,29 @@ describe('StatusButton', () => {
     expect(screen.queryByRole('dialog', { name: 'Status' })).not.toBeInTheDocument();
   });
 
-  it('runs Update All and closes the panel', () => {
+  it('opens the update page instead of updating, and closes the panel', () => {
     state.updates = { ...state.updates, skills: ['pdf'] };
     renderButton();
     openPanel();
     fireEvent.click(screen.getByRole('button', { name: 'Update' }));
-    expect(bridge.runStatusAction).toHaveBeenCalledWith('update_all');
+    expect(screen.getByTestId('location')).toHaveTextContent('/update');
     expect(screen.queryByRole('dialog', { name: 'Status' })).not.toBeInTheDocument();
   });
 
-  it('runs the matching source action', () => {
+  it('opens the collect page for skills that are only in targets', () => {
+    state.health = { ...state.health, localSkills: ['mine'] };
+    renderButton();
+    openPanel();
+    fireEvent.click(screen.getByRole('button', { name: 'Collect' }));
+    expect(screen.getByTestId('location')).toHaveTextContent('/collect');
+  });
+
+  it('opens the git page for changes to pull', () => {
     state.health = { ...state.health, git: { uncommitted: 0, ahead: 0, behind: 1 } };
     renderButton();
     openPanel();
     fireEvent.click(screen.getByRole('button', { name: 'Pull' }));
-    expect(bridge.runStatusAction).toHaveBeenCalledWith('pull');
+    expect(screen.getByTestId('location')).toHaveTextContent('/git');
   });
 
   it('opens the skill a security issue is in', () => {
