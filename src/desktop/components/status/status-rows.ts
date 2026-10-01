@@ -1,17 +1,10 @@
-import type {
-  AuditFinding,
-  AvailableUpdates,
-  SourceHealth,
-  StatusAction,
-} from '../../api/tauri-bridge';
+import type { AuditFinding, AvailableUpdates, SourceHealth } from '../../api/tauri-bridge';
 
 export type StatusTone = 'bad' | 'accent' | 'warn' | 'neutral' | 'ok';
 export type StatusIcon = 'shield' | 'update' | 'sync' | 'upload' | 'server';
 
-export type RowAction =
-  | { kind: 'review'; path: string }
-  | { kind: 'run'; action: StatusAction; label: string }
-  | { kind: 'restart' };
+/** `open` goes to the Web UI page where the user acts; only the app's own server restarts here. */
+export type RowAction = { kind: 'open'; path: string; label: string } | { kind: 'restart' };
 
 export interface StatusRow {
   id: string;
@@ -57,7 +50,7 @@ function auditRow(findings: AuditFinding[]): StatusRow | null {
         ? plural(alerts.length, 'security issue')
         : plural(findings.length, 'audit finding'),
     detail: [...new Set(shown.map((f) => f.skill))].join(', '),
-    action: { kind: 'review', path: reviewPath(shown) },
+    action: { kind: 'open', path: reviewPath(shown), label: 'Review' },
   };
 }
 
@@ -79,7 +72,7 @@ function updatesRow(updates: AvailableUpdates): StatusRow | null {
         ? plural(names.length, kinds[0].one, kinds[0].many)
         : `${names.length} updates`,
     detail: names.join(', '),
-    action: { kind: 'run', action: 'update_all', label: 'Update' },
+    action: { kind: 'open', path: '/update', label: 'Update' },
   };
 }
 
@@ -93,7 +86,7 @@ function sourceRows(health: SourceHealth): StatusRow[] {
       icon: 'sync',
       title: `${plural(targets.length, 'target')} ${targets.length === 1 ? 'needs' : 'need'} a sync`,
       detail: targets.join(', '),
-      action: { kind: 'run', action: 'sync', label: 'Sync' },
+      action: { kind: 'open', path: '/sync', label: 'Sync' },
     });
   }
   const local = health.localSkills;
@@ -104,7 +97,7 @@ function sourceRows(health: SourceHealth): StatusRow[] {
       icon: 'sync',
       title: `${plural(local.length, 'skill')} only in ${local.length === 1 ? 'a target' : 'targets'}`,
       detail: local.join(', '),
-      action: { kind: 'run', action: 'collect', label: 'Collect' },
+      action: { kind: 'open', path: '/collect', label: 'Collect' },
     });
   }
   const git = health.git;
@@ -120,7 +113,7 @@ function sourceRows(health: SourceHealth): StatusRow[] {
       ]
         .filter(Boolean)
         .join(', '),
-      action: { kind: 'run', action: 'push', label: 'Push' },
+      action: { kind: 'open', path: '/git', label: 'Push' },
     });
   }
   if (git && git.behind > 0) {
@@ -130,7 +123,7 @@ function sourceRows(health: SourceHealth): StatusRow[] {
       icon: 'upload',
       title: `${plural(git.behind, 'update')} to pull`,
       detail: `${plural(git.behind, 'commit')} on the remote`,
-      action: { kind: 'run', action: 'pull', label: 'Pull' },
+      action: { kind: 'open', path: '/git', label: 'Pull' },
     });
   }
   return rows;
