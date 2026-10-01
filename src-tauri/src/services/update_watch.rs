@@ -180,6 +180,40 @@ fn unannounced(
 }
 
 /// Check the CLI, the app, and skills, publish the result, and notify while the app is in the background.
+/// Re-check only skills after the skills source changed, e.g. when the user updated
+/// them in the Web UI, so the badge clears without waiting for the daily check.
+pub async fn refresh_skills(app: &AppHandle) {
+    let Some(skills) = skill_updates().await else {
+        return;
+    };
+    let updates = app.state::<UpdateState>();
+    let found = {
+        let mut state = updates.0.lock().await;
+        if state.skills == skills {
+            return;
+        }
+        state.skills = skills;
+        state.clone()
+    };
+    let mut meta = cli_manager::load_meta();
+    if forget_cleared(&mut meta.notified_skill_updates, &found.skills) {
+        if let Err(e) = cli_manager::save_meta(&meta) {
+            log::warn!("Could not save notified skill updates: {e}");
+        }
+    }
+    if let Err(e) = app.emit(UPDATES_EVENT, &found) {
+        log::warn!("Failed to emit update result: {e}");
+    }
+}
+
+/// Drop announced skills that no longer have an update, so a later update to one of
+/// them is announced again. Never adds: new updates are left for the notifying check.
+fn forget_cleared(notified: &mut Vec<String>, current: &[String]) -> bool {
+    let before = notified.len();
+    notified.retain(|s| current.contains(s));
+    notified.len() != before
+}
+
 pub async fn check(app: &AppHandle, notify: bool) -> AvailableUpdates {
     let mut meta = cli_manager::load_meta();
     if let Err(e) = cli_manager::refresh_cached_version(&mut meta).await {
@@ -242,6 +276,13 @@ pub fn spawn_background(app: AppHandle) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn refresh_forgets_skills_that_were_updated() {
+        let mut notified = vec!["a".to_string(), "b".to_string()];
+        forget_cleared(&mut notified, &["b".to_string(), "c".to_string()]);
+        assert_eq!(notified, vec!["b".to_string()]);
+    }
 
     #[test]
     fn higher_version_is_newer() {
