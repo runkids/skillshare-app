@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.10](https://github.com/runkids/skillshare-app/compare/v0.0.9...v0.0.10) (2026-09-30)
+
+
+### Features
+
+* **onboarding:** show how to add the CLI to PATH after setup ([#8](https://github.com/runkids/skillshare-app/issues/8)) ([3ff34e1](https://github.com/runkids/skillshare-app/commit/3ff34e10ed53f68d832122de02cb6daebd95ff64))
+
 ## [0.0.9](https://github.com/runkids/skillshare-app/compare/v0.0.8...v0.0.9) (2026-09-30)
 
 
