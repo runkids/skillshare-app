@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.15](https://github.com/runkids/skillshare-app/compare/v0.0.14...v0.0.15) (2026-10-01)
+
+
+### Bug Fixes
+
+* **about:** report a saved diagnostics file even when it cannot be revealed ([#29](https://github.com/runkids/skillshare-app/issues/29)) ([da7bf07](https://github.com/runkids/skillshare-app/commit/da7bf078f89c2abb2d5c7a1ada8854e623cb3ea5))
+* **server:** make stop wait for a restart in progress; drop unused theme preference ([#31](https://github.com/runkids/skillshare-app/issues/31)) ([2c2f108](https://github.com/runkids/skillshare-app/commit/2c2f10851d3fb651c9753a5ff0a9038ac95709f3))
+
 ## [0.0.14](https://github.com/runkids/skillshare-app/compare/v0.0.13...v0.0.14) (2026-10-01)
 
 
