@@ -284,7 +284,8 @@ pub async fn exec(
 ) -> Result<String, String> {
     let env = crate::utils::env::build_env_for_child();
     let mut cmd = tokio::process::Command::new(cli_path);
-    cmd.args(args).envs(&env);
+    // A caller that gives up (e.g. Quick Sync's timeout) drops this future; take the CLI with it.
+    cmd.args(args).envs(&env).kill_on_drop(true);
     if let Some(dir) = working_dir {
         cmd.current_dir(dir);
     }
@@ -873,6 +874,24 @@ pub async fn download_cli(url: &str) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn exec_kills_the_cli_when_the_caller_times_out() {
+        let marker = std::env::temp_dir().join(format!("exec-timeout-{}", std::process::id()));
+        let _ = std::fs::remove_file(&marker);
+        let script = format!("sleep 1; touch '{}'", marker.display());
+        let args = ["-c".to_string(), script];
+
+        let timed_out = tokio::time::timeout(
+            std::time::Duration::from_millis(100),
+            exec("sh", &args, None),
+        )
+        .await;
+        tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+
+        assert!(timed_out.is_err() && !marker.exists());
+    }
 
     #[test]
     fn no_path_hint_when_login_shell_already_has_the_folder() {
