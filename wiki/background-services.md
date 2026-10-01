@@ -14,6 +14,7 @@ The app's long-running watchers and checks: auto-sync, update checks, the operat
   - Every CLI command, including the web UI's, appends a JSONL entry to `operations.log`: `<project>/.skillshare/logs/` (or `skillshare/`) in project mode, else `$XDG_STATE_HOME/skillshare/logs/` (`%AppData%\skillshare\logs` on Windows, `~/.local/state/skillshare/logs`). `refresh` (startup, project add/remove/switch, reset) watches the active project's log dir non-recursively; a missing dir is retried every 60s and never created, since the CLI adds the project `.gitignore` entry when it creates it.
   - Only appended complete lines are parsed. A log that shrank was trimmed by the CLI right after an append, so only its last line counts.
   - `is_mutating` is an allowlist (`MUTATING`, plus `plugin`/`mcp`/`hooks` with a `MUTATING_VERBS` verb); dry runs never count. The badge checks log `check`, `diff` and `status`, so reacting to those would loop.
+  - A successful `upgrade` (`is_upgrade`) first runs `update_watch::check(app, false)` to re-read the CLI version.
   - After 1.5s of quiet (`SETTLE`) it awaits `refresh_badges` (`update_watch::refresh_skills`, then `source_health::refresh(app, false)`) inline, so entries logged meanwhile coalesce into one follow-up.
   - The tray's Quick Sync calls `refresh_badges`, Update All is followed by `source_health::refresh`, and the tray source actions also call `refresh_skills`.
 - `update_watch.rs`
