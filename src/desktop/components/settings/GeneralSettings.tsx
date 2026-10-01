@@ -18,12 +18,17 @@ export default function GeneralSettings() {
   const [confirmReset, setConfirmReset] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [notifyUpdate, setNotifyUpdate] = useState(true);
+  const [notifySync, setNotifySync] = useState(true);
 
   useEffect(() => {
     tauriBridge.getPreferredPort().then((p) => setPort(String(p)));
     tauriBridge
       .getNotifyUpdate()
       .then(setNotifyUpdate)
+      .catch(() => {});
+    tauriBridge
+      .getNotifySync()
+      .then(setNotifySync)
       .catch(() => {});
   }, []);
 
@@ -33,6 +38,16 @@ export default function GeneralSettings() {
       await tauriBridge.setNotifyUpdate(enabled);
     } catch (err) {
       setNotifyUpdate(!enabled);
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const handleNotifySync = async (enabled: boolean) => {
+    setNotifySync(enabled);
+    try {
+      await tauriBridge.setNotifySync(enabled);
+    } catch (err) {
+      setNotifySync(!enabled);
       setError(err instanceof Error ? err.message : String(err));
     }
   };
@@ -128,6 +143,25 @@ export default function GeneralSettings() {
         </div>
       </Card>
 
+      <Card>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p id="notify-sync" className="text-sm font-medium text-pencil">
+              Sync notifications
+            </p>
+            <p id="notify-sync-hint" className="text-xs text-pencil-light mt-0.5">
+              Show the result when Quick Sync runs from the menu bar
+            </p>
+          </div>
+          <Switch
+            checked={notifySync}
+            onChange={handleNotifySync}
+            labelledBy="notify-sync"
+            describedBy="notify-sync-hint"
+          />
+        </div>
+      </Card>
+
       {/* Danger zone */}
       <div className="pt-4">
         <h2 className="text-sm font-semibold text-danger uppercase tracking-wider mb-3">
@@ -157,7 +191,7 @@ export default function GeneralSettings() {
                 <p className="font-semibold text-[var(--bad)]">Cleared</p>
                 <ul className="mt-1 space-y-0.5 text-[var(--ink-2)] list-disc pl-4">
                   <li>The app’s project list</li>
-                  <li>Server port and update notification settings</li>
+                  <li>Server port and notification settings</li>
                   <li>Remembered CLI location and version</li>
                 </ul>
               </div>

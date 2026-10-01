@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import type { ReactNode, RefObject } from 'react';
+import { isTauri } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { tauriBridge, type Project } from '../api/tauri-bridge';
 
 export interface SwitchOptions {
@@ -141,6 +143,15 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  // A tray Quick Sync changed the skills on disk; show the result in the web view.
+  useEffect(() => {
+    if (!isTauri()) return;
+    const unlisten = listen('sync-completed', reloadView);
+    return () => {
+      void unlisten.then((off) => off());
+    };
+  }, [reloadView]);
 
   return (
     <ProjectContext.Provider
