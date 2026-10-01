@@ -3,6 +3,7 @@ import Card from '../../../components/Card';
 import Badge from '../../../components/Badge';
 import Button from '../../../components/Button';
 import { useTauri } from '../../context/TauriContext';
+import { useProjects } from '../../context/ProjectContext';
 import { tauriBridge } from '../../api/tauri-bridge';
 import TerminalAccess from '../TerminalAccess';
 import { checkUpdatesNow, useUpdates } from '../../hooks/useUpdates';
@@ -11,6 +12,7 @@ type UpgradeStatus = 'idle' | 'upgrading' | 'success' | 'up-to-date' | 'error';
 
 export default function CliSettings() {
   const { appInfo, refresh } = useTauri();
+  const { reloadView } = useProjects();
   const { cli: cliUpdate } = useUpdates();
   const [status, setStatus] = useState<UpgradeStatus>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -28,15 +30,11 @@ export default function CliSettings() {
     setStatus('upgrading');
     setError(null);
     try {
-      const cliPath = await tauriBridge.detectCli();
-      if (!cliPath) throw new Error('CLI not found');
-
       const oldVersion = appInfo?.cliVersion;
-      await tauriBridge.runCli(cliPath, ['upgrade', '--force']);
-
-      // Re-detect version after upgrade and refresh app state
-      const updatedVersion = await tauriBridge.getCliVersion(cliPath);
+      // Stops the server, upgrades, then restarts it on the new binary for the active project
+      const updatedVersion = await tauriBridge.upgradeCli();
       await refresh();
+      reloadView();
       void checkUpdatesNow().catch(() => {});
 
       if (updatedVersion && updatedVersion !== oldVersion) {
