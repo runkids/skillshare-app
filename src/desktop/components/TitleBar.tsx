@@ -3,12 +3,12 @@ import { Settings, Monitor, TerminalSquare, RotateCw, History } from 'lucide-rea
 import { useNavigate } from 'react-router-dom';
 import ProjectDropdown from './ProjectDropdown';
 import { useTerminal } from '../context/TerminalContext';
-import { useTauri } from '../context/TauriContext';
 import { useProjects } from '../context/ProjectContext';
 import { isMacOS } from '../utils/platform';
 import { useUpdates } from '../hooks/useUpdates';
 import ResourceUpdatesBadge from './ResourceUpdatesBadge';
 import SourceHealthBadge from './SourceHealthBadge';
+import ServerStatus from './ServerStatus';
 import appIcon from '../../../src-tauri/icons/64x64.png';
 
 // TODO: re-enable Web UI / Terminal tab switcher when terminal feature is ready
@@ -19,7 +19,6 @@ export default function TitleBar() {
   const updates = useUpdates();
   const hasUpdate = Boolean(updates.app || updates.cli);
   const { activeView, setActiveView, hasUnreadAny } = useTerminal();
-  const { appInfo } = useTauri();
   const { switching, reloadView } = useProjects();
   // macOS draws native traffic lights over the window (titleBarStyle: Overlay).
   const mac = isMacOS();
@@ -92,12 +91,7 @@ export default function TitleBar() {
       <div data-tauri-drag-region className="flex-1 self-stretch" />
       <ResourceUpdatesBadge updates={updates} />
       <SourceHealthBadge />
-      {appInfo?.serverRunning && (
-        <span className="flex items-center gap-1.5 h-[26px] px-2.5 rounded-[var(--r-btn)] bg-[var(--ok-bg)] text-[var(--ok)] text-xs">
-          <span className="w-1.5 h-1.5 rounded-full bg-[var(--ok)]" />
-          Server running
-        </span>
-      )}
+      <ServerStatus />
       <button
         type="button"
         onClick={() => {
