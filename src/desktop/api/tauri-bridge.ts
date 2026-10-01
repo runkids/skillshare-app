@@ -41,6 +41,19 @@ export interface SourceHealth {
 
 export const SOURCE_HEALTH_EVENT = 'source-health';
 
+/** A finding from the security audit run after Update All, Pull or auto-sync. */
+export interface AuditFinding {
+  skill: string;
+  kind: 'skill' | 'agent';
+  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  message: string;
+  file: string;
+  /** 0 when the finding is about the file or skill as a whole. */
+  line: number;
+}
+
+export const AUDIT_EVENT = 'audit-report';
+
 export interface PathHint {
   dir: string;
   command: string;
@@ -176,6 +189,7 @@ export const tauriBridge = {
   setNotifyUpdate: (enabled: boolean) => invoke<void>('set_notify_update', { enabled }),
   resetAllData: () => invoke<void>('reset_all_data'),
   getSourceHealth: () => invoke<SourceHealth>('get_source_health'),
+  getAuditReport: () => invoke<AuditFinding[]>('get_audit_report'),
 
   // Activity commands
   getActivity: () => invoke<ActivityEntry[]>('get_activity'),

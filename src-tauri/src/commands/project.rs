@@ -39,6 +39,7 @@ pub fn add_project(
     crate::services::auto_sync::refresh(&app);
     crate::services::oplog_watch::refresh(&app);
     crate::services::source_health::project_changed(&app);
+    crate::services::audit::project_changed(&app);
     Ok(project)
 }
 
@@ -51,6 +52,7 @@ pub fn remove_project(app: tauri::AppHandle, id: String) -> Result<(), String> {
     crate::services::auto_sync::refresh(&app);
     crate::services::oplog_watch::refresh(&app);
     crate::services::source_health::project_changed(&app);
+    crate::services::audit::project_changed(&app);
     Ok(())
 }
 
@@ -63,5 +65,6 @@ pub fn switch_project(app: tauri::AppHandle, id: String) -> Result<(), String> {
     crate::services::auto_sync::refresh(&app);
     crate::services::oplog_watch::refresh(&app);
     crate::services::source_health::project_changed(&app);
+    crate::services::audit::project_changed(&app);
     Ok(())
 }

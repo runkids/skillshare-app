@@ -185,12 +185,16 @@ pub async fn quick_search(query: String, project_id: String) -> Result<Vec<Searc
 
 #[tauri::command]
 pub async fn quick_install(
+    app: tauri::AppHandle,
     source: String,
     skill: String,
     project_id: String,
 ) -> Result<String, String> {
     let context = cli_context(Some(&project_id)).await?;
-    run(&context, install_args(&source, &skill, context.mode)?, 120).await
+    let output = run(&context, install_args(&source, &skill, context.mode)?, 120).await?;
+    // Third-party content just arrived: audit it without holding up the palette.
+    tauri::async_runtime::spawn(async move { crate::services::audit::run(&app).await });
+    Ok(output)
 }
 
 #[derive(Serialize)]

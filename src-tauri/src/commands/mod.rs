@@ -1,5 +1,6 @@
 pub mod activity;
 pub mod app;
+pub mod audit;
 pub mod cli;
 pub mod project;
 pub mod quick_actions;

@@ -32,6 +32,9 @@ pub struct CliMeta {
     /// Source health findings as of the last notification, so each is announced once.
     #[serde(default)]
     pub notified_source_health: Vec<String>,
+    /// HIGH/CRITICAL audit findings as of the last notification, so each is announced once.
+    #[serde(default)]
+    pub notified_audit_findings: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

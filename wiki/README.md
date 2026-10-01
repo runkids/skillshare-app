@@ -6,7 +6,8 @@ The wiki holds background, procedures and reference for agents and maintainers, 
 
 | Topic | Use when | Main sources |
 |---|---|---|
-| `architecture` | Changing the Rust backend: commands, server supervisor, background services, state and files | `architecture.md` |
+| `architecture` | Changing the Rust backend: commands, server supervisor, state and files | `architecture.md` |
+| `background-services` | Changing auto-sync, update checks, the operation log watcher, source health or the audit | `background-services.md` |
 | `frontend` | Changing React code, styling, theme or the Rust bridge; frontend tests | `frontend.md` |
 | `development` | Running the app, verifying a change, logs and debugging | `development.md`, `../README.md` (the "Development with Docker" section) |
 | `release` | Shipping a version, choosing a version, recovering a failed release | `release.md`, `../README.md` (the "Releasing" section) |
