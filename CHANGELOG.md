@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.17](https://github.com/runkids/skillshare-app/compare/v0.0.16...v0.0.17) (2026-10-01)
+
+
+### Bug Fixes
+
+* **icon:** give the app icon a rounded-square body that fills the grid ([#38](https://github.com/runkids/skillshare-app/issues/38)) ([ec39182](https://github.com/runkids/skillshare-app/commit/ec39182c347dadee533057121366706d62340c50))
+
 ## [0.0.16](https://github.com/runkids/skillshare-app/compare/v0.0.15...v0.0.16) (2026-10-01)
 
 
