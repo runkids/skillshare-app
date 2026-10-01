@@ -92,6 +92,8 @@ pub fn run() {
             commands::quick_actions::quick_new_skill,
             commands::source_health::get_source_health,
             commands::audit::get_audit_report,
+            commands::status::run_status_action,
+            commands::status::check_status_now,
             // Activity commands
             commands::activity::get_activity,
             // Terminal commands
