@@ -41,6 +41,7 @@ specs/
 # Claude/AI files
 CLAUDE.md
 .claude/
+.agents/
 AGENTS.md
 GEMINI.md
 .mcp.json
