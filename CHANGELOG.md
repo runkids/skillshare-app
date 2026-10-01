@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.0](https://github.com/runkids/skillshare-app/compare/v0.1.0...v0.2.0) (2026-10-01)
+
+
+### Features
+
+* **tray:** group status, actions, projects and settings ([#53](https://github.com/runkids/skillshare-app/issues/53)) ([550754f](https://github.com/runkids/skillshare-app/commit/550754f6691be09847e0933a840a0c22efb4965f))
+
+
+### Bug Fixes
+
+* **settings:** center the settings content on wide windows ([#54](https://github.com/runkids/skillshare-app/issues/54)) ([76278ce](https://github.com/runkids/skillshare-app/commit/76278ce682677106f27b41764d0cc8b241eb3485))
+
 ## [0.1.0](https://github.com/runkids/skillshare-app/compare/v0.0.17...v0.1.0) (2026-10-01)
 
 
