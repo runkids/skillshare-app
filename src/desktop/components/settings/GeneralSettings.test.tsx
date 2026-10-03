@@ -22,8 +22,6 @@ vi.mock('@tauri-apps/api/event', () => ({
 vi.mock('../../api/tauri-bridge', () => ({
   AUTO_SYNC_CHANGED_EVENT: 'auto-sync-changed',
   tauriBridge: {
-    getQuickActionsSettings: () =>
-      Promise.resolve({ enabled: true, shortcut: 'Command+Shift+K', error: null }),
     getPreferredPort: () => Promise.resolve(19420),
     getNotifyUpdate: () => Promise.resolve(true),
     getNotifySync: mocks.getNotifySync,

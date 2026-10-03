@@ -17,7 +17,6 @@ const updates = vi.hoisted(() => ({
 vi.mock('../hooks/useUpdates', () => ({ useUpdates: () => updates }));
 const bridge = vi.hoisted(() => ({
   quickSync: vi.fn(() => Promise.resolve('Synced to 1 target: 1 linked, 0 updated, 0 pruned')),
-  openQuickActions: vi.fn(() => Promise.resolve()),
 }));
 vi.mock('../api/tauri-bridge', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/tauri-bridge')>();
@@ -120,12 +119,6 @@ describe('TitleBar shortcuts', () => {
     renderWithUA(<TitleBar />, MAC_UA);
     fireEvent.click(screen.getByRole('button', { name: 'Quick Sync' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('no targets configured');
-  });
-
-  it('opens the Quick Actions palette', () => {
-    renderWithUA(<TitleBar />, MAC_UA);
-    fireEvent.click(screen.getByRole('button', { name: 'Quick Actions' }));
-    expect(bridge.openQuickActions).toHaveBeenCalledTimes(1);
   });
 
   it('opens the Web UI config files page', () => {

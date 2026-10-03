@@ -1,11 +1,10 @@
-//! Source health: skills left behind in targets, targets out of sync, and the git
+//! Source health: targets out of sync and the git
 //! remote state of the global source. Re-checked when the source changes and every
 //! 15 minutes; surfaced as an event, a title bar badge and tray actions.
 
 use crate::services::{cli_manager, project_store};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
-use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 use tauri_plugin_notification::NotificationExt;
 
 /// Emitted with [`SourceHealth`] whenever it changes.
@@ -20,15 +19,12 @@ const GIT_TIMEOUT: Duration = Duration::from_secs(10);
 /// Same budget as Quick Sync: long enough for a slow push or pull, short enough not to hang.
 const ACTION_TIMEOUT: Duration = Duration::from_secs(120);
 
-const COLLECT_MENU_ID: &str = "source_collect";
 const PUSH_MENU_ID: &str = "source_push";
 const PULL_MENU_ID: &str = "source_pull";
 
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SourceHealth {
-    /// Skills that exist only in a target, which `collect` would copy into the source; sorted.
-    pub local_skills: Vec<String>,
     /// Targets that `sync` would change; sorted.
     pub out_of_sync_targets: Vec<String>,
     /// Git state of the source; `None` outside a git repo and in project mode,
@@ -55,9 +51,6 @@ static CHECK_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 #[derive(serde::Deserialize)]
 struct DiffItem {
-    name: String,
-    kind: String,
-    reason: String,
     is_sync: bool,
 }
 
@@ -74,30 +67,20 @@ struct DiffOutput {
     targets: Vec<DiffTarget>,
 }
 
-/// Local-only skills and out-of-sync targets from `skillshare diff --json`.
-fn parse_diff(stdout: &str) -> Option<(Vec<String>, Vec<String>)> {
+/// Out-of-sync targets from `skillshare diff --json`.
+fn parse_diff(stdout: &str) -> Option<Vec<String>> {
     let out: DiffOutput = serde_json::from_str(stdout)
         .map_err(|e| log::warn!("Unexpected `skillshare diff --json` output: {e}"))
         .ok()?;
-    let mut local = Vec::new();
-    let mut drifted = Vec::new();
-    for target in out.targets {
-        if target.items.iter().any(|i| i.is_sync) {
-            drifted.push(target.name);
-        }
-        local.extend(
-            target
-                .items
-                .into_iter()
-                .filter(|i| i.kind == "skill" && i.reason == "local only")
-                .map(|i| i.name),
-        );
-    }
-    for list in [&mut local, &mut drifted] {
-        list.sort();
-        list.dedup();
-    }
-    Some((local, drifted))
+    let mut drifted: Vec<String> = out
+        .targets
+        .into_iter()
+        .filter(|t| t.items.iter().any(|i| i.is_sync))
+        .map(|t| t.name)
+        .collect();
+    drifted.sort();
+    drifted.dedup();
+    Some(drifted)
 }
 
 /// Counts from `git status --porcelain=v2 --branch`; no upstream means nothing ahead or behind.
@@ -191,7 +174,7 @@ async fn compute(fetch: bool, (dir, is_project): &ProjectMode) -> Option<SourceH
     .await
     .map_err(|e| log::warn!("Source health: diff failed: {e}"))
     .ok()?;
-    let (local_skills, out_of_sync_targets) = parse_diff(&diff)?;
+    let out_of_sync_targets = parse_diff(&diff)?;
 
     let git = if is_project {
         None
@@ -210,25 +193,21 @@ async fn compute(fetch: bool, (dir, is_project): &ProjectMode) -> Option<SourceH
         }
     };
     Some(SourceHealth {
-        local_skills,
         out_of_sync_targets,
         git,
     })
 }
 
-/// Keys for findings worth a notification: each skill left in a target, and each new
-/// upstream commit count. Drift and unpushed work follow the user's own edits, so the
-/// badge is enough for them.
+/// Keys for findings worth a notification: each new upstream commit count. Drift and
+/// unpushed work follow the user's own edits, so the badge is enough for them.
 fn finding_keys(health: &SourceHealth) -> Vec<String> {
-    let mut keys: Vec<String> = health
-        .local_skills
-        .iter()
-        .map(|s| format!("local:{s}"))
-        .collect();
-    if let Some(git) = health.git.as_ref().filter(|g| g.behind > 0) {
-        keys.push(format!("behind:{}", git.behind));
-    }
-    keys
+    health
+        .git
+        .as_ref()
+        .filter(|g| g.behind > 0)
+        .map(|g| format!("behind:{}", g.behind))
+        .into_iter()
+        .collect()
 }
 
 /// Notification lines when `health` has a finding the last notification didn't cover.
@@ -240,14 +219,6 @@ fn unannounced(health: &SourceHealth, notified: &mut Vec<String>) -> Vec<String>
             .any(|k| k.starts_with(prefix) && !notified.contains(k))
     };
     let mut lines = Vec::new();
-    if new("local:") {
-        let n = health.local_skills.len();
-        lines.push(format!(
-            "{n} skill{} only in targets; collect {} into the source.",
-            plural(n),
-            if n == 1 { "it" } else { "them" }
-        ));
-    }
     if new("behind:") {
         let n = health.git.as_ref().map_or(0, |g| g.behind);
         lines.push(format!("{n} update{} to pull from the remote.", plural(n)));
@@ -267,48 +238,10 @@ fn plural(n: usize) -> &'static str {
 /// Dispatch source actions from the grouped tray without changing their execution.
 pub fn on_menu_event(app: &AppHandle, id: &str) {
     match id {
-        COLLECT_MENU_ID => confirm_collect(app),
         PUSH_MENU_ID => spawn_action(app, &["push"], "Push"),
         PULL_MENU_ID => spawn_action(app, &["pull"], "Pull"),
         _ => {}
     }
-}
-
-/// Collect copies skills into the source, so ask before changing it.
-pub(crate) fn confirm_collect(app: &AppHandle) {
-    let app = app.clone();
-    tauri::async_runtime::spawn(async move {
-        let skills = app
-            .state::<SourceHealthState>()
-            .0
-            .lock()
-            .await
-            .local_skills
-            .clone();
-        if skills.is_empty() {
-            return;
-        }
-        let (_, is_project) = project_store::active_project_mode(&project_store::load());
-        let mode = if is_project { "--project" } else { "--global" };
-        let dialog_app = app.clone();
-        dialog_app
-            .dialog()
-            .message(format!(
-                "Copy these skills from your targets into the skills source?\n\n{}",
-                skills.join(", ")
-            ))
-            .title("Collect Local Skills")
-            .buttons(MessageDialogButtons::OkCancelCustom(
-                "Collect".into(),
-                "Cancel".into(),
-            ))
-            .show(move |confirmed| {
-                if confirmed {
-                    // --json skips the CLI's own prompt, which cannot be answered without a terminal.
-                    spawn_action(&app, &["collect", "--all", "--json", mode], "Collect");
-                }
-            });
-    });
 }
 
 /// Run a CLI action for the active project, report the result, then re-check.
@@ -431,10 +364,9 @@ pub fn spawn_background(app: AppHandle) {
 mod tests {
     use super::*;
 
-    fn health(local: &[&str], behind: usize) -> SourceHealth {
+    fn health(drifted: &[&str], behind: usize) -> SourceHealth {
         SourceHealth {
-            local_skills: local.iter().map(|s| s.to_string()).collect(),
-            out_of_sync_targets: Vec::new(),
+            out_of_sync_targets: drifted.iter().map(|s| s.to_string()).collect(),
             git: Some(GitState {
                 behind,
                 ..Default::default()
@@ -470,7 +402,7 @@ mod tests {
     }
 
     #[test]
-    fn diff_lists_local_skills_once_and_targets_sync_would_change() {
+    fn diff_lists_targets_sync_would_change() {
         let stdout = r#"{
           "targets": [
             {"name": "claude", "synced": false, "items": [
@@ -485,10 +417,7 @@ mod tests {
           ],
           "extras": []
         }"#;
-        assert_eq!(
-            parse_diff(stdout),
-            Some((vec!["mine".to_string()], vec!["codex".to_string()]))
-        );
+        assert_eq!(parse_diff(stdout), Some(vec!["codex".to_string()]));
     }
 
     #[test]
@@ -521,14 +450,7 @@ mod tests {
         let mut notified = Vec::new();
         let first = unannounced(&health(&["a"], 2), &mut notified).len();
         let second = unannounced(&health(&["a"], 2), &mut notified).len();
-        assert_eq!((first, second), (2, 0));
-    }
-
-    #[test]
-    fn fewer_findings_are_not_announced() {
-        let mut notified = Vec::new();
-        unannounced(&health(&["a", "b"], 0), &mut notified);
-        assert!(unannounced(&health(&["a"], 0), &mut notified).is_empty());
+        assert_eq!((first, second), (1, 0));
     }
 
     #[test]

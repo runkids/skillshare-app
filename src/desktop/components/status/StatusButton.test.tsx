@@ -14,7 +14,7 @@ const state = vi.hoisted(() => ({
     agents: [],
     plugins: [],
   } as AvailableUpdates,
-  health: { localSkills: [], outOfSyncTargets: [], git: null } as SourceHealth,
+  health: { outOfSyncTargets: [], git: null } as SourceHealth,
   stopped: false,
 }));
 const bridge = vi.hoisted(() => ({
@@ -60,7 +60,7 @@ function openPanel() {
 afterEach(() => {
   state.findings = [];
   state.updates = { ...state.updates, skills: [], plugins: [] };
-  state.health = { localSkills: [], outOfSyncTargets: [], git: null };
+  state.health = { outOfSyncTargets: [], git: null };
   state.stopped = false;
   vi.clearAllMocks();
 });
@@ -95,7 +95,6 @@ describe('StatusButton', () => {
     state.findings = [finding('HIGH')];
     state.updates = { ...state.updates, skills: ['pdf'] };
     state.health = {
-      localSkills: ['mine'],
       outOfSyncTargets: ['claude'],
       git: { uncommitted: 1, ahead: 2, behind: 2 },
     };
@@ -105,7 +104,6 @@ describe('StatusButton', () => {
       '1 security issuepdfReview',
       '1 skill updatepdfUpdate',
       '1 target needs a syncclaudeSync',
-      '1 skill only in a targetmineCollect',
       '3 changes not pushed1 uncommitted change, 2 commitsPush',
       '2 updates to pull2 commits on the remotePull',
       'Server runningPort 19420',
@@ -127,14 +125,6 @@ describe('StatusButton', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Update' }));
     expect(screen.getByTestId('location')).toHaveTextContent('/update');
     expect(screen.queryByRole('dialog', { name: 'Status' })).not.toBeInTheDocument();
-  });
-
-  it('opens the collect page for skills that are only in targets', () => {
-    state.health = { ...state.health, localSkills: ['mine'] };
-    renderButton();
-    openPanel();
-    fireEvent.click(screen.getByRole('button', { name: 'Collect' }));
-    expect(screen.getByTestId('location')).toHaveTextContent('/collect');
   });
 
   it('opens the git page for changes to pull', () => {

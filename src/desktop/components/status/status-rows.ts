@@ -89,17 +89,6 @@ function sourceRows(health: SourceHealth): StatusRow[] {
       action: { kind: 'open', path: '/sync', label: 'Sync' },
     });
   }
-  const local = health.localSkills;
-  if (local.length > 0) {
-    rows.push({
-      id: 'collect',
-      tone: 'warn',
-      icon: 'sync',
-      title: `${plural(local.length, 'skill')} only in ${local.length === 1 ? 'a target' : 'targets'}`,
-      detail: local.join(', '),
-      action: { kind: 'open', path: '/collect', label: 'Collect' },
-    });
-  }
   const git = health.git;
   if (git && git.uncommitted + git.ahead > 0) {
     rows.push({
