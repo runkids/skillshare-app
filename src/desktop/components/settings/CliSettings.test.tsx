@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import CliSettings from './CliSettings';
 
 const mocks = vi.hoisted(() => ({
@@ -30,6 +30,7 @@ vi.mock('../../hooks/useUpdates', () => ({
 beforeEach(() => {
   vi.clearAllMocks();
 });
+afterEach(() => vi.useRealTimers());
 
 describe('CliSettings upgrade', () => {
   it('upgrades through the app so the server restarts, not by running the CLI directly', async () => {
@@ -53,5 +54,14 @@ describe('CliSettings upgrade', () => {
     render(<CliSettings />);
     fireEvent.click(screen.getByRole('button', { name: 'Upgrade CLI' }));
     expect(await screen.findByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  });
+
+  it('shows how long a slow upgrade has been running', async () => {
+    vi.useFakeTimers();
+    mocks.upgradeCli.mockReturnValue(new Promise(() => {}));
+    render(<CliSettings />);
+    fireEvent.click(screen.getByRole('button', { name: 'Upgrade CLI' }));
+    await act(() => vi.advanceTimersByTimeAsync(83_000));
+    expect(screen.getByText(/Downloading and installing… 1:23/)).toBeInTheDocument();
   });
 });

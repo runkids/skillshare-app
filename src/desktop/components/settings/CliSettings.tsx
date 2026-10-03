@@ -18,6 +18,14 @@ export default function CliSettings() {
   const [error, setError] = useState<string | null>(null);
   const [newVersion, setNewVersion] = useState<string | null>(null);
   const [cliPath, setCliPath] = useState<string | null>(null);
+  // Seconds since Upgrade was clicked; the download alone can take minutes.
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (status !== 'upgrading') return;
+    const timer = window.setInterval(() => setElapsed((s) => s + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [status]);
 
   useEffect(() => {
     tauriBridge
@@ -27,6 +35,7 @@ export default function CliSettings() {
   }, []);
 
   const handleUpgrade = async () => {
+    setElapsed(0);
     setStatus('upgrading');
     setError(null);
     try {
@@ -86,7 +95,8 @@ export default function CliSettings() {
             <p className="text-xs text-pencil-light mt-0.5">
               {status === 'idle' &&
                 (cliUpdate ? `${cliUpdate} is available` : 'Upgrade CLI to the latest version')}
-              {status === 'upgrading' && 'Upgrading CLI...'}
+              {status === 'upgrading' &&
+                `Downloading and installing… ${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}. This can take a few minutes.`}
               {status === 'success' && `Updated to ${newVersion}`}
               {status === 'up-to-date' && 'Already on the latest version'}
               {status === 'error' && (error || 'Upgrade failed')}
