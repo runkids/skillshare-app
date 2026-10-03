@@ -24,6 +24,9 @@ const RESTART_DELAYS: [Duration; 3] = [
 ];
 /// Exits older than this no longer count toward giving up.
 const RESTART_WINDOW: Duration = Duration::from_secs(60);
+/// How long a clean exit waits for the CLI's restart helper to bring up its server.
+const SELF_RESTART_POLLS: u32 = 10;
+const SELF_RESTART_POLL_INTERVAL: Duration = Duration::from_millis(500);
 
 /// How long to wait before restarting, given when the server exited unexpectedly
 /// (including the exit just seen), or `None` to stop restarting.
@@ -68,6 +71,55 @@ fn is_own_orphan(recorded: ServerPid, own_pid: u32, lsof_pids: &str) -> bool {
             .any(|line| line.trim().parse::<u32>() == Ok(recorded.pid))
 }
 
+/// Pids of `skillshare` processes listening on `port`, one per line; empty where `lsof`
+/// is missing (Windows). lsof ORs its filters unless -a is given. `-c /^skillshare$/` is
+/// an exact match so `skillshare-app` (the Tauri binary) never qualifies.
+async fn skillshare_listeners(port: u16) -> String {
+    tokio::process::Command::new("lsof")
+        .args([
+            "-t",
+            "-a",
+            &format!("-iTCP:{port}"),
+            "-sTCP:LISTEN",
+            "-c",
+            "/^skillshare$/",
+        ])
+        .output()
+        .await
+        .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+        .unwrap_or_default()
+}
+
+/// The Web UI's "Update now" makes the CLI restart itself: our server exits cleanly and
+/// a helper it spawned starts a new server on the same port. That server is not ours to
+/// supervise, and leaving it would push our relaunch to the next port and leave it
+/// running after the app quits. Stop it, so the relaunch takes the port back.
+async fn stop_self_restarted_server(port: u16) {
+    for _ in 0..SELF_RESTART_POLLS {
+        let pids = skillshare_listeners(port).await;
+        let pids: Vec<&str> = pids
+            .lines()
+            .map(str::trim)
+            .filter(|p| !p.is_empty())
+            .collect();
+        if !pids.is_empty() {
+            log::info!(
+                "Stopping the server the CLI restarted on port {port} (pid {})",
+                pids.join(", ")
+            );
+            for pid in pids {
+                let _ = tokio::process::Command::new("kill")
+                    .args(["-TERM", pid])
+                    .output()
+                    .await;
+            }
+            tokio::time::sleep(Duration::from_millis(300)).await;
+            return;
+        }
+        tokio::time::sleep(SELF_RESTART_POLL_INTERVAL).await;
+    }
+}
+
 /// Kill the server a previous app instance left running (crash, SIGKILL, dev restart).
 /// Only the pid from our pidfile is a candidate, so a `skillshare ui` the user
 /// started in a terminal is never touched.
@@ -81,22 +133,7 @@ async fn kill_orphaned_server() {
         return;
     };
 
-    // lsof ORs its filters unless -a is given. `-c /^skillshare$/` is an exact match
-    // so `skillshare-app` (the Tauri binary) never qualifies.
-    let lsof_pids = tokio::process::Command::new("lsof")
-        .args([
-            "-t",
-            "-a",
-            &format!("-iTCP:{}", recorded.port),
-            "-sTCP:LISTEN",
-            "-c",
-            "/^skillshare$/",
-        ])
-        .output()
-        .await
-        .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
-        .unwrap_or_default();
-
+    let lsof_pids = skillshare_listeners(recorded.port).await;
     if !is_own_orphan(recorded, std::process::id(), &lsof_pids) {
         return;
     }
@@ -314,6 +351,9 @@ impl ServerManager {
     async fn supervise(self, launch: Launch, generation: u64) {
         while let Some(status) = self.wait_for_exit(generation).await {
             log::warn!("skillshare server exited unexpectedly ({status})");
+            if status.success() {
+                stop_self_restarted_server(self.get_port().await).await;
+            }
             loop {
                 let delay = {
                     let mut exits = self.exits.lock().await;

@@ -48,9 +48,11 @@ pub async fn download_cli() -> Result<String, String> {
 pub async fn upgrade_cli(server: State<'_, ServerManager>) -> Result<String, String> {
     let cli_path = cli_manager::detect_cli().await.ok_or("CLI not found")?;
 
-    // The old binary must not keep serving the Web UI, and Windows cannot replace a running exe.
+    // Windows cannot replace a running exe, so the server stops first there. Elsewhere it
+    // keeps serving the Web UI during the download, which can take minutes, and is
+    // restarted on the new binary below.
     let was_running = server.is_running().await;
-    if was_running {
+    if was_running && cfg!(windows) {
         server.stop().await?;
     }
 
@@ -61,7 +63,8 @@ pub async fn upgrade_cli(server: State<'_, ServerManager>) -> Result<String, Str
     )
     .await;
 
-    // Bring the server back even if the upgrade failed, for the active project like a normal start.
+    // Restart on the new binary, or bring the server back on Windows even if the upgrade
+    // failed, for the active project like a normal start.
     let restarted = if was_running {
         let store = project_store::load();
         let (project_dir, is_project_mode) = project_store::active_project_mode(&store);
