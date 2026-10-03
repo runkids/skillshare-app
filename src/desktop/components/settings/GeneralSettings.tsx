@@ -9,7 +9,6 @@ import Switch from '../../../components/Switch';
 import { tauriBridge, AUTO_SYNC_CHANGED_EVENT } from '../../api/tauri-bridge';
 import { useTauri } from '../../context/TauriContext';
 import { useProjects } from '../../context/ProjectContext';
-import QuickActionsSettings from './QuickActionsSettings';
 
 export default function GeneralSettings() {
   const navigate = useNavigate();
@@ -210,8 +209,6 @@ export default function GeneralSettings() {
       </Card>
 
       {/* Danger zone */}
-      <QuickActionsSettings />
-
       <div className="pt-4">
         <h2 className="text-sm font-semibold text-danger uppercase tracking-wider mb-3">
           Danger Zone

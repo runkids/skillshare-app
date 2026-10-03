@@ -3,7 +3,7 @@ import { isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { tauriBridge, SOURCE_HEALTH_EVENT, type SourceHealth } from '../api/tauri-bridge';
 
-const HEALTHY: SourceHealth = { localSkills: [], outOfSyncTargets: [], git: null };
+const HEALTHY: SourceHealth = { outOfSyncTargets: [], git: null };
 
 // Module-level store fed by the Rust source health check (source changes, then every 15 min).
 let state = HEALTHY;

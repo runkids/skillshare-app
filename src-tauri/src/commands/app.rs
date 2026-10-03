@@ -186,8 +186,6 @@ pub async fn reset_all_data(
     let meta = crate::models::app_state::CliMeta::default();
     cli_manager::save_meta(&meta)?;
 
-    crate::services::quick_actions::setup(&app);
-
     // Reset project store to default
     let store = crate::models::project::ProjectStore::default();
     project_store::save(&store)?;

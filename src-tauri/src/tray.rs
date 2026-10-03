@@ -129,13 +129,6 @@ fn status_labels(
 
 fn action_labels(health: &SourceHealth) -> Vec<(&'static str, String)> {
     let mut labels = Vec::new();
-    let n = health.local_skills.len();
-    if n > 0 {
-        labels.push((
-            "source_collect",
-            format!("Collect {n} Local Skill{}…", plural(n)),
-        ));
-    }
     if let Some(git) = &health.git {
         let n = git.uncommitted + git.ahead;
         if n > 0 {
@@ -379,7 +372,6 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let update_all = MenuItemBuilder::with_id("update_all", "Update All (0)")
         .enabled(false)
         .build(app)?;
-    let quick_actions = MenuItemBuilder::with_id("quick_actions", "Quick Actions…").build(app)?;
     let project = Submenu::new(app, "Project: No active project", false)?;
     let open_source = MenuItemBuilder::with_id("open_source", "Open Source Folder")
         .enabled(false)
@@ -395,7 +387,6 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         .separator()
         .item(&quick_sync)
         .item(&update_all)
-        .item(&quick_actions)
         .separator()
         .item(&project)
         .item(&open_source)
@@ -449,7 +440,6 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                     services::source_health::refresh(&app, false).await;
                 });
             }
-            "quick_actions" => services::quick_actions::request_open(app),
             "open_app" => crate::show_main_window(app),
             "auto_sync" => {
                 let enabled = !cli_manager::load_meta().auto_sync.unwrap_or(false);
@@ -514,7 +504,6 @@ mod tests {
     #[test]
     fn groups_use_plain_counts_and_preserve_source_actions() {
         let health = SourceHealth {
-            local_skills: vec!["a".into(), "b".into()],
             out_of_sync_targets: vec!["claude".into()],
             git: Some(GitState {
                 uncommitted: 1,
@@ -534,7 +523,6 @@ mod tests {
         assert_eq!(
             action_labels(&health),
             vec![
-                ("source_collect", "Collect 2 Local Skills…".into()),
                 ("source_push", "Push 2 Changes".into()),
                 ("source_pull", "Pull 1 Update".into()),
             ]

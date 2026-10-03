@@ -4,11 +4,11 @@ React 19 + TypeScript + Vite 8 + Tailwind CSS 4, rendered in a Tauri 2 webview. 
 
 ## Layout
 
-- `src/main.tsx` mounts the standalone `QuickActionsPalette` inside `ThemeProvider` when `?quick-actions=1` is present; otherwise it mounts `App` in `StrictMode` and imports `src/index.css`.
+- `src/main.tsx` mounts `App` in `StrictMode` and imports `src/index.css`.
 - `src/App.tsx` nests providers in this order: `QueryClientProvider` > `ThemeProvider` > `TauriProvider` > `ProjectProvider` > `TerminalProvider` > `BrowserRouter` > `ErrorBoundary`. It renders `UpdateCheckListener`, then an `OnboardingGuard` around four routes: `/onboarding`, `/settings`, `/activity`, and `/*` (`MainView`).
 - `src/desktop/api/tauri-bridge.ts`: every Rust `invoke` call plus the shared types (`AppInfo`, `Project`, `AvailableUpdates`, ...).
 - `src/desktop/pages/`: `OnboardingPage`, `SettingsPage`, `ActivityPage` (`/activity`, opened from the title bar; day grouping and relative times in `utils/activity.ts`).
-- `src/desktop/components/`: `MainView`, `TitleBar`, `ServerStatus` (dot while up, "Server stopped" after `server-stopped`), `ProjectDropdown`, `CliWebView` (iframe host), `UpdateCheckListener`, `TerminalAccess`; subfolders `status/` (`StatusButton`, `StatusPanel`, pure `status-rows.ts`; see Status panel), `OnboardingSteps/` (steps, a pure `onboarding-flow.ts` reducer, `onboarding.css` with `ob-*` classes), `settings/` (one component per tab), `terminal/` (xterm UI, currently hidden by `SHOW_TERMINAL = false` in `MainView`).
+- `src/desktop/components/`: `MainView`, `TitleBar`, `ProjectDropdown`, `CliWebView` (iframe host), `UpdateCheckListener`, `TerminalAccess`; subfolders `status/` (`StatusButton`, `StatusPanel`, pure `status-rows.ts`; see Status panel), `OnboardingSteps/` (steps, a pure `onboarding-flow.ts` reducer, `onboarding.css` with `ob-*` classes), `settings/` (one component per tab), `terminal/` (xterm UI, currently hidden by `SHOW_TERMINAL = false` in `MainView`).
 - `src/desktop/context/`: `TauriContext` (`useTauri`: `appInfo`, `loading`, `refresh`), `ProjectContext` (`useProjects`: projects, `activeProject`, `switching`, `switchWithRestart`, `reloadKey`/`reloadView`), `TerminalContext` (`useTerminal`).
 - `src/desktop/hooks/`: `useUpdates`, `useSourceHealth`, `useAudit`, `useServerStopped` and `useAppUpdate` (module-level stores read with `useSyncExternalStore`), `useCliManager`, `useFullscreen` (macOS full screen hides the traffic lights, so `TitleBar` drops their gap), plus terminal hooks `usePtySpawn`, `useTerminalInstance`.
 - `src/desktop/utils/`: `platform.ts` (`detectPlatform`, `isMacOS` from the user agent), `path.ts` (`shortPath`).
@@ -24,12 +24,12 @@ React 19 + TypeScript + Vite 8 + Tailwind CSS 4, rendered in a Tauri 2 webview. 
 2. `OnboardingPage` drives three steps (`WelcomeStep` finds or installs the CLI, `ProjectSetupStep`, `FirstSyncStep`) through `flowReducer`. On finish it calls `startServer(cliPath)`, refreshes app and project state, then navigates to `/`.
 3. `MainView` shows `TitleBar` and `CliWebView`. `CliWebView` uses `http://localhost:${appInfo.serverPort}` when the server already runs; otherwise it calls `detectCli` then `startServer(cliPath, activeProject.path)` once and uses the returned port. The iframe `src` is that origin plus the shell path (a shell route like `/skills?tab=updates` opens that CLI page) and a `?theme=` param.
 4. `CliWebView` polls `healthCheck` every 30 s; three failures show the "server-down" card with Restart. A `reloadKey` change (title bar reload, `sync-completed`) reloads the iframe, or restarts the server when unhealthy. Finishing a project switch remounts the iframe.
-5. `TitleBar` shows one `StatusButton` for resource updates, source health and the audit, then the `ServerStatus` dot (see Status panel). Shortcut buttons follow: Quick Sync (`QuickSyncButton`: runs the tray's sync, shows Syncing… then the summary or error in a toast styled like the Web UI's (4 s, errors 8 s), without a system notification), Quick Actions (`openQuickActions`) and Config files (the Web UI's `/config` page). App/CLI versions keep their settings indicator.
+5. `TitleBar` shows one `StatusButton` for resource updates, source health and the audit, then shortcut buttons: Quick Sync (`QuickSyncButton`: runs the tray's sync, shows Syncing… then the summary or error in a toast styled like the Web UI's (4 s, errors 8 s), without a system notification) and Config files (the Web UI's `/config` page). App/CLI versions keep their settings indicator.
 6. `/settings?tab=general|appearance|projects|cli|about` picks the tab via `useSearchParams`; the nav shows an "Update" badge from `useUpdates`/`useAppUpdate`.
 
 Rust events (names verified in `src-tauri/src`), all subscribed with `listen` from `@tauri-apps/api/event` inside a `useEffect` guarded by `isTauri()`, and unsubscribed with `unlisten.then((off) => off())`:
 
-- `server-restarted` (payload: port) and `server-stopped`: `CliWebView` and `useServerStopped` (shared by `ServerStatus` and the status panel).
+- `server-restarted` (payload: port) and `server-stopped`: `CliWebView` and `useServerStopped` (used by the status panel).
 - `updates-available` (payload: `AvailableUpdates`): `useUpdates`.
 - `source-health` (`SOURCE_HEALTH_EVENT`, payload: `SourceHealth`): `useSourceHealth`.
 - `audit-report` (`AUDIT_EVENT`, payload: `AuditFinding[]`): `useAudit`.
@@ -47,14 +47,8 @@ App self-update uses `check()` from `@tauri-apps/plugin-updater` in `useAppUpdat
 
 - The button renders nothing when no row has an action. It shows "N things to review" (warn dot, neutral pill), or, with any HIGH/CRITICAL finding, "N security issues" plus "+M" for the other actionable rows on `--bad-bg`. Red means security or a stopped server only.
 - The panel closes on Escape, an outside click, window blur and after any action. Only the first actionable row's button is primary.
-- Actions open a Web UI page and never change anything themselves: Review goes to the one skill/agent with findings, else `/audit` (LOW/MEDIUM-only findings get a neutral row); Update goes to `/update`, Sync to `/sync`, Collect to `/collect`, Push and Pull to `/git`. Restart clears the stop and calls `reloadView`.
+- Actions open a Web UI page and never change anything themselves: Review goes to the one skill/agent with findings, else `/audit` (LOW/MEDIUM-only findings get a neutral row); Update goes to `/update`, Sync to `/sync`, Push and Pull to `/git`. Restart clears the stop and calls `reloadView`.
 - Check now calls `checkStatusNow` (update check, source health with a fetch, audit). "Checked" is the time of the last Check now or the last new value from any store.
-
-## Quick Actions palette
-
-`components/quick-actions/QuickActionsPalette.tsx` and `useQuickActions.ts` separate the palette views from CLI state and debounce logic. The palette runs in its own window, without onboarding, project providers or the dashboard iframe. It loads the active project and source directory, debounces search by 350ms and ignores replies from superseded queries. Up/Down select a result; Enter opens a review of the exact source and optional skill selector, then Install (or Enter) starts the command. Progress and CLI results/errors stay in the window, including if it is hidden and reopened during a command. A pasted source (`https://`, `git@` or `owner/repo`, see `sourceFromQuery`) skips search and offers one result that installs everything at that source. Escape hides the window.
-
-`settings/QuickActionsSettings.tsx` is embedded in General settings. Save shortcut applies the edited shortcut and enabled switch together, persisting them in CliMeta; registration errors remain visible. The palette listens for `QUICK_ACTIONS_OPENED_EVENT` through the bridge to focus search and refresh its target when idle.
 
 ## Talking to Rust
 

@@ -31,8 +31,6 @@ export interface SourceGitState {
 }
 
 export interface SourceHealth {
-  /** Skills that exist only in a target, which collect would copy into the source. */
-  localSkills: string[];
   /** Targets that sync would change. */
   outOfSyncTargets: string[];
   /** Git state of the source; null outside a git repo and in project mode. */
@@ -78,27 +76,6 @@ export interface InstallOutput {
 }
 
 export const CLI_INSTALL_OUTPUT_EVENT = 'cli-install-output';
-export const QUICK_ACTIONS_OPENED_EVENT = 'quick-actions-opened';
-
-export interface QuickActionsSettings {
-  enabled: boolean;
-  shortcut: string;
-  error: string | null;
-}
-
-export interface QuickActionsContext {
-  projectId: string;
-  projectName: string;
-  sourceDir: string;
-}
-
-export interface SkillSearchResult {
-  name: string;
-  description: string;
-  source: string;
-  skill: string;
-}
-
 /** Emitted after a tray or auto Quick Sync succeeds. */
 export const SYNC_COMPLETED_EVENT = 'sync-completed';
 export const TRAY_PROJECT_REQUESTED_EVENT = 'tray-project-requested';
@@ -134,18 +111,6 @@ export interface AppInfo {
 }
 
 export const tauriBridge = {
-  // Quick Actions commands
-  getQuickActionsSettings: () => invoke<QuickActionsSettings>('get_quick_actions_settings'),
-  setQuickActionsSettings: (enabled: boolean, shortcut: string) =>
-    invoke<void>('set_quick_actions_settings', { enabled, shortcut }),
-  getQuickActionsContext: () => invoke<QuickActionsContext>('get_quick_actions_context'),
-  openQuickActions: () => invoke<void>('open_quick_actions'),
-  closeQuickActions: () => invoke<void>('close_quick_actions'),
-  quickSearch: (query: string, projectId: string) =>
-    invoke<SkillSearchResult[]>('quick_search', { query, projectId }),
-  quickInstall: (source: string, skill: string, projectId: string) =>
-    invoke<string>('quick_install', { source, skill, projectId }),
-
   // CLI commands
   detectCli: () => invoke<string | null>('detect_cli'),
   getCliVersion: (cliPath: string) => invoke<string>('get_cli_version', { cliPath }),
