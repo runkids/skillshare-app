@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.0](https://github.com/runkids/skillshare-app/compare/v0.4.0...v0.5.0) (2026-10-03)
+
+
+### Features
+
+* drop Quick Actions, the Collect finding and the server dot; new logo ([#66](https://github.com/runkids/skillshare-app/issues/66)) ([189fcf0](https://github.com/runkids/skillshare-app/commit/189fcf01b6c27b41447116952e859c5efebfbdb6))
+
+
+### Bug Fixes
+
+* **icon:** center the new logo on the icon body ([#68](https://github.com/runkids/skillshare-app/issues/68)) ([6d0bca8](https://github.com/runkids/skillshare-app/commit/6d0bca849f1c737f43cffc5ee02b4d2a2e68e9c3))
+
 ## [0.4.0](https://github.com/runkids/skillshare-app/compare/v0.3.2...v0.4.0) (2026-10-01)
 
 
