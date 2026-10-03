@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0](https://github.com/runkids/skillshare-app/compare/v0.5.0...v0.6.0) (2026-10-03)
+
+
+### Features
+
+* **status:** show new app and CLI versions in the status panel ([#72](https://github.com/runkids/skillshare-app/issues/72)) ([9d4cbb4](https://github.com/runkids/skillshare-app/commit/9d4cbb4bceba05dbf8b965da8b3e2b4ab1c3e6f0))
+
+
+### Bug Fixes
+
+* **cli:** keep one server on its port across CLI upgrades ([#70](https://github.com/runkids/skillshare-app/issues/70)) ([1d9a404](https://github.com/runkids/skillshare-app/commit/1d9a4047b3b34fa340c43ca4646f7dfb069e2f91))
+
 ## [0.5.0](https://github.com/runkids/skillshare-app/compare/v0.4.0...v0.5.0) (2026-10-03)
 
 
