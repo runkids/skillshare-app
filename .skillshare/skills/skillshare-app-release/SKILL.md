@@ -31,7 +31,11 @@ Releasing happens on GitHub, so the local working tree doesn't matter. Work from
 `origin/main`, and don't switch branches, stash or pull over the user's local changes.
 
 - Only the release PR should be open. Other open PRs are not in this release.
-  Tell the user, and ask whether to merge them first.
+  Tell the user, and ask whether to merge them first. If a PR is about to merge
+  and belongs in this release (for example a follow-up fix the user wants "一起上"),
+  wait for it to merge (`scripts/merge-pr.sh <n>`). Then wait until the release PR
+  diff lists it before you merge the release PR. Release Please updates the PR a
+  minute or two after each push to `main`.
 - If main's latest CI run is still in progress, wait for it with `gh run watch <id>`.
   The release PR is opened by a bot, so CI does not run on it. Main's CI is the only
   check on the code being released, so don't merge on a red or unfinished run.
@@ -77,7 +81,10 @@ gh pr merge <n> --squash --admin --delete-branch
 ### 4. Watch the build
 
 The build takes about 20–30 minutes. Run it in the background and keep working,
-or report, while it runs:
+or report, while it runs. One background script can chain steps 3–5: wait for main's
+CI, merge, find the run, wait for it to finish, rerun the failed jobs once if a log
+shows a transient failure (see "Recovery" in the `release` topic), then print every
+check in step 5.
 
 Find the run for the merge commit, not simply the latest run. Right after the merge,
 the new run may not exist yet, and `--limit 1` would return the previous release's run:
