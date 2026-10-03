@@ -59,6 +59,7 @@ Project skills are managed by skillshare. Their source lives in `.skillshare/ski
 
 | Skill | Use when |
 |---|---|
+| `skillshare-app-pr` | Landing a change: worktree, checks, screenshot, PR, merge on green |
 | `skillshare-app-release` | Shipping a version, step by step |
 
 ## Verification
