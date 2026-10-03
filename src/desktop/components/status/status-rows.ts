@@ -54,6 +54,26 @@ function auditRow(findings: AuditFinding[]): StatusRow | null {
   };
 }
 
+/** New app and CLI versions, each opening the settings tab that installs it. */
+function versionRows(updates: AvailableUpdates): StatusRow[] {
+  const versions = [
+    { id: 'app-update', name: 'Skillshare App', version: updates.app, tab: 'about' },
+    { id: 'cli-update', name: 'skillshare CLI', version: updates.cli, tab: 'cli' },
+  ];
+  return versions
+    .filter(({ version }) => version)
+    .map(
+      ({ id, name, version, tab }): StatusRow => ({
+        id,
+        tone: 'accent',
+        icon: 'update',
+        title: `${name} v${version?.replace(/^v/, '')} available`,
+        detail: 'A new version is ready to install',
+        action: { kind: 'open', path: `/settings?tab=${tab}`, label: 'Update' },
+      })
+    );
+}
+
 function updatesRow(updates: AvailableUpdates): StatusRow | null {
   const kinds = [
     { names: updates.skills, one: 'skill update' },
@@ -146,9 +166,13 @@ export function statusRows(
   health: SourceHealth,
   server: ServerState
 ): StatusRow[] {
-  return [auditRow(findings), updatesRow(updates), ...sourceRows(health), serverRow(server)].filter(
-    (row): row is StatusRow => row !== null
-  );
+  return [
+    auditRow(findings),
+    ...versionRows(updates),
+    updatesRow(updates),
+    ...sourceRows(health),
+    serverRow(server),
+  ].filter((row): row is StatusRow => row !== null);
 }
 
 /** The title bar label: security issues lead, then everything else with an action. */

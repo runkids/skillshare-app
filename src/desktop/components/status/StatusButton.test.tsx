@@ -40,8 +40,8 @@ function finding(severity: AuditFinding['severity'], skill = 'pdf'): AuditFindin
 }
 
 function LocationProbe() {
-  const { pathname } = useLocation();
-  return <span data-testid="location">{pathname}</span>;
+  const { pathname, search } = useLocation();
+  return <span data-testid="location">{pathname + search}</span>;
 }
 
 function renderButton() {
@@ -59,7 +59,7 @@ function openPanel() {
 
 afterEach(() => {
   state.findings = [];
-  state.updates = { ...state.updates, skills: [], plugins: [] };
+  state.updates = { ...state.updates, cli: null, app: null, skills: [], plugins: [] };
   state.health = { outOfSyncTargets: [], git: null };
   state.stopped = false;
   vi.clearAllMocks();
@@ -108,6 +108,28 @@ describe('StatusButton', () => {
       '2 updates to pull2 commits on the remotePull',
       'Server runningPort 19420',
     ]);
+  });
+
+  it('lists new app and CLI versions after security issues', () => {
+    state.findings = [finding('HIGH')];
+    state.updates = { ...state.updates, app: '0.6.0', cli: 'v0.24.0', skills: ['pdf'] };
+    renderButton();
+    openPanel();
+    expect(screen.getAllByTestId(/^status-row-/).map((row) => row.textContent)).toEqual([
+      '1 security issuepdfReview',
+      'Skillshare App v0.6.0 availableA new version is ready to installUpdate',
+      'skillshare CLI v0.24.0 availableA new version is ready to installUpdate',
+      '1 skill updatepdfUpdate',
+      'Server runningPort 19420',
+    ]);
+  });
+
+  it('opens the CLI settings tab to install a new CLI', () => {
+    state.updates = { ...state.updates, cli: 'v0.24.0' };
+    renderButton();
+    openPanel();
+    fireEvent.click(screen.getByRole('button', { name: 'Update' }));
+    expect(screen.getByTestId('location')).toHaveTextContent('/settings?tab=cli');
   });
 
   it('closes the panel on Escape', () => {
