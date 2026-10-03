@@ -7,7 +7,8 @@ use tokio::sync::Mutex;
 
 const DEFAULT_PORT: u16 = 19420;
 const HEALTH_POLL_INTERVAL_MS: u64 = 500;
-const HEALTH_POLL_MAX_RETRIES: u32 = 20;
+// 60s: the first start after a CLI version change downloads the Web UI assets first.
+const HEALTH_POLL_MAX_RETRIES: u32 = 120;
 
 /// Emitted with the new port after the server exited on its own and was restarted.
 pub const SERVER_RESTARTED_EVENT: &str = "server-restarted";
@@ -417,7 +418,7 @@ impl ServerManager {
         health_check(port).await
     }
 
-    /// Poll the server health endpoint until ready or timeout (10s).
+    /// Poll the server health endpoint until ready, the process exits, or timeout (60s).
     async fn wait_for_ready(&self, port: u16) -> Result<(), String> {
         for _ in 0..HEALTH_POLL_MAX_RETRIES {
             if health_check(port).await {

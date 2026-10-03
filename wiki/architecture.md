@@ -118,6 +118,7 @@ To add a command:
 - `launch` awaits `load_login_shell_path`, because an app launched from Finder lacks the user's PATH (git, brew, agent CLIs).
 - `get_app_state` and `check` call `refresh_cached_version`, because the CLI can be upgraded outside the app. A changed binary mtime triggers a re-read.
 - `start_server` takes `project_dir` from the frontend, but takes the mode from the stored active project.
+- `wait_for_ready` allows 60s, because the first `skillshare ui` after a CLI version change downloads the Web UI assets before it listens. It returns early if the process exits, so a crash still fails fast.
 - `upgrade_cli` keeps the server running during `upgrade --force`, because the download can take minutes, then restarts it on the new binary. Only on Windows does it stop the server first, because Windows cannot replace a running exe; there it restarts the server even if the upgrade fails.
 - The Web UI's "Update now" makes the CLI restart itself: the server exits with status 0 and a detached `__ui-restart` helper starts a new server on the same port. On a clean exit, `supervise` stops any `skillshare` process listening on that port (up to 5s, via `lsof`), so the relaunch keeps the port and no unsupervised server outlives the app.
 - The unix installer targets `~/.local/bin`, because `/usr/local/bin` needs sudo, which the app cannot prompt for.
