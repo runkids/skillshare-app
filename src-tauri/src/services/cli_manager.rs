@@ -310,6 +310,62 @@ pub async fn exec(
     }
 }
 
+/// Like `exec`, but hands each stdout line to `on_line` while the CLI runs, so a slow
+/// command can show where it is.
+pub async fn exec_streaming(
+    cli_path: &str,
+    args: &[String],
+    mut on_line: impl FnMut(&str),
+) -> Result<String, String> {
+    use tokio::io::{AsyncBufReadExt, AsyncReadExt};
+
+    let mut child = tokio::process::Command::new(cli_path)
+        .args(args)
+        .envs(crate::utils::env::build_env_for_child())
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .kill_on_drop(true)
+        .spawn()
+        .map_err(|e| format!("Failed to exec CLI: {e}"))?;
+    let mut stderr = child.stderr.take().ok_or("CLI stderr was not captured")?;
+    let stderr = tokio::spawn(async move {
+        let mut text = String::new();
+        let _ = stderr.read_to_string(&mut text).await;
+        text
+    });
+    let stdout = child.stdout.take().ok_or("CLI stdout was not captured")?;
+    let mut lines = tokio::io::BufReader::new(stdout).lines();
+    let mut output = String::new();
+    while let Ok(Some(raw)) = lines.next_line().await {
+        let line = strip_ansi(&raw);
+        on_line(&line);
+        output.push_str(&line);
+        output.push('\n');
+    }
+
+    let status = child
+        .wait()
+        .await
+        .map_err(|e| format!("Failed to exec CLI: {e}"))?;
+    let output = output.trim().to_string();
+    if status.success() {
+        return Ok(output);
+    }
+    let stderr = strip_ansi(stderr.await.unwrap_or_default().trim());
+    Err(format!(
+        "CLI exited with {status}: {}",
+        if stderr.is_empty() { output } else { stderr }
+    ))
+}
+
+/// The step a line of `skillshare upgrade` output reports, e.g. "Downloading v0.24.1..."
+/// from "├─ Downloading v0.24.1...".
+pub fn upgrade_step(line: &str) -> Option<&str> {
+    let (_, step) = line.split_once("─ ")?;
+    Some(step.trim()).filter(|step| !step.is_empty())
+}
+
 // ── Platform-aware install ─────────────────────────────────────────
 
 /// Event emitted for every line the installer prints.
@@ -875,6 +931,20 @@ pub async fn download_cli(url: &str) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn upgrade_step_reads_tree_lines_only() {
+        assert_eq!(
+            upgrade_step("├─ Downloading v0.24.1..."),
+            Some("Downloading v0.24.1...")
+        );
+        assert_eq!(
+            upgrade_step("└─ UI assets cached (23.6s)"),
+            Some("UI assets cached (23.6s)")
+        );
+        assert_eq!(upgrade_step("▶  CLI  v0.23.5"), None);
+        assert_eq!(upgrade_step("│"), None);
+    }
 
     #[cfg(unix)]
     #[tokio::test]

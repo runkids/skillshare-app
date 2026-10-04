@@ -76,6 +76,8 @@ export interface InstallOutput {
 }
 
 export const CLI_INSTALL_OUTPUT_EVENT = 'cli-install-output';
+/** Payload: the step `upgradeCli` reached, e.g. "Downloading v0.24.1...". */
+export const CLI_UPGRADE_STEP_EVENT = 'cli-upgrade-step';
 /** Emitted after a tray or auto Quick Sync succeeds. */
 export const SYNC_COMPLETED_EVENT = 'sync-completed';
 export const TRAY_PROJECT_REQUESTED_EVENT = 'tray-project-requested';

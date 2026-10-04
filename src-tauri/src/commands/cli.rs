@@ -1,5 +1,8 @@
 use crate::services::{cli_manager, project_store, server_manager::ServerManager};
-use tauri::State;
+use tauri::{Emitter, State};
+
+/// Emitted with each step `upgrade_cli` reaches, e.g. "Downloading v0.24.1...".
+pub const CLI_UPGRADE_STEP_EVENT: &str = "cli-upgrade-step";
 
 #[tauri::command]
 pub async fn detect_cli() -> Result<Option<String>, String> {
@@ -45,7 +48,15 @@ pub async fn download_cli() -> Result<String, String> {
 /// The CLI knows how it was installed (Homebrew, sudo, Windows exe swap), so a
 /// Homebrew or PATH install is upgraded where it lives instead of next to it.
 #[tauri::command]
-pub async fn upgrade_cli(server: State<'_, ServerManager>) -> Result<String, String> {
+pub async fn upgrade_cli(
+    app: tauri::AppHandle,
+    server: State<'_, ServerManager>,
+) -> Result<String, String> {
+    let step = |step: &str| {
+        if let Err(e) = app.emit(CLI_UPGRADE_STEP_EVENT, step) {
+            log::warn!("Failed to emit upgrade step: {e}");
+        }
+    };
     let cli_path = cli_manager::detect_cli().await.ok_or("CLI not found")?;
 
     // Windows cannot replace a running exe, so the server stops first there. Elsewhere it
@@ -56,16 +67,21 @@ pub async fn upgrade_cli(server: State<'_, ServerManager>) -> Result<String, Str
         server.stop().await?;
     }
 
-    let upgraded = cli_manager::exec(
+    let upgraded = cli_manager::exec_streaming(
         &cli_path,
         &["upgrade".to_string(), "--force".to_string()],
-        None,
+        |line| {
+            if let Some(s) = cli_manager::upgrade_step(line) {
+                step(s);
+            }
+        },
     )
     .await;
 
     // Restart on the new binary, or bring the server back on Windows even if the upgrade
     // failed, for the active project like a normal start.
     let restarted = if was_running {
+        step("Restarting the server...");
         let store = project_store::load();
         let (project_dir, is_project_mode) = project_store::active_project_mode(&store);
         server

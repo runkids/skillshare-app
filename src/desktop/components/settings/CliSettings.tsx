@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { isTauri } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import Card from '../../../components/Card';
 import Badge from '../../../components/Badge';
 import Button from '../../../components/Button';
 import { useTauri } from '../../context/TauriContext';
 import { useProjects } from '../../context/ProjectContext';
-import { tauriBridge } from '../../api/tauri-bridge';
+import { CLI_UPGRADE_STEP_EVENT, tauriBridge } from '../../api/tauri-bridge';
 import TerminalAccess from '../TerminalAccess';
 import { checkUpdatesNow, useUpdates } from '../../hooks/useUpdates';
 
@@ -18,8 +20,15 @@ export default function CliSettings() {
   const [error, setError] = useState<string | null>(null);
   const [newVersion, setNewVersion] = useState<string | null>(null);
   const [cliPath, setCliPath] = useState<string | null>(null);
-  // Seconds since Upgrade was clicked; the download alone can take minutes.
+  // Seconds since Upgrade was clicked, and the step the upgrade last reported.
   const [elapsed, setElapsed] = useState(0);
+  const [step, setStep] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isTauri()) return;
+    const off = listen<string>(CLI_UPGRADE_STEP_EVENT, (e) => setStep(e.payload));
+    return () => void off.then((unlisten) => unlisten());
+  }, []);
 
   useEffect(() => {
     if (status !== 'upgrading') return;
@@ -36,6 +45,7 @@ export default function CliSettings() {
 
   const handleUpgrade = async () => {
     setElapsed(0);
+    setStep(null);
     setStatus('upgrading');
     setError(null);
     try {
@@ -96,7 +106,7 @@ export default function CliSettings() {
               {status === 'idle' &&
                 (cliUpdate ? `${cliUpdate} is available` : 'Upgrade CLI to the latest version')}
               {status === 'upgrading' &&
-                `Downloading and installing… ${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}. This can take a few minutes.`}
+                `${step ?? 'Starting...'} ${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`}
               {status === 'success' && `Updated to ${newVersion}`}
               {status === 'up-to-date' && 'Already on the latest version'}
               {status === 'error' && (error || 'Upgrade failed')}
