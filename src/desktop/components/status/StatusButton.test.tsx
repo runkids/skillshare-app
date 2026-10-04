@@ -145,8 +145,27 @@ describe('StatusButton', () => {
     renderButton();
     openPanel();
     fireEvent.click(screen.getByRole('button', { name: 'Update' }));
-    expect(screen.getByTestId('location')).toHaveTextContent('/update');
+    expect(screen.getByTestId('location')).toHaveTextContent('/skills?tab=updates');
     expect(screen.queryByRole('dialog', { name: 'Status' })).not.toBeInTheDocument();
+  });
+
+  it('lists skill and plugin updates as separate rows', () => {
+    state.updates = { ...state.updates, skills: ['archify'], plugins: ['ponytail'] };
+    renderButton();
+    openPanel();
+    expect(screen.getAllByTestId(/^status-row-/).map((row) => row.textContent)).toEqual([
+      '1 skill updatearchifyUpdate',
+      '1 plugin updateponytailUpdate',
+      'Server runningPort 19420',
+    ]);
+  });
+
+  it('opens the plugins page for plugin updates', () => {
+    state.updates = { ...state.updates, plugins: ['ponytail'] };
+    renderButton();
+    openPanel();
+    fireEvent.click(screen.getByRole('button', { name: 'Update' }));
+    expect(screen.getByTestId('location')).toHaveTextContent('/plugins');
   });
 
   it('opens the git page for changes to pull', () => {

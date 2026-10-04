@@ -44,7 +44,7 @@ App self-update uses `check()` from `@tauri-apps/plugin-updater` in `useAppUpdat
 
 ## Status panel
 
-`status/StatusButton.tsx` reads `useAudit`, `useUpdates`, `useSourceHealth`, `useServerStopped` and `appInfo`, and `statusRows` (`status-rows.ts`) turns them into rows, most severe first: security, a new app version, a new CLI version (each opens its settings tab), resource updates, targets to sync, unpushed changes, updates to pull, then the server. Titles use plain words ("1 target needs a sync", "3 changes not pushed").
+`status/StatusButton.tsx` reads `useAudit`, `useUpdates`, `useSourceHealth`, `useServerStopped` and `appInfo`, and `statusRows` (`status-rows.ts`) turns them into rows, most severe first: security, a new app version, a new CLI version (each opens its settings tab), skill, plugin, agent and repository updates (one row each, opening that kind's Web UI page), targets to sync, unpushed changes, updates to pull, then the server. Titles use plain words ("1 target needs a sync", "3 changes not pushed").
 
 - The button renders nothing when no row has an action. It shows "N things to review" (warn dot, neutral pill), or, with any HIGH/CRITICAL finding, "N security issues" plus "+M" for the other actionable rows on `--bad-bg`. Red means security or a stopped server only.
 - The panel closes on Escape, an outside click, window blur and after any action. Only the first actionable row's button is primary.

@@ -74,26 +74,32 @@ function versionRows(updates: AvailableUpdates): StatusRow[] {
     );
 }
 
-function updatesRow(updates: AvailableUpdates): StatusRow | null {
+/** One row per kind with updates, each opening the Web UI page that updates that kind. */
+function updateRows(updates: AvailableUpdates): StatusRow[] {
   const kinds = [
-    { names: updates.skills, one: 'skill update' },
-    { names: updates.plugins, one: 'plugin update' },
-    { names: updates.agents, one: 'agent update' },
-    { names: updates.repositories, one: 'repository update', many: 'repository updates' },
-  ].filter((kind) => kind.names.length > 0);
-  if (kinds.length === 0) return null;
-  const names = kinds.flatMap((kind) => kind.names);
-  return {
-    id: 'updates',
-    tone: 'accent',
-    icon: 'update',
-    title:
-      kinds.length === 1
-        ? plural(names.length, kinds[0].one, kinds[0].many)
-        : `${names.length} updates`,
-    detail: names.join(', '),
-    action: { kind: 'open', path: '/update', label: 'Update' },
-  };
+    { id: 'skill', names: updates.skills, one: 'skill update', path: '/skills?tab=updates' },
+    { id: 'plugin', names: updates.plugins, one: 'plugin update', path: '/plugins' },
+    { id: 'agent', names: updates.agents, one: 'agent update', path: '/agents?tab=updates' },
+    {
+      id: 'repository',
+      names: updates.repositories,
+      one: 'repository update',
+      many: 'repository updates',
+      path: '/skills?tab=updates',
+    },
+  ];
+  return kinds
+    .filter((kind) => kind.names.length > 0)
+    .map(
+      (kind): StatusRow => ({
+        id: `${kind.id}-updates`,
+        tone: 'accent',
+        icon: 'update',
+        title: plural(kind.names.length, kind.one, kind.many),
+        detail: kind.names.join(', '),
+        action: { kind: 'open', path: kind.path, label: 'Update' },
+      })
+    );
 }
 
 function sourceRows(health: SourceHealth): StatusRow[] {
@@ -169,7 +175,7 @@ export function statusRows(
   return [
     auditRow(findings),
     ...versionRows(updates),
-    updatesRow(updates),
+    ...updateRows(updates),
     ...sourceRows(health),
     serverRow(server),
   ].filter((row): row is StatusRow => row !== null);
