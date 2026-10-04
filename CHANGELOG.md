@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/runkids/skillshare-app/compare/v0.7.0...v0.7.1) (2026-10-04)
+
+
+### Bug Fixes
+
+* **projects:** open the dashboard after every project switch ([#76](https://github.com/runkids/skillshare-app/issues/76)) ([14cba86](https://github.com/runkids/skillshare-app/commit/14cba86c45229f78f4e9ddf30e821121b78b1a32))
+
 ## [0.7.0](https://github.com/runkids/skillshare-app/compare/v0.6.0...v0.7.0) (2026-10-04)
 
 
