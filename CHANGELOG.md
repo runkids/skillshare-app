@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.2](https://github.com/runkids/skillshare-app/compare/v0.7.1...v0.7.2) (2026-10-04)
+
+
+### Bug Fixes
+
+* **status:** split update rows by kind and clear the title bar ([#78](https://github.com/runkids/skillshare-app/issues/78)) ([1382399](https://github.com/runkids/skillshare-app/commit/138239957530e537a3a892df142613cb42ddb32d))
+
 ## [0.7.1](https://github.com/runkids/skillshare-app/compare/v0.7.0...v0.7.1) (2026-10-04)
 
 
