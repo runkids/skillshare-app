@@ -45,7 +45,7 @@ export default function StatusPanel({ id, rows, checked, checking, onCheckNow, o
       id={id}
       role="dialog"
       aria-label="Status"
-      className="absolute right-0 top-full mt-2 z-50 w-[392px] rounded-[var(--r-box)] border border-[var(--line-2)] bg-[var(--surface)] shadow-[0_16px_40px_rgba(20,19,18,.14)]"
+      className="absolute right-0 top-full mt-[14px] z-50 w-[392px] rounded-[var(--r-box)] border border-[var(--line-2)] bg-[var(--surface)] shadow-[0_16px_40px_rgba(20,19,18,.14)]"
     >
       <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2">
         <span className="text-[14px] font-bold text-[var(--ink)]">Status</span>
