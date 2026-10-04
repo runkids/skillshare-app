@@ -11,6 +11,7 @@ import OnboardingPage from './desktop/pages/OnboardingPage';
 import SettingsPage from './desktop/pages/SettingsPage';
 import ActivityPage from './desktop/pages/ActivityPage';
 import UpdateCheckListener from './desktop/components/UpdateCheckListener';
+import SwitchToDashboard from './desktop/components/SwitchToDashboard';
 
 function OnboardingGuard({ children }: { children: React.ReactNode }) {
   const { appInfo, loading } = useTauri();
@@ -33,6 +34,7 @@ export default function App() {
               <BrowserRouter>
                 <ErrorBoundary>
                   <UpdateCheckListener />
+                  <SwitchToDashboard />
                   <div className="h-screen flex flex-col">
                     <OnboardingGuard>
                       <Routes>
