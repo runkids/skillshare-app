@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.7.0](https://github.com/runkids/skillshare-app/compare/v0.6.0...v0.7.0) (2026-10-04)
+
+
+### Features
+
+* **cli:** show the step a CLI upgrade is on ([#75](https://github.com/runkids/skillshare-app/issues/75)) ([adbba8a](https://github.com/runkids/skillshare-app/commit/adbba8a987eb88866b1154f854d1b33357f28f5a))
+
+
+### Bug Fixes
+
+* **server:** wait up to 60s for the server to become ready ([#73](https://github.com/runkids/skillshare-app/issues/73)) ([fa21e8e](https://github.com/runkids/skillshare-app/commit/fa21e8e253401cb15bd9be167c2f31d433dc6a8c))
+
 ## [0.6.0](https://github.com/runkids/skillshare-app/compare/v0.5.0...v0.6.0) (2026-10-03)
 
 
