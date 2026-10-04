@@ -7,9 +7,19 @@ const mocks = vi.hoisted(() => ({
   runCli: vi.fn(),
   refresh: vi.fn(() => Promise.resolve()),
   reloadView: vi.fn(),
+  handlers: new Map<string, (e: { payload: unknown }) => void>(),
+}));
+
+vi.mock('@tauri-apps/api/core', () => ({ isTauri: () => true }));
+vi.mock('@tauri-apps/api/event', () => ({
+  listen: (event: string, handler: (e: { payload: unknown }) => void) => {
+    mocks.handlers.set(event, handler);
+    return Promise.resolve(() => mocks.handlers.delete(event));
+  },
 }));
 
 vi.mock('../../api/tauri-bridge', () => ({
+  CLI_UPGRADE_STEP_EVENT: 'cli-upgrade-step',
   tauriBridge: {
     detectCli: () => Promise.resolve(null),
     upgradeCli: mocks.upgradeCli,
@@ -56,12 +66,13 @@ describe('CliSettings upgrade', () => {
     expect(await screen.findByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
 
-  it('shows how long a slow upgrade has been running', async () => {
+  it('shows the step a slow upgrade is on and how long it has run', async () => {
     vi.useFakeTimers();
     mocks.upgradeCli.mockReturnValue(new Promise(() => {}));
     render(<CliSettings />);
     fireEvent.click(screen.getByRole('button', { name: 'Upgrade CLI' }));
     await act(() => vi.advanceTimersByTimeAsync(83_000));
-    expect(screen.getByText(/Downloading and installing… 1:23/)).toBeInTheDocument();
+    act(() => mocks.handlers.get('cli-upgrade-step')?.({ payload: 'Downloading v0.24.1...' }));
+    expect(screen.getByText('Downloading v0.24.1... 1:23')).toBeInTheDocument();
   });
 });

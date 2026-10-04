@@ -29,6 +29,7 @@ React 19 + TypeScript + Vite 8 + Tailwind CSS 4, rendered in a Tauri 2 webview. 
 
 Rust events (names verified in `src-tauri/src`), all subscribed with `listen` from `@tauri-apps/api/event` inside a `useEffect` guarded by `isTauri()`, and unsubscribed with `unlisten.then((off) => off())`:
 
+- `cli-upgrade-step` (payload: the step text): `CliSettings` shows it with the elapsed time while Upgrade CLI runs.
 - `server-restarted` (payload: port) and `server-stopped`: `CliWebView` and `useServerStopped` (used by the status panel).
 - `updates-available` (payload: `AvailableUpdates`): `useUpdates`.
 - `source-health` (`SOURCE_HEALTH_EVENT`, payload: `SourceHealth`): `useSourceHealth`.
