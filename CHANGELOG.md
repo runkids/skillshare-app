@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.5](https://github.com/runkids/skillshare-app/compare/v0.7.4...v0.7.5) (2026-10-25)
+
+
+### Bug Fixes
+
+* **linux:** isolate child processes from AppImage libraries ([#86](https://github.com/runkids/skillshare-app/issues/86)) ([7c7af8e](https://github.com/runkids/skillshare-app/commit/7c7af8e1f449291dec6fca7a02272bd8a86d080c))
+
 ## [0.7.4](https://github.com/runkids/skillshare-app/compare/v0.7.3...v0.7.4) (2026-10-22)
 
 
