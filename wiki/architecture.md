@@ -85,6 +85,7 @@ Auto-sync, update checks, the operation log watcher, source health and the audit
   - The first project added becomes active.
 - `utils/env.rs:load_login_shell_path` reads `$SHELL`'s login PATH once into a `OnceCell`. On Windows it returns `None`, since GUI apps inherit the user's PATH there.
 - `build_env_for_child` builds PATH in this order: the login PATH, the tool dirs (Volta, fnm, Homebrew, `/usr/local/bin`, Cargo, Go, `~/bin`, `~/.local/bin`), then the process PATH. Duplicates are dropped, joined with the platform separator. It also sets `HOME`, `LANG`/`LC_ALL`, `TERM`, `SSH_AUTH_SOCK` and `SHELL`.
+- On Linux, `build_env_for_child` filters entries inside the AppImage's absolute `APPDIR` from `LD_LIBRARY_PATH`, preserving other entries. An empty override prevents inherited bundled libraries from reaching the CLI, its Git children and direct Git commands; the GUI's own environment is unchanged.
 - On Windows, `install_cli` skips this environment and spawns with `CREATE_NO_WINDOW`.
 
 ## Events and commands
