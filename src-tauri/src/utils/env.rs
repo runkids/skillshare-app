@@ -38,6 +38,15 @@ fn merge_path(parts: &[String]) -> String {
         .unwrap_or_default()
 }
 
+#[cfg(any(target_os = "linux", test))]
+fn library_path_without_appdir(library_path: &str, app_dir: &std::path::Path) -> String {
+    library_path
+        .split(':')
+        .filter(|entry| !std::path::Path::new(entry).starts_with(app_dir))
+        .collect::<Vec<_>>()
+        .join(":")
+}
+
 /// Build a HashMap of environment variables suitable for child PTY processes.
 /// PATH is the login shell's PATH, then common tool paths (Volta, fnm, Homebrew,
 /// Cargo, Go, ~/bin, ~/.local/bin), then the process PATH, so that CLIs installed
@@ -101,6 +110,20 @@ pub fn build_env_for_child() -> HashMap<String, String> {
         env.insert("SHELL".to_string(), val);
     }
 
+    #[cfg(target_os = "linux")]
+    if let (Ok(app_dir), Ok(library_path)) =
+        (std::env::var("APPDIR"), std::env::var("LD_LIBRARY_PATH"))
+    {
+        let app_dir = std::path::Path::new(&app_dir);
+        if app_dir.is_absolute() {
+            // Override even when empty: omitting the key would inherit the bundled libraries.
+            env.insert(
+                "LD_LIBRARY_PATH".to_string(),
+                library_path_without_appdir(&library_path, app_dir),
+            );
+        }
+    }
+
     env
 }
 
@@ -112,6 +135,79 @@ mod tests {
         std::env::join_paths(dirs)
             .map(|p| p.to_string_lossy().into_owned())
             .unwrap_or_default()
+    }
+
+    #[test]
+    fn library_path_removes_only_appdir_entries() {
+        let app_dir = std::path::Path::new("/tmp/.mount_skillshare");
+        for (input, expected) in [
+            (
+                "/custom/lib:/tmp/.mount_skillshare/usr/lib:/tmp/.mount_skillshare/lib:/usr/lib",
+                "/custom/lib:/usr/lib",
+            ),
+            ("/tmp/.mount_skillshare/usr/lib", ""),
+            ("/custom/lib:/usr/lib", "/custom/lib:/usr/lib"),
+            (
+                "/tmp/.mount_skillshare-other/lib",
+                "/tmp/.mount_skillshare-other/lib",
+            ),
+            ("", ""),
+        ] {
+            assert_eq!(super::library_path_without_appdir(input, app_dir), expected);
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn appimage_child_does_not_inherit_bundled_libraries() {
+        const MARKER: &str = "SKILLSHARE_TEST_APPIMAGE_ENV";
+        if let Ok(expected) = std::env::var(MARKER) {
+            let inherited = std::env::var("LD_LIBRARY_PATH").ok();
+            let output = std::process::Command::new("/usr/bin/printenv")
+                .arg("LD_LIBRARY_PATH")
+                .envs(super::build_env_for_child())
+                .output()
+                .unwrap_or_else(|err| panic!("spawn child: {err}"));
+            assert!(output.status.success());
+            assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), expected);
+            assert_eq!(std::env::var("LD_LIBRARY_PATH").ok(), inherited);
+            return;
+        }
+
+        // Isolate the AppImage environment from other tests in this process.
+        for (app_dir, library_path, expected) in [
+            (
+                "/tmp/.mount_skillshare",
+                "/tmp/.mount_skillshare/usr/lib:/custom/lib",
+                "/custom/lib",
+            ),
+            (
+                "/tmp/.mount_skillshare",
+                "/tmp/.mount_skillshare/usr/lib",
+                "",
+            ),
+            ("", "/custom/lib", "/custom/lib"),
+        ] {
+            let output = std::process::Command::new(
+                std::env::current_exe().unwrap_or_else(|err| panic!("test executable: {err}")),
+            )
+            .args([
+                "--exact",
+                "utils::env::tests::appimage_child_does_not_inherit_bundled_libraries",
+                "--nocapture",
+            ])
+            .env(MARKER, expected)
+            .env("APPDIR", app_dir)
+            .env("LD_LIBRARY_PATH", library_path)
+            .output()
+            .unwrap_or_else(|err| panic!("spawn isolated test: {err}"));
+            assert!(
+                output.status.success(),
+                "{}\n{}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
     }
 
     #[test]

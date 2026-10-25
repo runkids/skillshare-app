@@ -77,6 +77,7 @@ fn is_own_orphan(recorded: ServerPid, own_pid: u32, lsof_pids: &str) -> bool {
 /// an exact match so `skillshare-app` (the Tauri binary) never qualifies.
 async fn skillshare_listeners(port: u16) -> String {
     tokio::process::Command::new("lsof")
+        .envs(crate::utils::env::build_env_for_child())
         .args([
             "-t",
             "-a",
@@ -110,6 +111,7 @@ async fn stop_self_restarted_server(port: u16) {
             );
             for pid in pids {
                 let _ = tokio::process::Command::new("kill")
+                    .envs(crate::utils::env::build_env_for_child())
                     .args(["-TERM", pid])
                     .output()
                     .await;
@@ -144,6 +146,7 @@ async fn kill_orphaned_server() {
         recorded.port
     );
     let _ = tokio::process::Command::new("kill")
+        .envs(crate::utils::env::build_env_for_child())
         .args(["-TERM", &recorded.pid.to_string()])
         .output()
         .await;
