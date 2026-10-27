@@ -76,6 +76,10 @@ export default function CliWebView() {
   const failCount = useRef(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const startAttempted = useRef(false);
+  // The page the CLI UI last reported (CLI versions that post `route-change`).
+  const framePathRef = useRef<string | null>(null);
+  // A reload reopens that page; `mount` is the iframe key it applies to.
+  const [reopen, setReopen] = useState<{ mount: string; path: string } | null>(null);
 
   // Derive CLI theme from shell's style + mode
   // CLI values: dark, light, playful, clean
@@ -102,6 +106,20 @@ export default function CliWebView() {
     return () => window.removeEventListener('message', handler);
   }, [setStyle, setModePreference, resolvedMode]);
 
+  // The CLI UI reports its route, so a reload can reopen the page instead of the shell route.
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (event.data?.type !== 'route-change') return;
+      if (event.source !== iframeRef.current?.contentWindow) return;
+      const path = event.data.path;
+      if (typeof path === 'string' && path.startsWith('/') && !path.startsWith('//')) {
+        framePathRef.current = path;
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
   const pushTheme = useCallback(() => {
     iframeRef.current?.contentWindow?.postMessage(
       { type: 'theme-push', mode: resolvedMode, style },
@@ -123,16 +141,20 @@ export default function CliWebView() {
   const webSearch = webPath ? location.search : '';
   // Remount on every navigation to a page, so it reopens even if the iframe moved on.
   const navKey = webPath ? location.key : '';
+  const mountKey = `${iframeUrl}-${iframeKey}-${navKey}`;
 
   // Read the theme each time the iframe (re)mounts. A stale ?theme= would make the
   // reloaded CLI UI restore the old style and post it back, undoing the user's choice.
   const iframeSrc = useMemo(() => {
     if (!iframeUrl) return null;
-    const params = new URLSearchParams(webSearch);
+    // Only the remount a reload caused reopens the CLI page; a switch or shell navigation does not.
+    const [path, search = ''] =
+      reopen?.mount === mountKey ? reopen.path.split(/\?(.*)/s) : [webPath, webSearch];
+    const params = new URLSearchParams(search);
     params.set('theme', cliThemeRef.current);
-    return `${iframeUrl}${webPath}?${params}`;
+    return `${iframeUrl}${path === '/' ? '' : path}?${params}`;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- iframeKey and navKey mark a remount
-  }, [iframeUrl, iframeKey, navKey, webPath, webSearch]);
+  }, [iframeUrl, iframeKey, navKey, webPath, webSearch, reopen, mountKey]);
 
   // Try to start server if no port available on mount
   useEffect(() => {
@@ -260,8 +282,11 @@ export default function CliWebView() {
       failCount.current = 0;
       setStatus('ready');
       await refreshAppInfo();
+      const path = framePathRef.current;
+      setReopen(path ? { mount: `${iframeUrl}-${iframeKey + 1}-${navKey}`, path } : null);
       setIframeKey((k) => k + 1);
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only a reloadKey change reloads
   }, [reloadKey, handleRestart, refreshAppInfo]);
 
   if (!isTauri()) {
@@ -348,7 +373,7 @@ export default function CliWebView() {
   return (
     <iframe
       ref={iframeRef}
-      key={`${iframeUrl}-${iframeKey}-${navKey}`}
+      key={mountKey}
       src={iframeSrc!}
       className="flex-1 w-full border-0"
       onLoad={() => {
