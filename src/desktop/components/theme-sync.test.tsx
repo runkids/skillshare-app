@@ -158,4 +158,37 @@ describe('CLI Web UI page', () => {
       'http://localhost:19420/skills?tab=updates&theme=clean'
     );
   });
+
+  function reportRoute(source: MessageEventSource | null, path: string) {
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', { source, data: { type: 'route-change', path } })
+      );
+    });
+  }
+
+  it('reloads on the page the CLI UI reported, not the dashboard', async () => {
+    const { iframe, rerender } = setup();
+    reportRoute(iframe.contentWindow, '/skills/demo?tab=files');
+    project.reloadKey = 1;
+    rerender(<Tree />);
+    await waitFor(() =>
+      expect(screen.getByTitle('skillshare UI')).toHaveAttribute(
+        'src',
+        'http://localhost:19420/skills/demo?tab=files&theme=clean'
+      )
+    );
+  });
+
+  it('ignores routes reported by other windows', async () => {
+    const { iframe, rerender } = setup();
+    reportRoute(window, '/skills');
+    project.reloadKey = 1;
+    rerender(<Tree />);
+    await waitFor(() => expect(screen.getByTitle('skillshare UI')).not.toBe(iframe));
+    expect(screen.getByTitle('skillshare UI')).toHaveAttribute(
+      'src',
+      'http://localhost:19420?theme=clean'
+    );
+  });
 });
