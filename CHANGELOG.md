@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.6](https://github.com/runkids/skillshare-app/compare/v0.7.5...v0.7.6) (2026-10-27)
+
+
+### Bug Fixes
+
+* **webview:** reload the CLI page that was open, not the dashboard ([#89](https://github.com/runkids/skillshare-app/issues/89)) ([291d40a](https://github.com/runkids/skillshare-app/commit/291d40a8c240dd64a62cde52d3b5bb2e20815444))
+
 ## [0.7.5](https://github.com/runkids/skillshare-app/compare/v0.7.4...v0.7.5) (2026-10-25)
 
 
