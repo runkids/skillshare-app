@@ -96,9 +96,15 @@ async fn skillshare_listeners(port: u16) -> String {
 /// a helper it spawned starts a new server on the same port. That server is not ours to
 /// supervise, and leaving it would push our relaunch to the next port and leave it
 /// running after the app quits. Stop it, so the relaunch takes the port back.
-async fn stop_self_restarted_server(port: u16) {
+///
+/// `generation` moving past `ours` means a newer `start()` (the upgrade restart) owns the
+/// port, so the listener is our own new server, not the CLI's: leave it alone.
+async fn stop_self_restarted_server(port: u16, generation: &AtomicU64, ours: u64) {
     for _ in 0..SELF_RESTART_POLLS {
         let pids = skillshare_listeners(port).await;
+        if generation.load(Ordering::SeqCst) != ours {
+            return;
+        }
         let pids: Vec<&str> = pids
             .lines()
             .map(str::trim)
@@ -392,7 +398,8 @@ impl ServerManager {
         while let Some(status) = self.wait_for_exit(generation).await {
             log::warn!("skillshare server exited unexpectedly ({status})");
             if status.success() {
-                stop_self_restarted_server(self.get_port().await).await;
+                stop_self_restarted_server(self.get_port().await, &self.generation, generation)
+                    .await;
             }
             loop {
                 let delay = {
