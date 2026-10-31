@@ -49,7 +49,7 @@ export default function QuickSyncButton({ disabled }: { disabled?: boolean }) {
           {/* Matches the Web UI's .ss-toast, which is dark in every theme. */}
           <div
             role={failed ? 'alert' : 'status'}
-            className="animate-fade-in flex items-start gap-3 min-h-[42px] py-2.5 pl-3.5 pr-2 rounded-[11px] bg-[#1E1D1B] text-[#F4F2ED] text-[13px] font-medium shadow-[0_16px_40px_rgba(20,19,18,.24)]"
+            className="qs-toast animate-fade-in flex items-start gap-3 min-h-[42px] py-2.5 pl-3.5 pr-2 rounded-[var(--r-box)] bg-[#1E1D1B] text-[#F4F2ED] text-[13px] font-medium shadow-[var(--sh-float)]"
           >
             <Icon
               size={16}

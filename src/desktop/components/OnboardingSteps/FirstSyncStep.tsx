@@ -154,13 +154,13 @@ export default function FirstSyncStep({ cliPath, onComplete, onSynced }: FirstSy
 
       {done && (
         <div className="ob-enter grid grid-cols-2 gap-2.5" aria-live="polite">
-          <div className="rounded-xl bg-sunken px-3.5 py-3 text-[13px] text-ink-2">
+          <div className="rounded-[var(--r-ctl)] bg-sunken px-3.5 py-3 text-[13px] text-ink-2">
             <b className="text-ink">Next:</b> install a skill from GitHub on the Skills page.
           </div>
           <TerminalAccess
             cliPath={cliPath}
             fallback={
-              <div className="rounded-xl bg-sunken px-3.5 py-3 text-[13px] text-ink-2">
+              <div className="rounded-[var(--r-ctl)] bg-sunken px-3.5 py-3 text-[13px] text-ink-2">
                 <b className="text-ink">Tip:</b> the CLI works in your terminal too —{' '}
                 <span className="text-ink" style={mono}>
                   skillshare sync

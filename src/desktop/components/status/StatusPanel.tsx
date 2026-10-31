@@ -45,9 +45,9 @@ export default function StatusPanel({ id, rows, checked, checking, onCheckNow, o
       id={id}
       role="dialog"
       aria-label="Status"
-      className="absolute right-0 top-full mt-[14px] z-50 w-[392px] rounded-[var(--r-box)] border border-[var(--line-2)] bg-[var(--surface)] shadow-[0_16px_40px_rgba(20,19,18,.14)]"
+      className="absolute right-0 top-full mt-[14px] z-50 w-[392px] rounded-[var(--r-box)] [border:var(--frame)] bg-[var(--surface)] shadow-[var(--sh-float)]"
     >
-      <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2">
+      <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2.5">
         <span className="text-[14px] font-bold text-[var(--ink)]">Status</span>
         <span className="text-xs text-[var(--ink-2)]">
           {checking ? 'Checking…' : `Checked ${checked}`} ·{' '}
@@ -61,7 +61,7 @@ export default function StatusPanel({ id, rows, checked, checking, onCheckNow, o
           </button>
         </span>
       </div>
-      <ul className="px-2 pb-2">
+      <ul className="m-0 p-0 list-none [border-top:var(--sep)]">
         {rows.map((row) => {
           const Icon = ICONS[row.icon];
           const label = actionLabel(row);
@@ -69,7 +69,7 @@ export default function StatusPanel({ id, rows, checked, checking, onCheckNow, o
             <li
               key={row.id}
               data-testid={`status-row-${row.id}`}
-              className="flex items-center gap-3 px-2 py-2"
+              className="flex items-center gap-3 px-4 py-3 [border-top:var(--sep)] first:[border-top:0]"
             >
               <span
                 className={`w-7 h-7 shrink-0 flex items-center justify-center rounded-[var(--r-ctl)] ${TONES[row.tone]}`}

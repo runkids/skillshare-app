@@ -9,11 +9,8 @@ interface StepHeaderProps {
 export default function StepHeader({ step, title, children }: StepHeaderProps) {
   return (
     <>
-      <div className="text-xs font-bold tracking-[0.08em] text-ink-3">STEP {step} OF 3</div>
-      <h1
-        className="m-0 text-[28px] font-bold leading-[1.1] tracking-[-0.022em] text-ink"
-        style={{ fontFamily: 'var(--font-heading)' }}
-      >
+      <div className="text-[12.5px] font-semibold text-ink-3">Step {step} of 3</div>
+      <h1 className="m-0 text-ink" style={{ font: 'var(--h1)', letterSpacing: 'var(--h1-track)' }}>
         {title}
       </h1>
       {children && (
