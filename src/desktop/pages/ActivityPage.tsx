@@ -142,43 +142,46 @@ export default function ActivityPage() {
   };
 
   return (
-    <main
-      className="h-screen overflow-y-auto bg-[var(--bg)] px-16 pb-12"
-      // Leave room for the macOS overlay traffic lights; this page has no title bar.
-      style={{ paddingTop: isMacOS() ? '48px' : '20px' }}
-    >
+    <main className="h-screen overflow-y-auto bg-[var(--bg)] px-16 pb-12">
       <div className="mx-auto max-w-[720px] flex flex-col gap-6">
-        <button
-          type="button"
-          onClick={() => navigate('/')}
-          className="self-start flex items-center gap-2 h-9 px-2.5 -ml-2.5 rounded-[var(--r-ctl)] text-sm text-[var(--ink-2)] hover:text-[var(--ink)] hover:bg-[var(--sel)] transition-colors"
+        {/* The header stays put; only the list scrolls under it. */}
+        <div
+          className="sticky top-0 z-10 flex flex-col gap-6 bg-[var(--bg)] pb-2"
+          // Leave room for the macOS overlay traffic lights; this page has no title bar.
+          style={{ paddingTop: isMacOS() ? '48px' : '20px' }}
         >
-          <ArrowLeft size={18} />
-          <span>Back to dashboard</span>
-        </button>
-        <div className="flex items-start gap-4">
-          <div className="flex-1">
-            <h1
-              className="m-0 text-[var(--ink)]"
-              style={{ font: 'var(--h1)', letterSpacing: 'var(--h1-track)' }}
-            >
-              Activity
-            </h1>
-            <p className="text-sm text-[var(--ink-2)] mt-1">
-              Syncs, installs, updates and errors from the last 7 days
-              {activeProject ? ` in ${activeProject.name}` : ''}.
-            </p>
-          </div>
           <button
             type="button"
-            onClick={refresh}
-            disabled={refreshing || !isTauri()}
-            className="w-[30px] h-[30px] flex items-center justify-center rounded-[var(--r-ctl)] hover:bg-[var(--sel)] transition-colors text-[var(--ink-2)] hover:text-[var(--ink)] disabled:opacity-50"
-            title="Refresh"
-            aria-label="Refresh"
+            onClick={() => navigate('/')}
+            className="self-start flex items-center gap-2 h-9 px-2.5 -ml-2.5 rounded-[var(--r-ctl)] text-sm text-[var(--ink-2)] hover:text-[var(--ink)] hover:bg-[var(--sel)] transition-colors"
           >
-            <RotateCw size={15} className={refreshing ? 'motion-safe:animate-spin' : undefined} />
+            <ArrowLeft size={18} />
+            <span>Back to dashboard</span>
           </button>
+          <div className="flex items-start gap-4">
+            <div className="flex-1">
+              <h1
+                className="m-0 text-[var(--ink)]"
+                style={{ font: 'var(--h1)', letterSpacing: 'var(--h1-track)' }}
+              >
+                Activity
+              </h1>
+              <p className="text-sm text-[var(--ink-2)] mt-1">
+                Syncs, installs, updates and errors from the last 7 days
+                {activeProject ? ` in ${activeProject.name}` : ''}.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={refresh}
+              disabled={refreshing || !isTauri()}
+              className="w-[30px] h-[30px] flex items-center justify-center rounded-[var(--r-ctl)] hover:bg-[var(--sel)] transition-colors text-[var(--ink-2)] hover:text-[var(--ink)] disabled:opacity-50"
+              title="Refresh"
+              aria-label="Refresh"
+            >
+              <RotateCw size={15} className={refreshing ? 'motion-safe:animate-spin' : undefined} />
+            </button>
+          </div>
         </div>
         {renderBody()}
       </div>
