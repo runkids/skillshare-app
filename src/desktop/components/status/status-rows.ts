@@ -57,8 +57,8 @@ function auditRow(findings: AuditFinding[]): StatusRow | null {
 /** New app and CLI versions, each opening the settings tab that installs it. */
 function versionRows(updates: AvailableUpdates): StatusRow[] {
   const versions = [
-    { id: 'app-update', name: 'Skillshare App', version: updates.app, tab: 'about' },
-    { id: 'cli-update', name: 'skillshare CLI', version: updates.cli, tab: 'cli' },
+    { id: 'app-update', name: 'Skillshare App', version: updates.app, tab: 'updates' },
+    { id: 'cli-update', name: 'skillshare CLI', version: updates.cli, tab: 'updates' },
   ];
   return versions
     .filter(({ version }) => version)

@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import Button from '../../../components/Button';
-import Card from '../../../components/Card';
 import Input from '../../../components/Input';
 import Switch from '../../../components/Switch';
 import { tauriBridge, AUTO_SYNC_CHANGED_EVENT } from '../../api/tauri-bridge';
 import { useTauri } from '../../context/TauriContext';
 import { useProjects } from '../../context/ProjectContext';
+import { SettingsHeader, SettingsList, SettingsRow, SettingsSection } from './SettingsLayout';
 
 export default function GeneralSettings() {
   const navigate = useNavigate();
@@ -17,18 +17,14 @@ export default function GeneralSettings() {
   const [port, setPort] = useState('19420');
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [toggleError, setToggleError] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [resetting, setResetting] = useState(false);
-  const [notifyUpdate, setNotifyUpdate] = useState(true);
   const [notifySync, setNotifySync] = useState(true);
   const [autoSync, setAutoSync] = useState(false);
 
   useEffect(() => {
     tauriBridge.getPreferredPort().then((p) => setPort(String(p)));
-    tauriBridge
-      .getNotifyUpdate()
-      .then(setNotifyUpdate)
-      .catch(() => {});
     tauriBridge
       .getNotifySync()
       .then(setNotifySync)
@@ -49,23 +45,13 @@ export default function GeneralSettings() {
     };
   }, []);
 
-  const handleNotifyUpdate = async (enabled: boolean) => {
-    setNotifyUpdate(enabled);
-    try {
-      await tauriBridge.setNotifyUpdate(enabled);
-    } catch (err) {
-      setNotifyUpdate(!enabled);
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  };
-
   const handleNotifySync = async (enabled: boolean) => {
     setNotifySync(enabled);
     try {
       await tauriBridge.setNotifySync(enabled);
     } catch (err) {
       setNotifySync(!enabled);
-      setError(err instanceof Error ? err.message : String(err));
+      setToggleError(err instanceof Error ? err.message : String(err));
     }
   };
 
@@ -75,7 +61,7 @@ export default function GeneralSettings() {
       await tauriBridge.setAutoSync(enabled);
     } catch (err) {
       setAutoSync(!enabled);
-      setError(err instanceof Error ? err.message : String(err));
+      setToggleError(err instanceof Error ? err.message : String(err));
     }
   };
 
@@ -118,153 +104,127 @@ export default function GeneralSettings() {
   };
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-pencil" style={{ fontFamily: 'var(--font-heading)' }}>
-        General
-      </h1>
+    <div className="flex flex-col gap-7">
+      <SettingsHeader
+        title="General"
+        subtitle="How the app runs while it sits in the background."
+      />
 
-      <Card>
-        <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col gap-2">
+        <SettingsList>
           <div>
-            <p className="text-sm font-medium text-pencil">Server Port</p>
-            <p className="text-xs text-pencil-light mt-0.5">
-              CLI server will start on this port (restart required)
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Input
-              type="number"
-              min={1024}
-              max={65535}
-              value={port}
-              onChange={(e) => {
-                setPort(e.target.value);
-                setSaved(false);
-              }}
-              className="!w-32 !py-1.5 text-sm"
-            />
-            <Button size="sm" onClick={handleSave}>
-              {saved ? 'Saved' : 'Save'}
-            </Button>
-          </div>
-        </div>
-        {error && <p className="text-danger text-xs mt-2">{error}</p>}
-      </Card>
-
-      <Card>
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p id="notify-update" className="text-sm font-medium text-pencil">
-              Update notifications
-            </p>
-            <p id="notify-update-hint" className="text-xs text-pencil-light mt-0.5">
-              Notify me about new app and CLI versions while the app is in the background
-            </p>
-          </div>
-          <Switch
-            checked={notifyUpdate}
-            onChange={handleNotifyUpdate}
-            labelledBy="notify-update"
-            describedBy="notify-update-hint"
-          />
-        </div>
-      </Card>
-
-      <Card>
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p id="notify-sync" className="text-sm font-medium text-pencil">
-              Sync notifications
-            </p>
-            <p id="notify-sync-hint" className="text-xs text-pencil-light mt-0.5">
-              Show the result when Quick Sync runs from the menu bar
-            </p>
-          </div>
-          <Switch
-            checked={notifySync}
-            onChange={handleNotifySync}
-            labelledBy="notify-sync"
-            describedBy="notify-sync-hint"
-          />
-        </div>
-      </Card>
-
-      <Card>
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p id="auto-sync" className="text-sm font-medium text-pencil">
-              Auto-sync
-            </p>
-            <p id="auto-sync-hint" className="text-xs text-pencil-light mt-0.5">
-              Sync automatically when files in the active project's skills source change
-            </p>
-          </div>
-          <Switch
-            checked={autoSync}
-            onChange={handleAutoSync}
-            labelledBy="auto-sync"
-            describedBy="auto-sync-hint"
-          />
-        </div>
-      </Card>
-
-      {/* Danger zone */}
-      <div className="pt-4">
-        <h2 className="text-sm font-semibold text-danger uppercase tracking-wider mb-3">
-          Danger Zone
-        </h2>
-        <Card className="border-danger/30">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium text-pencil">Reset app data</p>
-                <p className="text-xs text-pencil-light mt-0.5">
-                  Return the app to first launch and run setup again.
-                </p>
-              </div>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={confirmReset ? handleReset : () => setConfirmReset(true)}
-                loading={resetting}
-                className="text-danger hover:text-danger shrink-0"
-              >
-                {confirmReset ? 'Confirm' : 'Reset'}
+            <SettingsRow
+              id="server-port"
+              label="Server port"
+              hint="The dashboard runs on this local port. Saving restarts the server."
+            >
+              <Input
+                type="number"
+                min={1024}
+                max={65535}
+                value={port}
+                aria-labelledby="server-port"
+                onChange={(e) => {
+                  setPort(e.target.value);
+                  setSaved(false);
+                }}
+                className="!w-28 !py-1.5 font-mono text-[13px]"
+              />
+              <Button size="sm" variant="secondary" onClick={handleSave}>
+                {saved ? 'Saved' : 'Save'}
               </Button>
-            </div>
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="rounded-[var(--r-ctl)] bg-[var(--bad-bg)] px-3 py-2.5">
-                <p className="font-semibold text-[var(--bad)]">Cleared</p>
-                <ul className="mt-1 space-y-0.5 text-[var(--ink-2)] list-disc pl-4">
-                  <li>The app’s project list</li>
-                  <li>Server port and notification settings</li>
-                  <li>Remembered CLI location and version</li>
-                </ul>
-              </div>
-              <div className="rounded-[var(--r-ctl)] bg-[var(--sunken)] px-3 py-2.5">
-                <p className="font-semibold text-[var(--ink)]">Kept</p>
-                <ul className="mt-1 space-y-0.5 text-[var(--ink-2)] list-disc pl-4">
-                  <li>Your skills and the CLI’s own config</li>
-                  <li>Project folders on disk</li>
-                  <li>The skillshare CLI, including a copy the app downloaded</li>
-                </ul>
-              </div>
-            </div>
-            {confirmReset && (
-              <p className="text-xs text-danger">
-                The local server stops and setup starts over. Nothing on the Kept list is touched.{' '}
-                <button
-                  type="button"
-                  onClick={() => setConfirmReset(false)}
-                  className="underline hover:no-underline"
-                >
-                  Cancel
-                </button>
+            </SettingsRow>
+            {error && (
+              <p role="alert" className="m-0 -mt-1 px-4 pb-3 text-[13px] text-[var(--bad)]">
+                {error}
               </p>
             )}
           </div>
-        </Card>
+          <SettingsRow
+            id="notify-sync"
+            label="Sync notifications"
+            hint="Show the result when Quick Sync runs from the menu bar."
+          >
+            <Switch
+              checked={notifySync}
+              onChange={handleNotifySync}
+              labelledBy="notify-sync"
+              describedBy="notify-sync-hint"
+            />
+          </SettingsRow>
+          <SettingsRow
+            id="auto-sync"
+            label="Auto-sync"
+            hint="Sync automatically when files in the active project’s skills source change."
+          >
+            <Switch
+              checked={autoSync}
+              onChange={handleAutoSync}
+              labelledBy="auto-sync"
+              describedBy="auto-sync-hint"
+            />
+          </SettingsRow>
+        </SettingsList>
+        {toggleError && (
+          <p role="alert" className="m-0 text-[13px] text-[var(--bad)]">
+            {toggleError}
+          </p>
+        )}
+        <p className="m-0 text-[13px] text-[var(--ink-2)]">
+          Update notifications are on the{' '}
+          <button
+            type="button"
+            onClick={() => navigate('/settings?tab=updates')}
+            className="p-0 bg-transparent border-0 text-[var(--accent)] hover:underline cursor-pointer"
+          >
+            Updates
+          </button>{' '}
+          page.
+        </p>
       </div>
+
+      <SettingsSection title="Reset app data" heading="h2">
+        <SettingsList>
+          <div className="flex items-start gap-4 px-4 py-4">
+            <p className="m-0 flex-1 text-sm text-[var(--ink)]">
+              Return the app to first launch and run setup again. The local server stops and setup
+              starts over.
+            </p>
+            {confirmReset ? (
+              <span className="flex items-center gap-2 shrink-0">
+                <Button size="sm" variant="secondary" onClick={() => setConfirmReset(false)}>
+                  Cancel
+                </Button>
+                <Button size="sm" variant="danger" onClick={handleReset} loading={resetting}>
+                  Reset now
+                </Button>
+              </span>
+            ) : (
+              <Button size="sm" variant="danger" onClick={() => setConfirmReset(true)}>
+                Reset app data…
+              </Button>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-4 px-4 py-4">
+            <div>
+              <p className="m-0 text-[13px] font-semibold text-[var(--ink)]">Cleared</p>
+              <ul className="mt-1.5 mb-0 pl-[18px] flex flex-col gap-[3px] text-[13px] text-[var(--ink-2)]">
+                <li>The app’s project list</li>
+                <li>Server port and notification settings</li>
+                <li>Remembered CLI location and version</li>
+              </ul>
+            </div>
+            <div>
+              <p className="m-0 text-[13px] font-semibold text-[var(--ink)]">Kept</p>
+              <ul className="mt-1.5 mb-0 pl-[18px] flex flex-col gap-[3px] text-[13px] text-[var(--ink-2)]">
+                <li>Your skills and the CLI’s own config</li>
+                <li>Project folders on disk</li>
+                <li>The skillshare CLI, including a copy the app downloaded</li>
+              </ul>
+            </div>
+          </div>
+        </SettingsList>
+      </SettingsSection>
     </div>
   );
 }

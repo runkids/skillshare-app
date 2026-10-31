@@ -124,12 +124,12 @@ describe('StatusButton', () => {
     ]);
   });
 
-  it('opens the CLI settings tab to install a new CLI', () => {
+  it('opens the Updates tab to install a new CLI', () => {
     state.updates = { ...state.updates, cli: 'v0.24.0' };
     renderButton();
     openPanel();
     fireEvent.click(screen.getByRole('button', { name: 'Update' }));
-    expect(screen.getByTestId('location')).toHaveTextContent('/settings?tab=cli');
+    expect(screen.getByTestId('location')).toHaveTextContent('/settings?tab=updates');
   });
 
   it('closes the panel on Escape', () => {

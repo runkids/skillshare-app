@@ -1,5 +1,6 @@
 import TitleBar from './TitleBar';
 import CliWebView from './CliWebView';
+import UpdatedNotice from './UpdatedNotice';
 import TerminalPage from './terminal/TerminalPage';
 import { useTerminal } from '../context/TerminalContext';
 
@@ -13,6 +14,7 @@ export default function MainView() {
     <>
       <TitleBar />
       <div className="flex-1 flex flex-col overflow-hidden relative">
+        <UpdatedNotice />
         <div
           className={!SHOW_TERMINAL || activeView === 'webui' ? 'flex-1 flex flex-col' : 'hidden'}
         >

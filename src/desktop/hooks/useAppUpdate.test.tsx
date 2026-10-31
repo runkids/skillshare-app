@@ -7,8 +7,16 @@ import { resetAppUpdateForTests } from './useAppUpdate';
 
 vi.mock('@tauri-apps/api/core', () => ({ isTauri: () => true }));
 vi.mock('@tauri-apps/plugin-updater', () => ({ check: vi.fn() }));
+vi.mock('@tauri-apps/plugin-process', () => ({ relaunch: vi.fn() }));
 
-const updates = vi.hoisted(() => ({ cli: null as string | null, app: null as string | null }));
+const updates = vi.hoisted(() => ({
+  cli: null as string | null,
+  app: null as string | null,
+  skills: [] as string[],
+  agents: [] as string[],
+  plugins: [] as string[],
+  repositories: [] as string[],
+}));
 vi.mock('./useUpdates', () => ({ useUpdates: () => updates }));
 
 const mockCheck = vi.mocked(check);
@@ -25,6 +33,7 @@ beforeEach(() => {
   resetAppUpdateForTests();
   mockCheck.mockReset();
   updates.cli = null;
+  updates.skills = [];
 });
 
 describe('settings nav update badge', () => {
@@ -32,31 +41,30 @@ describe('settings nav update badge', () => {
     mockCheck.mockResolvedValue(null);
     renderSettings();
     await waitFor(() => expect(mockCheck).toHaveBeenCalledTimes(1));
-    expect(screen.queryByText('Update')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Updates' })).toBeInTheDocument();
   });
 
   it('appears with an accessible name when an update is available', async () => {
     mockCheck.mockResolvedValue({ version: '9.9.9' } as Awaited<ReturnType<typeof check>>);
     renderSettings();
-    expect(
-      await screen.findByRole('button', { name: 'About, update available' })
-    ).toHaveTextContent('Update');
+    expect(await screen.findByRole('button', { name: 'Updates, 1 available' })).toHaveTextContent(
+      '1'
+    );
   });
 
   it('stays hidden when the update check fails', async () => {
     mockCheck.mockRejectedValue(new Error('offline'));
     renderSettings();
     await waitFor(() => expect(mockCheck).toHaveBeenCalledTimes(1));
-    expect(screen.queryByText('Update')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Updates' })).toBeInTheDocument();
   });
 
-  it('marks the CLI tab when a newer CLI is known', async () => {
+  it('counts a newer CLI and resource updates on the Updates tab', async () => {
     mockCheck.mockResolvedValue(null);
     updates.cli = 'v0.24.0';
+    updates.skills = ['pdf', 'docx'];
     renderSettings();
-    expect(await screen.findByRole('button', { name: 'CLI, update available' })).toHaveTextContent(
-      'Update'
-    );
+    expect(await screen.findByRole('button', { name: 'Updates, 3 available' })).toBeInTheDocument();
   });
 
   it('checks only once per session across remounts', async () => {

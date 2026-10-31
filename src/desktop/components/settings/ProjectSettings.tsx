@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Folder, FolderOpen, Globe, Plus, Trash2, X } from 'lucide-react';
+import { Folder, FolderOpen, Globe, Plus, Trash2, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { open } from '@tauri-apps/plugin-dialog';
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
@@ -7,10 +7,8 @@ import Button from '../../../components/Button';
 import { useProjects } from '../../context/ProjectContext';
 import { tauriBridge, type Project } from '../../api/tauri-bridge';
 import { shortPath } from '../../utils/path';
+import { SettingsHeader, SettingsList, SettingsSection, StatusDot } from './SettingsLayout';
 
-const sectionLabel = 'text-[11px] font-semibold tracking-[.06em] uppercase text-[var(--ink-3)]';
-const listBox =
-  'rounded-[var(--r-box)] border border-[var(--line)] bg-[var(--surface)] divide-y divide-[var(--line)] overflow-hidden';
 const iconButton =
   'w-8 h-8 flex items-center justify-center rounded-[var(--r-ctl)] text-[var(--ink-3)] hover:text-[var(--ink)] hover:bg-[var(--sel)] transition-colors disabled:opacity-40 disabled:pointer-events-none';
 
@@ -107,10 +105,7 @@ export default function ProjectSettings() {
           </p>
         </div>
         {isActive ? (
-          <span className="flex items-center gap-1.5 h-7 px-2.5 rounded-[var(--r-btn)] bg-[var(--ok-bg)] text-[var(--ok)] text-xs font-semibold">
-            <Check size={13} strokeWidth={3} />
-            Active
-          </span>
+          <StatusDot tone="ok">Active</StatusDot>
         ) : (
           <Button
             size="sm"
@@ -148,19 +143,16 @@ export default function ProjectSettings() {
   };
 
   return (
-    <div className="space-y-7">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--ink)]">Projects</h1>
-          <p className="text-sm text-[var(--ink-2)] mt-1">
-            Your global config plus repos that keep their own skills. The active one is what the
-            dashboard shows.
-          </p>
-        </div>
-        <Button size="sm" onClick={handleAddProject} loading={adding} className="shrink-0">
-          <Plus size={14} /> Add project folder
-        </Button>
-      </div>
+    <div className="flex flex-col gap-7">
+      <SettingsHeader
+        title="Projects"
+        subtitle="Your global config plus repos that keep their own skills. The active one is what the dashboard shows."
+        action={
+          <Button size="sm" onClick={handleAddProject} loading={adding} className="shrink-0">
+            <Plus size={14} /> Add project folder
+          </Button>
+        }
+      />
 
       {error && (
         <div
@@ -175,18 +167,21 @@ export default function ProjectSettings() {
       )}
 
       {globals.length > 0 && (
-        <section className="space-y-2.5">
-          <h2 className={sectionLabel}>Global</h2>
-          <div className={listBox}>{globals.map(renderRow)}</div>
-        </section>
+        <SettingsSection title="Global">
+          <SettingsList className="overflow-hidden">{globals.map(renderRow)}</SettingsList>
+        </SettingsSection>
       )}
 
-      <section className="space-y-2.5">
-        <h2 className={sectionLabel}>
-          Projects{repos.length > 0 && <span className="ml-1.5 font-normal">{repos.length}</span>}
-        </h2>
+      <SettingsSection
+        title={
+          <>
+            Project folders
+            {repos.length > 0 && <span className="ml-1.5 font-normal">{repos.length}</span>}
+          </>
+        }
+      >
         {repos.length > 0 ? (
-          <div className={listBox}>{repos.map(renderRow)}</div>
+          <SettingsList className="overflow-hidden">{repos.map(renderRow)}</SettingsList>
         ) : (
           <div className="flex flex-col items-center gap-3 px-6 py-10 rounded-[var(--r-box)] border border-dashed border-[var(--line-2)] text-center">
             <span className="w-10 h-10 rounded-full bg-[var(--sunken)] text-[var(--ink-3)] flex items-center justify-center">
@@ -204,7 +199,7 @@ export default function ProjectSettings() {
             </Button>
           </div>
         )}
-      </section>
+      </SettingsSection>
     </div>
   );
 }

@@ -28,7 +28,7 @@ function LocationProbe() {
 }
 
 describe('UpdateCheckListener', () => {
-  it('opens About and checks both app and CLI when the menu item is picked', () => {
+  it('opens Updates and checks both app and CLI when the menu item is picked', () => {
     render(
       <MemoryRouter>
         <UpdateCheckListener />
@@ -40,6 +40,6 @@ describe('UpdateCheckListener', () => {
       screen.getByTestId('location').textContent,
       mocks.recheck.mock.calls.length,
       mocks.checkUpdatesNow.mock.calls.length,
-    ]).toEqual(['/settings?tab=about', 1, 1]);
+    ]).toEqual(['/settings?tab=updates', 1, 1]);
   });
 });

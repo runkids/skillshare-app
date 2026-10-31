@@ -10,7 +10,7 @@ React 19 + TypeScript + Vite 8 + Tailwind CSS 4, rendered in a Tauri 2 webview. 
 - `src/desktop/pages/`: `OnboardingPage`, `SettingsPage`, `ActivityPage` (`/activity`, opened from the title bar; day grouping and relative times in `utils/activity.ts`).
 - `src/desktop/components/`: `MainView`, `TitleBar`, `ProjectDropdown`, `CliWebView` (iframe host), `UpdateCheckListener`, `TerminalAccess`; subfolders `status/` (`StatusButton`, `StatusPanel`, pure `status-rows.ts`; see Status panel), `OnboardingSteps/` (steps, a pure `onboarding-flow.ts` reducer, `onboarding.css` with `ob-*` classes), `settings/` (one component per tab), `terminal/` (xterm UI, currently hidden by `SHOW_TERMINAL = false` in `MainView`).
 - `src/desktop/context/`: `TauriContext` (`useTauri`: `appInfo`, `loading`, `refresh`), `ProjectContext` (`useProjects`: projects, `activeProject`, `switching`, `switchWithRestart`, `reloadKey`/`reloadView`), `TerminalContext` (`useTerminal`).
-- `src/desktop/hooks/`: `useUpdates`, `useSourceHealth`, `useAudit`, `useServerStopped` and `useAppUpdate` (module-level stores read with `useSyncExternalStore`), `useCliManager`, `useFullscreen` (macOS full screen hides the traffic lights, so `TitleBar` drops their gap), plus terminal hooks `usePtySpawn`, `useTerminalInstance`.
+- `src/desktop/hooks/`: `useUpdates`, `useSourceHealth`, `useAudit`, `useServerStopped`, `useAppUpdate` (check, then download, install and restart) and `useCliUpgrade` (module-level stores read with `useSyncExternalStore`, so an update keeps its progress when the page changes), `useCliManager`, `useFullscreen` (macOS full screen hides the traffic lights, so `TitleBar` drops their gap), plus terminal hooks `usePtySpawn`, `useTerminalInstance`.
 - `src/desktop/utils/`: `platform.ts` (`detectPlatform`, `isMacOS` from the user agent), `path.ts` (`shortPath`).
 - `src/components/`: shared primitives `Button`, `Card`, `Input`, `Switch`, `Badge`, `Spinner` (default exports) and `ErrorBoundary` (named export).
 - `src/context/`: `ThemeContext.tsx` (provider) and `useTheme.ts` (context, types, `useTheme`).
@@ -25,18 +25,18 @@ React 19 + TypeScript + Vite 8 + Tailwind CSS 4, rendered in a Tauri 2 webview. 
 3. `MainView` shows `TitleBar` and `CliWebView`. `CliWebView` uses `http://localhost:${appInfo.serverPort}` when the server already runs; otherwise it calls `detectCli` then `startServer(cliPath, activeProject.path)` once and uses the returned port. The iframe `src` is that origin plus the shell path (a shell route like `/skills?tab=updates` opens that CLI page) and a `?theme=` param.
 4. `CliWebView` polls `healthCheck` every 30 s; three failures show the "server-down" card with Restart. A `reloadKey` change (title bar reload, `sync-completed`) reloads the iframe, or restarts the server when unhealthy. The reload reopens the page the CLI UI last reported with `{ type: 'route-change', path }` (accepted only from the iframe, `path` starting with a single `/`); CLI versions that do not post it reload at the shell route. Finishing a project switch remounts the iframe at the shell route.
 5. `TitleBar` shows one `StatusButton` for app, CLI and resource updates, source health and the audit, then shortcut buttons: Quick Sync (`QuickSyncButton`: runs the tray's sync, shows Syncing… then the summary or error in a toast styled like the Web UI's (4 s, errors 8 s), without a system notification) and Config files (the Web UI's `/config` page). App/CLI versions keep their settings indicator. `SwitchToDashboard` (mounted in `App` inside the router) navigates to `/` when `switching` turns on, so every project switch (dropdown, tray, removing the active project) opens the dashboard instead of the last page the shell was sent to.
-6. `/settings?tab=general|appearance|projects|cli|about` picks the tab via `useSearchParams`; the nav shows an "Update" badge from `useUpdates`/`useAppUpdate`.
+6. `/settings?tab=updates|general|appearance|projects|cli|about` picks the tab via `useSearchParams`; the Updates tab shows the number of pending updates from `useUpdates`/`useAppUpdate`. Updates is the one place that installs the app and the CLI: each shows current → new version, the app's release notes as plain bullet text (`utils/release-notes.ts`), and staged progress; "Update both" upgrades the CLI first, then installs the app and restarts. Before restarting, `useAppUpdate` saves the version and notes under `skillshare-just-updated` in localStorage; after the restart `UpdatedNotice` (in `MainView`) shows them once if the running version matches. Settings tabs share `settings/SettingsLayout.tsx` (header, framed list, row, status dot).
 
 Rust events (names verified in `src-tauri/src`), all subscribed with `listen` from `@tauri-apps/api/event` inside a `useEffect` guarded by `isTauri()`, and unsubscribed with `unlisten.then((off) => off())`:
 
-- `cli-upgrade-step` (payload: the step text): `CliSettings` shows it with the elapsed time while Upgrade CLI runs.
+- `cli-upgrade-step` (payload: the step text): `useCliUpgrade` stores it; the Updates tab shows it with the elapsed time while the CLI upgrades.
 - `server-restarted` (payload: port) and `server-stopped`: `CliWebView` and `useServerStopped` (used by the status panel).
 - `updates-available` (payload: `AvailableUpdates`): `useUpdates`.
 - `source-health` (`SOURCE_HEALTH_EVENT`, payload: `SourceHealth`): `useSourceHealth`.
 - `audit-report` (`AUDIT_EVENT`, payload: `AuditFinding[]`): `useAudit`.
 - `tray-project-requested` (project ID): `ProjectContext` calls `switchWithRestart`, using the same switch lock and server lifecycle as the in-app switcher.
 - `auto-sync-changed` (boolean): General settings follows changes made from the tray; the setter updates both the tray checkmark and watcher.
-- `check-for-updates` (menu/tray): `UpdateCheckListener` opens `/settings?tab=about` and rechecks.
+- `check-for-updates` (menu/tray): `UpdateCheckListener` opens `/settings?tab=updates` and rechecks.
 - `sync-completed` (`SYNC_COMPLETED_EVENT`, tray or auto Quick Sync): `ProjectContext` calls `reloadView`; `ActivityPage` re-reads the log.
 - `cli-install-output` (`CLI_INSTALL_OUTPUT_EVENT`): `useCliManager`.
 
@@ -44,7 +44,7 @@ App self-update uses `check()` from `@tauri-apps/plugin-updater` in `useAppUpdat
 
 ## Status panel
 
-`status/StatusButton.tsx` reads `useAudit`, `useUpdates`, `useSourceHealth`, `useServerStopped` and `appInfo`, and `statusRows` (`status-rows.ts`) turns them into rows, most severe first: security, a new app version, a new CLI version (each opens its settings tab), skill, plugin, agent and repository updates (one row each, opening that kind's Web UI page), targets to sync, unpushed changes, updates to pull, then the server. Titles use plain words ("1 target needs a sync", "3 changes not pushed").
+`status/StatusButton.tsx` reads `useAudit`, `useUpdates`, `useSourceHealth`, `useServerStopped` and `appInfo`, and `statusRows` (`status-rows.ts`) turns them into rows, most severe first: security, a new app version, a new CLI version (each opens the Updates tab), skill, plugin, agent and repository updates (one row each, opening that kind's Web UI page), targets to sync, unpushed changes, updates to pull, then the server. Titles use plain words ("1 target needs a sync", "3 changes not pushed").
 
 - The button renders nothing when no row has an action. It shows "N things to review" (warn dot, neutral pill), or, with any HIGH/CRITICAL finding, "N security issues" plus "+M" for the other actionable rows on `--bad-bg`. Red means security or a stopped server only.
 - The panel closes on Escape, an outside click, window blur and after any action. Only the first actionable row's button is primary.
