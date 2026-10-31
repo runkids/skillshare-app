@@ -441,6 +441,7 @@ export default function UpdatesSettings() {
                   Retry
                 </Button>
               )}
+              {cliRunning && <StatusDot tone="accent">Updating</StatusDot>}
               {!cliNew && !cliRunning && cli.status !== 'error' && (
                 <StatusDot tone="ok">Up to date</StatusDot>
               )}
