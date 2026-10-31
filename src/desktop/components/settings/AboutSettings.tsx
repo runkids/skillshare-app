@@ -78,7 +78,7 @@ export default function AboutSettings() {
         className="flex items-center gap-4 p-5 rounded-[var(--r-box)] bg-[var(--surface)] shadow-[var(--sh-box)]"
         style={{ border: 'var(--frame)' }}
       >
-        <img src="/logo.png" alt="" className="w-12 h-12 rounded-xl" />
+        <img src="/app-icon.png" alt="" className="w-12 h-12" />
         <div className="flex-1 min-w-0 flex flex-col gap-0.5">
           <h1 className="m-0" style={{ font: 'var(--h2)', letterSpacing: 'var(--h2-track)' }}>
             skillshare App
