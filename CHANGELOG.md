@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.7.7](https://github.com/runkids/skillshare-app/compare/v0.7.6...v0.7.7) (2026-10-31)
+
+
+### Features
+
+* **settings:** title-only headers and flowing progress bars for updates ([#97](https://github.com/runkids/skillshare-app/issues/97)) ([1f57569](https://github.com/runkids/skillshare-app/commit/1f575697a73d451f0fd576ffac0f94df48dc4805))
+* **ui:** flatten activity, status panel, onboarding and launch screens ([#92](https://github.com/runkids/skillshare-app/issues/92)) ([84629e1](https://github.com/runkids/skillshare-app/commit/84629e1d79b4c559b07cda3ee5e156ed21ebb120))
+* **updates:** one Updates tab for the app, the CLI and resources ([#91](https://github.com/runkids/skillshare-app/issues/91)) ([5ad7898](https://github.com/runkids/skillshare-app/commit/5ad7898178568404332071138f8d0fb4d745af59))
+
+
+### Bug Fixes
+
+* **about:** show the square app icon instead of the wide logo ([#95](https://github.com/runkids/skillshare-app/issues/95)) ([8ed90ab](https://github.com/runkids/skillshare-app/commit/8ed90ab9ab1f02b8c5c53a7e6ffe7beb95522bd0))
+* **activity:** keep the header in place while the list scrolls ([#94](https://github.com/runkids/skillshare-app/issues/94)) ([46a8ad6](https://github.com/runkids/skillshare-app/commit/46a8ad690e6ffc1fb23ccd7d9d9157d150e95d2f))
+* **projects:** say where the folder is when it cannot be opened ([#96](https://github.com/runkids/skillshare-app/issues/96)) ([f42744b](https://github.com/runkids/skillshare-app/commit/f42744b03b95038bc6d671c6d7d871d0ee4a6a92))
+* **server:** stop killing our own server after a Web UI update ([#98](https://github.com/runkids/skillshare-app/issues/98)) ([a678a84](https://github.com/runkids/skillshare-app/commit/a678a846715047d190eacf486c80ab1cdbd6638a))
+
+
+### Miscellaneous Chores
+
+* **release:** release 0.7.7 ([#99](https://github.com/runkids/skillshare-app/issues/99)) ([ad59b45](https://github.com/runkids/skillshare-app/commit/ad59b45fe466b72270c2dbf8c2fe9be4f4f5d85b))
+
 ## [0.7.6](https://github.com/runkids/skillshare-app/compare/v0.7.5...v0.7.6) (2026-10-27)
 
 
