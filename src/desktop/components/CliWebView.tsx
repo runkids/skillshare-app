@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { AlertTriangle, Check, RotateCw, Unplug } from 'lucide-react';
+import { AlertTriangle, Check, Loader2, RotateCw, Unplug } from 'lucide-react';
 import Button from '../../components/Button';
 import { useProjects } from '../context/ProjectContext';
 import { tauriBridge } from '../api/tauri-bridge';
@@ -14,9 +14,14 @@ const HEALTH_FAIL_THRESHOLD = 3;
 
 type Status = 'loading' | 'ready' | 'error' | 'server-down';
 
-const CARD =
-  'w-full max-w-[520px] bg-[var(--surface)] border-[length:var(--bw)] border-[var(--line)] rounded-[var(--r-box)] shadow-[var(--sh-box)] p-9 flex flex-col motion-safe:animate-[fadeInUp_200ms_ease-out]';
-const HEADING = 'text-[28px] font-bold tracking-[-0.022em] leading-[1.1] text-[var(--ink)]';
+const WRAP = 'w-full max-w-[520px] flex flex-col motion-safe:animate-[fadeInUp_200ms_ease-out]';
+const HEADING = 'm-0 text-[var(--ink)]';
+const H1_STYLE = { font: 'var(--h1)', letterSpacing: 'var(--h1-track)' };
+const LIST =
+  'm-0 p-0 list-none overflow-hidden bg-[var(--surface)] [border:var(--frame)] rounded-[var(--r-box)] shadow-[var(--sh-box)]';
+const STEP_ROW =
+  'flex items-center gap-3.5 min-h-12 px-4 [border-top:var(--sep)] first:[border-top:0]';
+const BADGE = 'w-6 h-6 shrink-0 rounded-full flex items-center justify-center';
 
 function StartingCard({
   title,
@@ -28,34 +33,35 @@ function StartingCard({
   scope?: string;
 }) {
   return (
-    <section aria-label="Starting" aria-busy="true" className={`${CARD} gap-[22px]`}>
-      <div className="text-xs font-bold tracking-[.08em] text-[var(--ink-3)]">LAUNCHING</div>
-      <h1 className={HEADING} style={{ fontFamily: 'var(--fh)' }}>
-        {title}
-      </h1>
-      <ol className="flex flex-col gap-3.5 text-[15px]">
-        <li className="flex items-center gap-3">
-          <span className="w-7 h-7 rounded-full bg-[var(--ok)] text-[var(--surface)] flex items-center justify-center">
-            <Check size={15} />
+    <section aria-label="Starting" aria-busy="true" className={`${WRAP} gap-5`}>
+      <div className="flex flex-col gap-2">
+        <div className="text-[12.5px] font-semibold text-[var(--ink-3)]">Launching</div>
+        <h1 className={HEADING} style={H1_STYLE}>
+          {title}
+        </h1>
+      </div>
+      <ol className={LIST}>
+        <li className={STEP_ROW}>
+          <span className={`${BADGE} bg-[var(--ok-bg)] text-[var(--ok)]`}>
+            <Check size={13} />
           </span>
-          <span className="flex-1">Found CLI</span>
+          <span className="flex-1 font-semibold">Found CLI</span>
           {cliVersion && (
             <span className="font-mono text-xs text-[var(--ink-3)]">v{cliVersion}</span>
           )}
         </li>
-        <li className="flex items-center gap-3 font-bold">
-          <span className="w-7 h-7 rounded-full border-[3px] border-[var(--line)] border-t-[var(--accent)] animate-spin" />
-          <span className="flex-1">Starting local server</span>
-          {scope && <span className="text-xs font-normal text-[var(--ink-3)]">{scope}</span>}
+        <li className={STEP_ROW}>
+          <span className={`${BADGE} bg-[var(--accent-bg)] text-[var(--accent)]`}>
+            <Loader2 size={13} className="motion-safe:animate-spin" />
+          </span>
+          <span className="flex-1 font-semibold">Starting local server</span>
+          {scope && <span className="font-mono text-xs text-[var(--ink-3)]">{scope}</span>}
         </li>
-        <li className="flex items-center gap-3 text-[var(--ink-3)]">
-          <span className="w-7 h-7 rounded-full border border-dashed border-[var(--line-2)]" />
-          <span>Loading dashboard</span>
+        <li className={`${STEP_ROW} text-[var(--ink-2)]`}>
+          <span className={`${BADGE} border-2 border-[var(--line-2)]`} />
+          <span className="flex-1 font-semibold">Loading dashboard</span>
         </li>
       </ol>
-      <div className="h-2 rounded-[var(--r-btn)] bg-[var(--sunken)] overflow-hidden">
-        <div className="h-full w-[55%] rounded-[var(--r-btn)] bg-[var(--accent)]/40 motion-safe:animate-[shimmer_1.5s_ease-in-out_infinite]" />
-      </div>
     </section>
   );
 }
@@ -332,20 +338,22 @@ export default function CliWebView() {
         <section
           role="alert"
           aria-label={down ? 'Disconnected' : 'Failed to start'}
-          className={`${CARD} gap-[18px]`}
+          className={`${WRAP} gap-5`}
         >
-          <span className="w-[52px] h-[52px] rounded-[var(--r-box)] bg-[var(--bad-bg)] text-[var(--bad)] flex items-center justify-center">
+          <span className="w-11 h-11 rounded-[var(--r-ctl)] bg-[var(--bad-bg)] text-[var(--bad)] flex items-center justify-center">
             {down ? <Unplug size={24} /> : <AlertTriangle size={24} />}
           </span>
-          <h1 className={HEADING} style={{ fontFamily: 'var(--fh)' }}>
-            {down ? 'Lost touch with the server' : 'Server failed to start'}
-          </h1>
-          <p className="text-[15px] leading-[1.55] text-[var(--ink-2)]">
-            {down
-              ? 'The local skillshare server stopped answering health checks.'
-              : 'The local skillshare server could not be started.'}{' '}
-            Your skills and config are safe on disk.
-          </p>
+          <div className="flex flex-col gap-2">
+            <h1 className={HEADING} style={H1_STYLE}>
+              {down ? 'The server stopped' : 'Server failed to start'}
+            </h1>
+            <p className="m-0 text-[15px] leading-[1.55] text-[var(--ink-2)]">
+              {down
+                ? 'The local skillshare server stopped answering health checks.'
+                : 'The local skillshare server could not be started.'}{' '}
+              Your skills and config are safe on disk.
+            </p>
+          </div>
           <div className="flex items-center gap-3">
             <Button size="lg" onClick={handleRestart} loading={restarting}>
               {!restarting && <RotateCw size={16} />}
@@ -356,11 +364,11 @@ export default function CliWebView() {
             </Button>
           </div>
           {error && (
-            <details className="rounded-[var(--r-box)] bg-[var(--sunken)] px-3.5 py-3">
-              <summary className="text-[13px] font-semibold cursor-pointer text-[var(--ink)]">
+            <details className="rounded-[var(--r-box)] bg-[#1E1D1B] px-3.5 py-3">
+              <summary className="text-[13px] font-semibold cursor-pointer text-[#F7F6F3]">
                 Technical details
               </summary>
-              <pre className="mt-2.5 font-mono text-xs text-[var(--ink-2)] whitespace-pre-wrap">
+              <pre className="mt-2.5 font-mono text-xs text-[#E9E6DF] whitespace-pre-wrap">
                 {error}
               </pre>
             </details>

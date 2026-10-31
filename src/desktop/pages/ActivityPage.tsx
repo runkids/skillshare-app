@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import {
-  AlertCircle,
   ArrowLeft,
   ArrowUpCircle,
   Download,
@@ -31,37 +30,22 @@ const ICONS: Record<string, typeof History> = {
 function ActivityRow({ entry, now }: { entry: ActivityEntry; now: Date }) {
   const failed = entry.status === 'error' || entry.status === 'blocked';
   const partial = entry.status === 'partial';
-  const Icon = failed ? AlertCircle : (ICONS[entry.cmd] ?? History);
+  const Icon = ICONS[entry.cmd] ?? History;
+  const tone = failed ? 'text-[var(--bad)]' : partial ? 'text-[var(--warn)]' : 'text-[var(--ok)]';
   const date = new Date(entry.ts);
   return (
     <li
       data-status={entry.status}
-      className={`flex gap-3 px-4 py-3 rounded-[var(--r-box)] border-[length:var(--bw)] ${
-        failed
-          ? 'bg-[var(--bad-bg)] border-[var(--bad)]'
-          : 'bg-[var(--surface)] border-[var(--line)]'
-      }`}
+      className="flex gap-3 px-4 py-3 [border-top:var(--sep)] first:[border-top:0]"
     >
-      <Icon
-        size={16}
-        className={`mt-0.5 shrink-0 ${
-          failed ? 'text-[var(--bad)]' : partial ? 'text-[var(--warn)]' : 'text-[var(--ink-2)]'
-        }`}
-      />
+      <Icon size={16} className="mt-0.5 shrink-0 text-[var(--ink-3)]" />
       <div className="flex-1 min-w-0">
-        <div className="flex items-baseline gap-2">
+        <div className="flex items-baseline gap-3">
           <span className="text-sm font-semibold text-[var(--ink)] capitalize">{entry.cmd}</span>
-          {entry.status !== 'ok' && (
-            <span
-              className={`text-[11px] font-bold px-[7px] py-0.5 rounded-[var(--r-btn)] ${
-                failed
-                  ? 'bg-[var(--bad)] text-[var(--surface)]'
-                  : 'bg-[var(--warn-bg)] text-[var(--warn)]'
-              }`}
-            >
-              {entry.status}
-            </span>
-          )}
+          <span className={`inline-flex items-center gap-1.5 text-[13px] font-medium ${tone}`}>
+            <i className="w-[7px] h-[7px] rounded-full bg-current" aria-hidden="true" />
+            {failed ? 'failed' : partial ? 'partial' : 'done'}
+          </span>
           {entry.detail && <span className="text-xs text-[var(--ink-2)]">{entry.detail}</span>}
           <time
             dateTime={entry.ts}
@@ -147,8 +131,8 @@ export default function ActivityPage() {
     }
     return groupByDay(entries, now).map((day) => (
       <section key={day.label} aria-label={day.label} className="flex flex-col gap-2">
-        <h2 className="text-[15px] font-bold text-[var(--ink)]">{day.label}</h2>
-        <ul className="flex flex-col gap-2">
+        <h2 className="text-[13px] font-semibold text-[var(--ink-2)]">{day.label}</h2>
+        <ul className="m-0 p-0 list-none overflow-hidden bg-[var(--surface)] [border:var(--frame)] rounded-[var(--r-box)] shadow-[var(--sh-box)]">
           {day.entries.map((entry, i) => (
             <ActivityRow key={`${entry.ts}-${entry.cmd}-${i}`} entry={entry} now={now} />
           ))}
@@ -174,7 +158,12 @@ export default function ActivityPage() {
         </button>
         <div className="flex items-start gap-4">
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-[var(--ink)]">Activity</h1>
+            <h1
+              className="m-0 text-[var(--ink)]"
+              style={{ font: 'var(--h1)', letterSpacing: 'var(--h1-track)' }}
+            >
+              Activity
+            </h1>
             <p className="text-sm text-[var(--ink-2)] mt-1">
               Syncs, installs, updates and errors from the last 7 days
               {activeProject ? ` in ${activeProject.name}` : ''}.

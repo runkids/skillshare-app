@@ -52,8 +52,8 @@ export default function OnboardingPage() {
 
   return (
     <div className="ob-root flex min-h-screen items-center justify-center bg-bg p-8">
-      <div className="flex h-[580px] w-[960px] max-w-full overflow-hidden rounded-xl border border-line bg-surface">
-        <aside className="flex w-[290px] flex-none flex-col gap-9 border-r border-line-soft bg-side px-7 py-8">
+      <div className="flex h-[580px] w-[960px] max-w-full overflow-hidden rounded-[var(--r-box)] [border:var(--frame)] bg-surface shadow-[var(--sh-float)]">
+        <aside className="flex w-[290px] flex-none flex-col gap-9 [border-right:var(--sep)] bg-side px-7 py-8">
           <div>
             <div className="text-[17px] font-bold leading-none tracking-[-0.01em] text-ink">
               skillshare

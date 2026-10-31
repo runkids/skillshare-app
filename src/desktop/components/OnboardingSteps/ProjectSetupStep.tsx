@@ -162,14 +162,18 @@ export default function ProjectSetupStep({ cliPath, onComplete }: ProjectSetupSt
             your skills into it.
           </p>
           <fieldset className="m-0 grid min-h-0 grid-cols-2 gap-2.5 overflow-y-auto border-0 p-0">
-            <legend className="sr-only">Targets</legend>
+            <legend className="mb-2 text-[13px] font-semibold text-ink-2">
+              {count} of {detected.length} selected
+            </legend>
             {detected.map((t, i) => {
               const checked = selected.has(t.name);
               return (
                 <label
                   key={t.name}
-                  className={`ob-rise-item flex cursor-pointer items-center gap-3 rounded-xl border bg-surface px-3 py-2.5 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-link ${
-                    checked ? 'border-line-2' : 'border-line-soft'
+                  className={`ob-rise-item flex cursor-pointer items-center gap-3 rounded-[var(--r-ctl)] bg-surface px-3 py-2.5 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-link ${
+                    checked
+                      ? '[border:var(--frame)] shadow-[var(--sh-btn)]'
+                      : 'border border-line-soft'
                   }`}
                   style={{ ['--ob-i' as string]: i }}
                 >
@@ -195,7 +199,6 @@ export default function ProjectSetupStep({ cliPath, onComplete }: ProjectSetupSt
                       {t.path}
                     </span>
                   </span>
-                  <span className="text-xs text-ok">Detected</span>
                 </label>
               );
             })}
