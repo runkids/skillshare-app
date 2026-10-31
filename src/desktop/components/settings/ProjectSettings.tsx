@@ -120,7 +120,14 @@ export default function ProjectSettings() {
         <button
           type="button"
           className={iconButton}
-          onClick={() => run(() => revealItemInDir(project.path))}
+          onClick={() =>
+            // The raw opener error (e.g. a missing desktop portal on Linux) means nothing to users.
+            run(() =>
+              revealItemInDir(project.path).catch(() => {
+                throw new Error(`Couldn't open the folder. It's at ${project.path}`);
+              })
+            )
+          }
           title="Show in folder"
           aria-label={`Show ${project.name} in folder`}
         >

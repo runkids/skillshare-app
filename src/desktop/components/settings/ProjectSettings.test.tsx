@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import type { Project } from '../../api/tauri-bridge';
 import ProjectSettings from './ProjectSettings';
 
@@ -66,5 +67,15 @@ describe('ProjectSettings', () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Switch' }));
     await waitFor(() => expect(mocks.switchWithRestart).toHaveBeenCalledWith('g'));
+  });
+  it('says where the folder is when it cannot be opened', async () => {
+    vi.mocked(revealItemInDir).mockRejectedValueOnce(
+      new Error('org.freedesktop.DBus.Error.ServiceUnknown')
+    );
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Show Global in folder' }));
+    expect(
+      await screen.findByText("Couldn't open the folder. It's at /Users/me/.config/skillshare")
+    ).toBeInTheDocument();
   });
 });
