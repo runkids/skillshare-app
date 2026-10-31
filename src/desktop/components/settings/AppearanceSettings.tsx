@@ -73,9 +73,6 @@ export default function AppearanceSettings() {
         >
           Appearance
         </h1>
-        <p className="mt-2 text-sm text-[var(--ink-2)]">
-          Changes apply to the whole app, including the dashboard, right away.
-        </p>
       </header>
 
       <section className="flex flex-col gap-3">

@@ -158,7 +158,7 @@ export default function ActivityPage() {
             <ArrowLeft size={18} />
             <span>Back to dashboard</span>
           </button>
-          <div className="flex items-start gap-4">
+          <div className="flex items-center gap-4">
             <div className="flex-1">
               <h1
                 className="m-0 text-[var(--ink)]"
@@ -166,10 +166,6 @@ export default function ActivityPage() {
               >
                 Activity
               </h1>
-              <p className="text-sm text-[var(--ink-2)] mt-1">
-                Syncs, installs, updates and errors from the last 7 days
-                {activeProject ? ` in ${activeProject.name}` : ''}.
-              </p>
             </div>
             <button
               type="button"

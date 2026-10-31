@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getVersion } from '@tauri-apps/api/app';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import { AppWindow, Check, Download, Terminal } from 'lucide-react';
+import { AppWindow, ArrowDown, Check, Download, Terminal } from 'lucide-react';
 import Button from '../../../components/Button';
 import Switch from '../../../components/Switch';
 import { tauriBridge } from '../../api/tauri-bridge';
@@ -13,6 +13,7 @@ import { upgradeCli, useCliUpgrade } from '../../hooks/useCliUpgrade';
 import { checkUpdatesNow, useUpdates } from '../../hooks/useUpdates';
 import { releaseNoteItems } from '../../utils/release-notes';
 import {
+  ProgressBar,
   SettingsHeader,
   SettingsList,
   SettingsRow,
@@ -70,8 +71,8 @@ function Step({
       </span>
     ),
     running: (
-      <span className="w-6 h-6 rounded-full border-2 border-[var(--ink)] flex items-center justify-center">
-        <i className="w-2 h-2 rounded-full bg-[var(--ink)]" />
+      <span className="w-6 h-6 rounded-full bg-[var(--accent-bg)] text-[var(--accent)] flex items-center justify-center">
+        <ArrowDown size={14} strokeWidth={2.5} />
       </span>
     ),
     pending: <span className="w-6 h-6 rounded-full border-2 border-[var(--line-2)]" />,
@@ -171,15 +172,6 @@ export default function UpdatesSettings() {
     }
   };
 
-  const anyNew = Boolean(appNew || cliNew || resources.length);
-  const subtitle = busy
-    ? 'Updating. You can leave this page; it keeps going.'
-    : checking || app.status === 'checking'
-      ? 'Checking for new versions…'
-      : anyNew
-        ? 'The app checks when it starts and once a day.'
-        : 'Everything is up to date. The app checks when it starts and once a day.';
-
   const showProgress = cli.status !== 'idle' || app.phase !== 'idle';
   const appNotes = releaseNoteItems(app.update?.body).slice(0, 5);
   const appPct = app.total > 0 ? Math.min(100, Math.round((app.downloaded / app.total) * 100)) : 0;
@@ -200,19 +192,7 @@ export default function UpdatesSettings() {
         >
           {app.phase === 'downloading' && (
             <>
-              <div
-                role="progressbar"
-                aria-label="Download"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={appPct}
-                className="h-2 rounded-full bg-[var(--sunken)] overflow-hidden"
-              >
-                <div
-                  className="h-full rounded-full bg-[var(--ink)] transition-[width] duration-300"
-                  style={{ width: `${appPct}%` }}
-                />
-              </div>
+              <ProgressBar label="Download" value={app.total > 0 ? appPct : undefined} />
               <span className="text-[13px] text-[var(--ink-2)]">
                 {app.total > 0
                   ? `${mb(app.downloaded)} of ${mb(app.total)} MB`
@@ -234,7 +214,9 @@ export default function UpdatesSettings() {
                   : 'done'
             }
             title="Install"
-          />
+          >
+            {app.phase === 'installing' && <ProgressBar label="Install" />}
+          </Step>
         )}
         {app.phase !== 'error' && (
           <Step
@@ -247,6 +229,7 @@ export default function UpdatesSettings() {
             }
             title={app.phase === 'restart-failed' ? 'Restart to finish' : 'Restart'}
           >
+            {app.phase === 'restarting' && <ProgressBar label="Restart" />}
             <span className="text-[13px] text-[var(--ink-2)]">
               {app.phase === 'restart-failed'
                 ? 'The update is installed but the app could not restart itself.'
@@ -262,7 +245,6 @@ export default function UpdatesSettings() {
     <div className="flex flex-col gap-7">
       <SettingsHeader
         title="Updates"
-        subtitle={subtitle}
         action={
           <Button
             size="sm"
@@ -324,6 +306,7 @@ export default function UpdatesSettings() {
                         : 'The CLI update failed'
                 }
               >
+                {cli.status === 'upgrading' && <ProgressBar label="CLI update" />}
                 <span
                   className={`text-[13px] ${cli.status === 'error' ? 'text-[var(--bad)]' : 'text-[var(--ink-2)]'}`}
                 >

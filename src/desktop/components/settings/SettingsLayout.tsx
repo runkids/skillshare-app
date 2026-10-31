@@ -1,28 +1,37 @@
 import type { ReactNode } from 'react';
 
-/** Page title for a settings tab: the shared h1 token, a one-line subtitle, and an optional action. */
-export function SettingsHeader({
-  title,
-  subtitle,
-  action,
-}: {
-  title: string;
-  subtitle?: ReactNode;
-  action?: ReactNode;
-}) {
+/** Page title for a settings tab: the shared h1 token and an optional action. */
+export function SettingsHeader({ title, action }: { title: string; action?: ReactNode }) {
   return (
-    <header className="flex items-end gap-4">
-      <div className="flex-1 min-w-0 flex flex-col gap-2">
-        <h1
-          className="m-0 text-[var(--ink)]"
-          style={{ font: 'var(--h1)', letterSpacing: 'var(--h1-track)' }}
-        >
-          {title}
-        </h1>
-        {subtitle && <p className="m-0 text-sm text-[var(--ink-2)]">{subtitle}</p>}
-      </div>
+    <header className="flex items-center gap-4">
+      <h1
+        className="m-0 flex-1 min-w-0 text-[var(--ink)]"
+        style={{ font: 'var(--h1)', letterSpacing: 'var(--h1-track)' }}
+      >
+        {title}
+      </h1>
       {action}
     </header>
+  );
+}
+
+/** Update progress. With `value` (0-100) it fills to that point; without, a band sweeps the track. */
+export function ProgressBar({ label, value }: { label: string; value?: number }) {
+  const known = value !== undefined;
+  return (
+    <div
+      role="progressbar"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={known ? value : undefined}
+      className="relative h-2 rounded-full bg-[var(--sunken)] overflow-hidden"
+    >
+      <div
+        className={`progress-fill absolute inset-y-0 left-0 rounded-full ${known ? 'transition-[width] duration-300' : 'progress-sweep'}`}
+        style={{ width: known ? `${value}%` : '35%' }}
+      />
+    </div>
   );
 }
 

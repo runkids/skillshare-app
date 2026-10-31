@@ -106,6 +106,16 @@ describe('UpdatesSettings CLI', () => {
     act(() => mocks.handlers.get('cli-upgrade-step')?.({ payload: 'Downloading v0.24.1...' }));
     expect(screen.getByText('Downloading v0.24.1... 1:23')).toBeInTheDocument();
   });
+
+  it('shows an indeterminate bar while the CLI updates, since it reports no percentage', () => {
+    mocks.updates.cli = 'v0.24.0';
+    mocks.upgradeCli.mockReturnValue(new Promise(() => {}));
+    renderUpdates();
+    fireEvent.click(screen.getByRole('button', { name: 'Update CLI' }));
+    expect(screen.getByRole('progressbar', { name: 'CLI update' })).not.toHaveAttribute(
+      'aria-valuenow'
+    );
+  });
 });
 
 describe('UpdatesSettings app', () => {
