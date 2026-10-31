@@ -1,10 +1,19 @@
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Settings, Palette, FolderOpen, Terminal, Info } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowUpCircle,
+  Settings,
+  Palette,
+  FolderOpen,
+  Terminal,
+  Info,
+} from 'lucide-react';
 import GeneralSettings from '../components/settings/GeneralSettings';
 import AppearanceSettings from '../components/settings/AppearanceSettings';
 import ProjectSettings from '../components/settings/ProjectSettings';
 import CliSettings from '../components/settings/CliSettings';
 import AboutSettings from '../components/settings/AboutSettings';
+import UpdatesSettings from '../components/settings/UpdatesSettings';
 import { isMacOS } from '../utils/platform';
 import { useEffect } from 'react';
 import { useAppUpdate } from '../hooks/useAppUpdate';
@@ -12,6 +21,7 @@ import { useUpdates } from '../hooks/useUpdates';
 import { useTauri } from '../context/TauriContext';
 
 const TABS = [
+  { id: 'updates', label: 'Updates', icon: ArrowUpCircle },
   { id: 'general', label: 'General', icon: Settings },
   { id: 'appearance', label: 'Appearance', icon: Palette },
   { id: 'projects', label: 'Projects', icon: FolderOpen },
@@ -24,9 +34,14 @@ export default function SettingsPage() {
   const navigate = useNavigate();
   const { available: appUpdateAvailable } = useAppUpdate();
   const updates = useUpdates();
-  const hasUpdate = (tab: string) =>
-    (tab === 'about' && (appUpdateAvailable || Boolean(updates.app))) ||
-    (tab === 'cli' && Boolean(updates.cli));
+  const pending =
+    Number(appUpdateAvailable || Boolean(updates.app)) +
+    Number(Boolean(updates.cli)) +
+    updates.skills.length +
+    updates.agents.length +
+    updates.plugins.length +
+    updates.repositories.length;
+  const badge = (tab: string) => (tab === 'updates' ? pending : 0);
   const { refresh: refreshAppInfo } = useTauri();
   // The CLI can be upgraded from its web UI or a terminal; re-read versions on open.
   useEffect(() => {
@@ -46,6 +61,8 @@ export default function SettingsPage() {
         return <CliSettings />;
       case 'about':
         return <AboutSettings />;
+      case 'updates':
+        return <UpdatesSettings />;
       default:
         return <GeneralSettings />;
     }
@@ -67,7 +84,10 @@ export default function SettingsPage() {
           <span>Back to dashboard</span>
         </button>
 
-        <div className="px-2.5 text-[17px] font-bold tracking-[-0.01em] text-[var(--ink)]">
+        <div
+          className="px-2.5 text-[17px] font-bold tracking-[-0.01em] text-[var(--ink)]"
+          style={{ fontFamily: 'var(--fh)' }}
+        >
           Settings
         </div>
 
@@ -78,7 +98,7 @@ export default function SettingsPage() {
               type="button"
               onClick={() => setParams({ tab: id })}
               aria-current={activeTab === id ? 'page' : undefined}
-              aria-label={hasUpdate(id) ? `${label}, update available` : undefined}
+              aria-label={badge(id) > 0 ? `${label}, ${badge(id)} available` : undefined}
               className={`w-full flex items-center gap-2.5 h-9 px-3 text-sm rounded-[var(--r-ctl)] transition-colors ${
                 activeTab === id
                   ? 'bg-[var(--sel)] text-[var(--sel-ink)] font-semibold'
@@ -87,9 +107,9 @@ export default function SettingsPage() {
             >
               <Icon size={18} />
               <span className="flex-1 text-left">{label}</span>
-              {hasUpdate(id) && (
-                <span className="text-[11px] font-bold px-[7px] py-0.5 rounded-[var(--r-btn)] bg-[var(--accent-bg)] text-[var(--accent)]">
-                  Update
+              {badge(id) > 0 && (
+                <span className="min-w-5 h-5 px-1.5 flex items-center justify-center text-[11px] font-bold rounded-full bg-[var(--ink)] text-[var(--surface)]">
+                  {badge(id)}
                 </span>
               )}
             </button>

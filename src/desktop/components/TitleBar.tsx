@@ -126,9 +126,7 @@ export default function TitleBar() {
       </button>
       <button
         type="button"
-        onClick={() =>
-          navigate(hasUpdate ? `/settings?tab=${updates.app ? 'about' : 'cli'}` : '/settings')
-        }
+        onClick={() => navigate(hasUpdate ? '/settings?tab=updates' : '/settings')}
         className="relative w-[30px] h-[30px] flex items-center justify-center rounded-[var(--r-ctl)] hover:bg-[var(--sel)] transition-colors text-[var(--ink-2)] hover:text-[var(--ink)]"
         title={hasUpdate ? 'Settings — update available' : 'Settings'}
         aria-label={hasUpdate ? 'Settings, update available' : 'Settings'}

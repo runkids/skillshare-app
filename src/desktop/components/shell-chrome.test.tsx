@@ -135,7 +135,7 @@ describe('TitleBar shortcuts', () => {
 });
 
 describe('TitleBar update badge', () => {
-  it('opens the CLI settings tab when a newer CLI is known', () => {
+  it('opens the Updates tab when a newer CLI is known', () => {
     updates.cli = 'v0.24.0';
     renderWithUA(
       <>
@@ -145,7 +145,7 @@ describe('TitleBar update badge', () => {
       MAC_UA
     );
     fireEvent.click(screen.getByRole('button', { name: 'Settings, update available' }));
-    expect(screen.getByTestId('location')).toHaveTextContent('/settings?tab=cli');
+    expect(screen.getByTestId('location')).toHaveTextContent('/settings?tab=updates');
   });
 });
 
