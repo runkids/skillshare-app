@@ -21,8 +21,7 @@
           "path": "src-tauri/Cargo.lock",
           "jsonpath": "$.package[?(@.name.value == 'skillshare-app')].version"
         }
-      ],
-      "release-as": "0.7.7"
+      ]
     }
   }
 }
