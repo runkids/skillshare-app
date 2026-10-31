@@ -22,7 +22,7 @@ export default function CliSettings() {
 
   return (
     <div className="flex flex-col gap-7">
-      <SettingsHeader title="CLI" subtitle="The skillshare CLI the app runs on." />
+      <SettingsHeader title="CLI" />
 
       <SettingsList>
         <SettingsRow

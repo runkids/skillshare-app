@@ -298,6 +298,51 @@ html[data-theme='playful'] .qs-toast {
   animation: shimmer 1.5s ease-in-out infinite;
 }
 
+/* Update progress: stripes that flow along the fill, and a band that sweeps an unknown-length step. */
+.progress-fill {
+  background-color: var(--accent);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgb(255 255 255 / 0.22) 0 6px,
+    transparent 6px 12px
+  );
+  background-size: 17px 17px;
+  animation: progress-stripes 0.7s linear infinite;
+}
+
+.progress-sweep {
+  animation:
+    progress-stripes 0.7s linear infinite,
+    progress-sweep 1.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+@keyframes progress-stripes {
+  to {
+    background-position: 17px 0;
+  }
+}
+
+@keyframes progress-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(290%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-fill,
+  .progress-sweep {
+    animation: none;
+  }
+  .progress-sweep {
+    left: 0;
+    width: 100% !important;
+    opacity: 0.5;
+  }
+}
+
 /* Pipeline flow animation — dashed line movement */
 @keyframes flow {
   0% {

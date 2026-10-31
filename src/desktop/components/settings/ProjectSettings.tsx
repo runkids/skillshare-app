@@ -153,7 +153,6 @@ export default function ProjectSettings() {
     <div className="flex flex-col gap-7">
       <SettingsHeader
         title="Projects"
-        subtitle="Your global config plus repos that keep their own skills. The active one is what the dashboard shows."
         action={
           <Button size="sm" onClick={handleAddProject} loading={adding} className="shrink-0">
             <Plus size={14} /> Add project folder

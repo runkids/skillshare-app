@@ -105,10 +105,7 @@ export default function GeneralSettings() {
 
   return (
     <div className="flex flex-col gap-7">
-      <SettingsHeader
-        title="General"
-        subtitle="How the app runs while it sits in the background."
-      />
+      <SettingsHeader title="General" />
 
       <div className="flex flex-col gap-2">
         <SettingsList>
