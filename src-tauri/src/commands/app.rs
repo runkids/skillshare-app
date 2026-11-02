@@ -5,14 +5,17 @@ use crate::services::{
 };
 use tauri::State;
 
-/// Check if the Global project's config.yaml actually exists on disk.
-fn global_config_exists(store: &crate::models::project::ProjectStore) -> bool {
+/// The stored Global path may be stale until startup repairs it. Check the CLI's
+/// actual config file, including a SKILLSHARE_CONFIG override with another name.
+fn global_config_exists(
+    store: &crate::models::project::ProjectStore,
+    config_path: &std::path::Path,
+) -> bool {
     store
         .projects
         .iter()
-        .find(|p| p.project_type == ProjectType::Global)
-        .map(|p| std::path::Path::new(&p.path).join("config.yaml").exists())
-        .unwrap_or(false)
+        .any(|p| p.project_type == ProjectType::Global)
+        && config_path.is_file()
 }
 
 #[tauri::command]
@@ -30,7 +33,8 @@ pub async fn get_app_state(server: State<'_, ServerManager>) -> Result<AppInfo, 
     };
 
     let cli_ready = meta.version.is_some();
-    let config_exists = global_config_exists(&store);
+    let config_exists = crate::utils::paths::global_config_path()
+        .is_ok_and(|path| global_config_exists(&store, &path));
 
     Ok(AppInfo {
         cli_version: meta.version.clone(),
@@ -195,4 +199,39 @@ pub async fn reset_all_data(
     crate::services::oplog_watch::refresh(&app);
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::global_config_exists;
+    use crate::models::project::{Project, ProjectStore, ProjectType};
+
+    #[test]
+    fn onboarding_checks_the_config_file_even_with_a_stale_global_path() {
+        let root = std::env::temp_dir().join(format!("ss-onboarding-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&root).unwrap_or_else(|err| panic!("create config fixture: {err}"));
+        let config = root.join("custom.yaml");
+        std::fs::write(&config, "sources:\n  skills: /repos/custom-skills\n")
+            .unwrap_or_else(|err| panic!("write config fixture: {err}"));
+        let mut store = ProjectStore {
+            projects: vec![Project {
+                id: "global".into(),
+                name: "Global".into(),
+                path: "/repos".into(),
+                project_type: ProjectType::Global,
+                added_at: String::new(),
+            }],
+            active_project_id: Some("global".into()),
+        };
+
+        assert!(global_config_exists(&store, &config));
+        assert!(!global_config_exists(&store, &root.join("missing.yaml")));
+        assert!(!global_config_exists(&store, &root));
+
+        // A config file alone must not skip the first-time Global project setup.
+        store.projects[0].project_type = ProjectType::Project;
+        assert!(!global_config_exists(&store, &config));
+        assert!(!global_config_exists(&ProjectStore::default(), &config));
+        std::fs::remove_dir_all(root).ok();
+    }
 }
