@@ -142,16 +142,18 @@ pub async fn detect_cli() -> Option<String> {
     None
 }
 
-/// Get the global config directory by running `skillshare status --json`
-/// and extracting the parent of `source.path`.
-/// e.g. source.path = `~/.config/skillshare/skills` → returns `~/.config/skillshare`
-pub async fn get_global_config_dir(cli_path: &str) -> Result<String, String> {
-    let source_path = get_source_dir(cli_path, None).await?;
-
-    Ok(std::path::Path::new(&source_path)
+/// Resolve the CLI's global config directory independently of its skills source.
+pub async fn get_global_config_dir(_cli_path: &str) -> Result<String, String> {
+    let config_path = crate::utils::paths::global_config_path()?;
+    let parent = config_path
         .parent()
-        .map(|p| p.to_string_lossy().to_string())
-        .unwrap_or_default())
+        .ok_or_else(|| "Global config path has no parent directory".to_string())?;
+    let dir = if parent.as_os_str().is_empty() {
+        std::env::current_dir().map_err(|e| format!("Could not get config directory: {e}"))?
+    } else {
+        parent.to_path_buf()
+    };
+    Ok(dir.to_string_lossy().into_owned())
 }
 
 /// The skills source directory (`source.path` of `skillshare status --json`).
@@ -966,6 +968,58 @@ pub async fn download_cli(url: &str) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn global_config_dir_does_not_follow_custom_skills_source() {
+        const MARKER: &str = "SKILLSHARE_TEST_CONFIG_DIR";
+        if let Ok(root) = std::env::var(MARKER) {
+            let root = std::path::Path::new(&root);
+            let actual = get_global_config_dir(&root.join("skillshare").to_string_lossy()).await;
+            assert_eq!(
+                actual,
+                Ok(root.join("config").to_string_lossy().into_owned())
+            );
+            return;
+        }
+
+        // Isolate config overrides from other tests and the user's real CLI config.
+        use std::os::unix::fs::PermissionsExt;
+        let root = std::env::temp_dir().join(format!("ss-config-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(root.join("config"))
+            .unwrap_or_else(|err| panic!("create config fixture: {err}"));
+        let config = root.join("config/custom.yaml");
+        std::fs::write(&config, "sources:\n  skills: /repos/custom-skills\n")
+            .unwrap_or_else(|err| panic!("write config fixture: {err}"));
+        let cli = root.join("skillshare");
+        std::fs::write(
+            &cli,
+            "#!/bin/sh\nprintf '%s\\n' '{\"source\":{\"path\":\"/repos/custom-skills\"}}'\n",
+        )
+        .unwrap_or_else(|err| panic!("write CLI fixture: {err}"));
+        std::fs::set_permissions(&cli, std::fs::Permissions::from_mode(0o755))
+            .unwrap_or_else(|err| panic!("make CLI fixture executable: {err}"));
+
+        let output = std::process::Command::new(
+            std::env::current_exe().unwrap_or_else(|err| panic!("test executable: {err}")),
+        )
+        .args([
+            "--exact",
+            "services::cli_manager::tests::global_config_dir_does_not_follow_custom_skills_source",
+            "--nocapture",
+        ])
+        .env(MARKER, &root)
+        .env("SKILLSHARE_CONFIG", &config)
+        .output()
+        .unwrap_or_else(|err| panic!("spawn isolated test: {err}"));
+        std::fs::remove_dir_all(&root).ok();
+        assert!(
+            output.status.success(),
+            "{}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
 
     #[test]
     fn an_update_keeps_fields_saved_after_the_callers_snapshot() -> Result<(), String> {
