@@ -26,22 +26,47 @@ fn meta_path() -> PathBuf {
 // ── Meta persistence ───────────────────────────────────────────────
 
 pub fn load_meta() -> CliMeta {
-    let path = meta_path();
-    if path.exists() {
-        let data = std::fs::read_to_string(&path).unwrap_or_default();
-        serde_json::from_str(&data).unwrap_or_default()
-    } else {
-        CliMeta::default()
-    }
+    load_meta_at(&meta_path())
 }
 
 pub fn save_meta(meta: &CliMeta) -> Result<(), String> {
-    let path = meta_path();
+    save_meta_at(&meta_path(), meta)
+}
+
+/// Change some fields of the saved metadata, re-read just before writing. A caller that
+/// awaits between reading and saving must use this, or it writes back a stale snapshot
+/// over fields saved meanwhile (e.g. the CLI version onboarding just detected).
+pub fn update_meta<R>(change: impl FnOnce(&mut CliMeta) -> R) -> Result<R, String> {
+    update_meta_at(&meta_path(), change)
+}
+
+/// Serializes `update_meta` calls, so two updates never interleave their read and write.
+static META_UPDATE: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+fn update_meta_at<R>(
+    path: &std::path::Path,
+    change: impl FnOnce(&mut CliMeta) -> R,
+) -> Result<R, String> {
+    let _guard = META_UPDATE.lock().unwrap_or_else(|e| e.into_inner());
+    let mut meta = load_meta_at(path);
+    let result = change(&mut meta);
+    save_meta_at(path, &meta)?;
+    Ok(result)
+}
+
+fn load_meta_at(path: &std::path::Path) -> CliMeta {
+    std::fs::read_to_string(path)
+        .ok()
+        .and_then(|data| serde_json::from_str(&data).ok())
+        .unwrap_or_default()
+}
+
+fn save_meta_at(path: &std::path::Path, meta: &CliMeta) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).ok();
     }
     let data = serde_json::to_string_pretty(meta).map_err(|e| format!("Serialize error: {e}"))?;
-    crate::utils::fs::write_atomic(&path, data.as_bytes()).map_err(|e| format!("Write error: {e}"))
+    crate::utils::fs::write_atomic(path, data.as_bytes()).map_err(|e| format!("Write error: {e}"))
 }
 
 // ── CLI detection ──────────────────────────────────────────────────
@@ -218,9 +243,13 @@ pub async fn refresh_cached_version(meta: &mut CliMeta) -> Result<(), String> {
     if !needs_version_refresh(meta, modified_ms) {
         return Ok(());
     }
-    meta.version = Some(get_version(&path).await?);
+    let version = get_version(&path).await?;
+    meta.version = Some(version.clone());
     meta.binary_modified_ms = Some(modified_ms);
-    save_meta(meta)
+    update_meta(|saved| {
+        saved.version = Some(version);
+        saved.binary_modified_ms = Some(modified_ms);
+    })
 }
 
 /// Strip ANSI escape codes (CSI and OSC sequences) from a string.
@@ -937,6 +966,30 @@ pub async fn download_cli(url: &str) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_update_keeps_fields_saved_after_the_callers_snapshot() -> Result<(), String> {
+        let path = std::env::temp_dir().join(format!("cli-meta-{}.json", uuid::Uuid::new_v4()));
+        let snapshot = load_meta_at(&path);
+        // Onboarding saves the detected CLI while a slow update check is still running.
+        let detected = CliMeta {
+            version: Some("0.28.2".into()),
+            path: Some("/opt/homebrew/bin/skillshare".into()),
+            ..CliMeta::default()
+        };
+        save_meta_at(&path, &detected)?;
+
+        update_meta_at(&path, |meta| meta.last_update_check = Some("now".into()))?;
+        let saved = load_meta_at(&path);
+        std::fs::remove_file(&path).ok();
+
+        assert_eq!(snapshot.version, None);
+        assert_eq!(
+            (saved.version, saved.path, saved.last_update_check),
+            (detected.version, detected.path, Some("now".into()))
+        );
+        Ok(())
+    }
 
     #[test]
     fn upgrade_step_reads_tree_lines_only() {

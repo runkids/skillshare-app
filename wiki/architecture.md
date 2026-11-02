@@ -68,7 +68,7 @@ Auto-sync, update checks, the operation log watcher, source health and the audit
 ## State and files
 
 - The app data dir is `dirs::data_dir()` joined with `com.skillshare.app-dev` (debug builds) or `com.skillshare.app` (release builds). Inside it:
-  - `cli-meta.json`: `CliMeta` in camelCase, written with `write_atomic`. An unreadable file loads as the default.
+  - `cli-meta.json`: `CliMeta` in camelCase, written with `write_atomic`. An unreadable file loads as the default. Code that awaits between reading and saving it (the update check, `refresh_cached_version`) saves through `cli_manager::update_meta`, which re-reads the file under a lock and changes only its own fields; saving the earlier snapshot would undo what onboarding or settings saved meanwhile.
   - `projects.json`: `ProjectStore` (`projects`, `active_project_id`).
   - `bin/`: the app's own copy of the CLI.
   - `server.pid`.

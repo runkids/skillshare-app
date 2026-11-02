@@ -343,23 +343,30 @@ pub async fn check(app: &AppHandle, notify: bool) -> AvailableUpdates {
     resource_updates(&mut found).await;
     found.cli = latest_cli(meta.version.as_deref()).await;
     found.app = latest_app(app).await;
-    forget_cleared_resources(&mut meta, &found);
-    meta.last_update_check = Some(Utc::now().to_rfc3339());
 
     // In the foreground the title bar badge is enough.
-    if notify && meta.notify_update.unwrap_or(true) && !main_window_focused(app) {
-        let lines = unannounced(&found, &mut meta);
-        if !lines.is_empty() {
-            let _ = app
-                .notification()
-                .builder()
-                .title("Skillshare Update Available")
-                .body(lines.join("\n"))
-                .show();
+    let background = notify && !main_window_focused(app);
+    // `meta` is stale after the checks above: change only this check's fields.
+    let lines = cli_manager::update_meta(|meta| {
+        forget_cleared_resources(meta, &found);
+        meta.last_update_check = Some(Utc::now().to_rfc3339());
+        if background && meta.notify_update.unwrap_or(true) {
+            unannounced(&found, meta)
+        } else {
+            Vec::new()
         }
-    }
-    if let Err(e) = cli_manager::save_meta(&meta) {
+    })
+    .unwrap_or_else(|e| {
         log::warn!("Failed to save CLI meta after update check: {e}");
+        Vec::new()
+    });
+    if !lines.is_empty() {
+        let _ = app
+            .notification()
+            .builder()
+            .title("Skillshare Update Available")
+            .body(lines.join("\n"))
+            .show();
     }
 
     *state.0.lock().await = found.clone();
