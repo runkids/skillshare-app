@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.8](https://github.com/runkids/skillshare-app/compare/v0.7.7...v0.7.8) (2026-11-02)
+
+
+### Bug Fixes
+
+* **meta:** stop the update check from undoing CLI metadata saved meanwhile ([#104](https://github.com/runkids/skillshare-app/issues/104)) ([0f06b4c](https://github.com/runkids/skillshare-app/commit/0f06b4c4d0c853e0dc9ebf034bcca4d4d56d46ee))
+* resolve global config independently of skills source ([#103](https://github.com/runkids/skillshare-app/issues/103)) ([ea69277](https://github.com/runkids/skillshare-app/commit/ea69277a2b2b81e7118fb845c41705e35190ee40))
+
 ## [0.7.7](https://github.com/runkids/skillshare-app/compare/v0.7.6...v0.7.7) (2026-10-31)
 
 
