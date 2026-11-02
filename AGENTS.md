@@ -16,6 +16,7 @@ skillshare-app is a Tauri 2 desktop app for the [skillshare](https://github.com/
 - **Prove UI changes on screen.** Unit tests alone do not show that a UI change works. Run the app and take a screenshot; load `development`.
 - **Check whether the bug is in the CLI.** If the CLI's web UI misbehaves in a normal browser too, the fix belongs in `runkids/skillshare`.
 - Resolve the CLI config with `utils::paths::global_config_path`, never from its skills source. Load `architecture`.
+- **Never save a `CliMeta` read before an `await`.** Use `cli_manager::update_meta`; load `architecture`.
 - **Keep tray updates cheap.** Mutate cached menu items on the main thread; never query the CLI when opening the tray. Load `architecture`.
 - **Helper files go in the repo.** Put reusable helper scripts in `scripts/`. Never leave task artifacts outside the repository.
 
