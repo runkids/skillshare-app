@@ -352,7 +352,7 @@ async fn auto_start_server(server: ServerManager) {
         }
     };
 
-    // Sync Global project path from CLI status (config dir may change across versions)
+    // Repair the Global path using the CLI's config-location rules, not its skills source.
     let store = sync_global_project_path(&cli_path, store).await;
 
     // Get active project path and determine mode

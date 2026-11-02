@@ -9,7 +9,7 @@ How the Rust backend in `src-tauri/` fits together.
   - spawns `update_watch::spawn_background`, `auto_sync::refresh`, `oplog_watch::refresh` and `source_health::spawn_background`;
   - loads the login-shell PATH;
   - runs `auto_start_server`.
-- `auto_start_server` runs only after onboarding (`CliMeta.version` is set and a project exists). It syncs the Global project path from `skillshare status --json`, then starts the server for the active project.
+- `auto_start_server` runs only after onboarding (`CliMeta.version` is set and a project exists). It repairs the Global project path using `utils::paths::global_config_path`, then starts the server for the active project.
 - The server runs as `skillshare ui [-p] --port N --no-open` in the project dir. Its health check is `GET http://localhost:{port}/api/overview`. Only a server this app started counts as running: another server on the port, such as one an earlier app instance left behind, may serve a Web UI whose files are gone. The frontend shows the server's UI in an iframe (`src/desktop/components/CliWebView.tsx`).
 - `tauri.conf.json` sets `"create": false` on the main window; `main_window.rs:build` creates it from that config:
   - New windows: http/https/mailto links open in the browser; anything else is blocked.
@@ -39,7 +39,7 @@ How the Rust backend in `src-tauri/` fits together.
 - `services/diagnostics.rs`: the report text, with home redacted to `~`.
 - `services/project_store.rs`: `projects.json`, the active project, `active_project_mode`.
 - `utils/env.rs`: the login-shell PATH and the child-process environment.
-- `utils/paths.rs`: `app_data_dir`, `logs_dir`.
+- `utils/paths.rs`: `app_data_dir`, `logs_dir`, `global_config_path`.
 - `utils/fs.rs`: `write_atomic` (temp file, fsync, rename).
 - `models/app_state.rs`: `CliMeta`, `OnboardingStatus`, `AppInfo`.
 - `models/project.rs`: `Project`, `ProjectType`, `ProjectStore`.
@@ -113,6 +113,7 @@ To add a command:
 
 ## Gotchas
 
+- Global config lookup follows the CLI: `SKILLSHARE_CONFIG` (exact filename), then `XDG_CONFIG_HOME/skillshare/config.yaml`, then Windows `APPDATA/skillshare/config.yaml`, otherwise `~/.config/skillshare/config.yaml` (also on macOS). Use `global_config_path` for onboarding and its parent for the Global project; `status.source.path` can be an unrelated skills repository. The onboarding check uses the actual config file even before startup repairs a stale stored path.
 - Hold `lifecycle` across start, stop and every supervised restart, so `stop()` waits for a restart in progress and kills its new process. `supervise` re-checks `generation` after taking the lock.
 - `SYNC_LOCK` (`lib.rs`) spans all of `handle_quick_sync`, so tray and auto-sync runs never overlap. Quick Sync times out after 120s; `exec` uses `kill_on_drop` so the CLI dies with it.
 - `-c /^skillshare$/` is an exact match, so the app binary (`skillshare-app`) never qualifies. There is no `lsof` on Windows, so orphan cleanup does nothing there.
