@@ -5,11 +5,14 @@ use std::ffi::OsStr;
 /// The release app is a GUI-subsystem binary with no console of its own, so Windows
 /// gives every console program it starts (the CLI, git, `where`) a new visible window.
 /// Every spawn goes through here; children of a hidden-console process share it.
+/// Nobody can answer a git credential prompt on a hidden console, so git fails at
+/// once instead of waiting forever, as it does on macOS and Linux without a tty.
 pub fn command(program: impl AsRef<OsStr>) -> tokio::process::Command {
     #[allow(unused_mut)]
     let mut cmd = tokio::process::Command::new(program);
     #[cfg(target_os = "windows")]
-    cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+    cmd.creation_flags(0x0800_0000) // CREATE_NO_WINDOW
+        .env("GIT_TERMINAL_PROMPT", "0");
     cmd
 }
 
@@ -35,8 +38,11 @@ mod tests {
                 }
                 let text =
                     std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path:?}: {e}"));
-                // Tests spawn themselves with std::process; only app code is checked.
-                let app_code = text.split("#[cfg(test)]").next().unwrap_or_default();
+                // Test modules spawn themselves with std::process; only app code is checked.
+                let app_code = text
+                    .split("#[cfg(test)]\nmod tests")
+                    .next()
+                    .unwrap_or_default();
                 if app_code.contains("Command::new(") {
                     offenders.push(path.display().to_string());
                 }
