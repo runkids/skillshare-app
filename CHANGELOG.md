@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.9](https://github.com/runkids/skillshare-app/compare/v0.7.8...v0.7.9) (2026-11-04)
+
+
+### Bug Fixes
+
+* **windows:** fail git credential prompts instead of hanging on the hidden console ([#109](https://github.com/runkids/skillshare-app/issues/109)) ([0993bd4](https://github.com/runkids/skillshare-app/commit/0993bd4020d55a204e7ab925e3a99cf20d1c18c0))
+* **windows:** stop child processes from opening console windows ([#107](https://github.com/runkids/skillshare-app/issues/107)) ([e6a3c1d](https://github.com/runkids/skillshare-app/commit/e6a3c1dfd0ece107cf28f73c98dcaa63f9e83e77)), closes [#106](https://github.com/runkids/skillshare-app/issues/106)
+
 ## [0.7.8](https://github.com/runkids/skillshare-app/compare/v0.7.7...v0.7.8) (2026-11-02)
 
 
