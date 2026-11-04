@@ -87,7 +87,7 @@ Auto-sync, update checks, the operation log watcher, source health and the audit
 - `build_env_for_child` builds PATH in this order: the login PATH, the tool dirs (Volta, fnm, Homebrew, `/usr/local/bin`, Cargo, Go, `~/bin`, `~/.local/bin`), then the process PATH. Duplicates are dropped, joined with the platform separator. It also sets `HOME`, `LANG`/`LC_ALL`, `TERM`, `SSH_AUTH_SOCK` and `SHELL`.
 - On Linux, `build_env_for_child` filters entries inside the AppImage's absolute `APPDIR` from `LD_LIBRARY_PATH`, preserving other entries. An empty override prevents inherited bundled libraries from reaching the CLI, its Git children and direct Git commands; the GUI's own environment is unchanged. Every spawned process gets this environment, including `lsof`, `kill` and `tar`; the login shell read gets only the filtered `LD_LIBRARY_PATH`, so its PATH is built as before. New spawns must do the same.
 - On Windows, `install_cli` skips this environment.
-- Create every child process with `utils/process.rs:command`, never `Command::new`. On Windows it sets `CREATE_NO_WINDOW`; the release app has no console, so any other spawn opens a visible console window (issue #106).
+- Create every child process with `utils/process.rs:command`, never `Command::new`. On Windows it sets `CREATE_NO_WINDOW`; the release app has no console, so any other spawn opens a visible console window (issue #106). It also sets `GIT_TERMINAL_PROMPT=0`, because nobody can answer a prompt on the hidden console; an SSH key passphrase prompt is not covered.
 
 ## Events and commands
 
