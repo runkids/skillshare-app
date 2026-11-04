@@ -90,7 +90,7 @@ pub async fn detect_cli() -> Option<String> {
     } else {
         "which"
     };
-    if let Ok(output) = tokio::process::Command::new(find_cmd)
+    if let Ok(output) = crate::utils::process::command(find_cmd)
         .arg("skillshare")
         .envs(&env)
         .output()
@@ -179,7 +179,7 @@ pub async fn get_source_dir(cli_path: &str, working_dir: Option<&str>) -> Result
 /// The CLI outputs ASCII art with ANSI codes; we strip those and find the version.
 pub async fn get_version(cli_path: &str) -> Result<String, String> {
     let env = crate::utils::env::build_env_for_child();
-    let output = tokio::process::Command::new(cli_path)
+    let output = crate::utils::process::command(cli_path)
         .arg("version")
         .envs(&env)
         .output()
@@ -315,7 +315,7 @@ pub async fn exec(
     working_dir: Option<&str>,
 ) -> Result<String, String> {
     let env = crate::utils::env::build_env_for_child();
-    let mut cmd = tokio::process::Command::new(cli_path);
+    let mut cmd = crate::utils::process::command(cli_path);
     // A caller that gives up (e.g. Quick Sync's timeout) drops this future; take the CLI with it.
     cmd.args(args).envs(&env).kill_on_drop(true);
     if let Some(dir) = working_dir {
@@ -350,7 +350,7 @@ pub async fn exec_streaming(
 ) -> Result<String, String> {
     use tokio::io::{AsyncBufReadExt, AsyncReadExt};
 
-    let mut child = tokio::process::Command::new(cli_path)
+    let mut child = crate::utils::process::command(cli_path)
         .args(args)
         .envs(crate::utils::env::build_env_for_child())
         .stdin(std::process::Stdio::null())
@@ -470,7 +470,7 @@ pub async fn login_shell_path(shell: &str) -> Option<String> {
     let library_path = crate::utils::env::build_env_for_child()
         .into_iter()
         .filter(|(key, _)| key == "LD_LIBRARY_PATH");
-    let run = tokio::process::Command::new(shell)
+    let run = crate::utils::process::command(shell)
         .envs(library_path)
         .args(["-ilc", "/usr/bin/env"])
         .stdin(std::process::Stdio::null())
@@ -609,7 +609,7 @@ pub async fn detect_install_platform() -> InstallPlatform {
     };
 
     let brew = !cfg!(target_os = "windows")
-        && tokio::process::Command::new("which")
+        && crate::utils::process::command("which")
             .arg("brew")
             .envs(crate::utils::env::build_env_for_child())
             .output()
@@ -686,7 +686,7 @@ where
 /// Run the installer for `method`, streaming output, then verify the CLI with `version`.
 pub async fn install_cli(app: tauri::AppHandle, method: &str) -> Result<InstallResult, String> {
     let (program, args) = install_invocation(method)?;
-    let mut cmd = tokio::process::Command::new(program);
+    let mut cmd = crate::utils::process::command(program);
     cmd.args(&args)
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::piped())
@@ -696,9 +696,6 @@ pub async fn install_cli(app: tauri::AppHandle, method: &str) -> Result<InstallR
         // The enriched PATH is unix-style; Windows keeps its own environment.
         cmd.envs(crate::utils::env::build_env_for_child());
     }
-    #[cfg(target_os = "windows")]
-    cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
-
     let mut child = cmd
         .spawn()
         .map_err(|e| format!("Failed to start the {method} installer: {e}"))?;
@@ -888,7 +885,7 @@ pub async fn download_cli(url: &str) -> Result<String, String> {
     // Extract
     #[cfg(target_os = "windows")]
     {
-        let extract_status = tokio::process::Command::new("powershell")
+        let extract_status = crate::utils::process::command("powershell")
             .args([
                 "-Command",
                 &format!(
@@ -910,7 +907,7 @@ pub async fn download_cli(url: &str) -> Result<String, String> {
     }
     #[cfg(not(target_os = "windows"))]
     {
-        let extract_status = tokio::process::Command::new("tar")
+        let extract_status = crate::utils::process::command("tar")
             .envs(crate::utils::env::build_env_for_child())
             .args(["xzf", archive_name])
             .current_dir(&tmp_dir)

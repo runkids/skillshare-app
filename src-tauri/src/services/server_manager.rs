@@ -2,7 +2,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
 use tauri::Emitter;
-use tokio::process::{Child, Command};
+use tokio::process::Child;
 use tokio::sync::Mutex;
 
 const DEFAULT_PORT: u16 = 19420;
@@ -76,7 +76,7 @@ fn is_own_orphan(recorded: ServerPid, own_pid: u32, lsof_pids: &str) -> bool {
 /// is missing (Windows). lsof ORs its filters unless -a is given. `-c /^skillshare$/` is
 /// an exact match so `skillshare-app` (the Tauri binary) never qualifies.
 async fn skillshare_listeners(port: u16) -> String {
-    tokio::process::Command::new("lsof")
+    crate::utils::process::command("lsof")
         .envs(crate::utils::env::build_env_for_child())
         .args([
             "-t",
@@ -116,7 +116,7 @@ async fn stop_self_restarted_server(port: u16, generation: &AtomicU64, ours: u64
                 pids.join(", ")
             );
             for pid in pids {
-                let _ = tokio::process::Command::new("kill")
+                let _ = crate::utils::process::command("kill")
                     .envs(crate::utils::env::build_env_for_child())
                     .args(["-TERM", pid])
                     .output()
@@ -151,7 +151,7 @@ async fn kill_orphaned_server() {
         recorded.pid,
         recorded.port
     );
-    let _ = tokio::process::Command::new("kill")
+    let _ = crate::utils::process::command("kill")
         .envs(crate::utils::env::build_env_for_child())
         .args(["-TERM", &recorded.pid.to_string()])
         .output()
@@ -272,7 +272,7 @@ impl ServerManager {
             )
         })?;
 
-        let mut cmd = Command::new(cli_path);
+        let mut cmd = crate::utils::process::command(cli_path);
 
         if is_project_mode {
             cmd.args(["ui", "-p", "--port", &chosen_port.to_string(), "--no-open"]);

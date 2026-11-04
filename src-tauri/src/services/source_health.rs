@@ -110,7 +110,7 @@ async fn run_with_timeout(
 }
 
 async fn git(dir: &str, args: &[&str], limit: Duration) -> Result<String, String> {
-    let mut cmd = tokio::process::Command::new("git");
+    let mut cmd = crate::utils::process::command("git");
     cmd.args(args)
         .current_dir(dir)
         .envs(crate::utils::env::build_env_for_child())

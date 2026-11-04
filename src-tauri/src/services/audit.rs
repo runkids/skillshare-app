@@ -154,7 +154,7 @@ fn notification_body(new: &[&AuditFinding]) -> String {
 /// Run one audit command; it exits non-zero when a finding reaches the CLI's block
 /// threshold, but the JSON report is on stdout either way.
 async fn audit_json(cli: &str, args: &[&str], dir: Option<&str>) -> Option<Vec<AuditFinding>> {
-    let mut cmd = tokio::process::Command::new(cli);
+    let mut cmd = crate::utils::process::command(cli);
     cmd.args(args)
         .envs(crate::utils::env::build_env_for_child())
         .kill_on_drop(true);
