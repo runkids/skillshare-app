@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.10](https://github.com/runkids/skillshare-app/compare/v0.7.9...v0.7.10) (2026-11-06)
+
+
+### Bug Fixes
+
+* **updates:** check versions on entry and split resource checks from Check now ([#110](https://github.com/runkids/skillshare-app/issues/110)) ([6592681](https://github.com/runkids/skillshare-app/commit/659268136305e634201ecc1fa1e90cb29ed06dab))
+
 ## [0.7.9](https://github.com/runkids/skillshare-app/compare/v0.7.8...v0.7.9) (2026-11-04)
 
 
