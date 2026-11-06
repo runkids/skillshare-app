@@ -37,9 +37,22 @@ function start() {
     .catch(() => {});
 }
 
-/** Re-check all updates now, ignoring the 24h schedule. */
-export function checkUpdatesNow() {
-  return tauriBridge.checkUpdatesNow().then(publish);
+let versionCheck: Promise<void> | null = null;
+
+/** Re-check the app and CLI versions now. Callers that overlap share one check. */
+export function checkVersionsNow() {
+  versionCheck ??= tauriBridge
+    .checkVersionsNow()
+    .then(publish)
+    .finally(() => {
+      versionCheck = null;
+    });
+  return versionCheck;
+}
+
+/** Re-check skills, agents and plugins now. Slow: the CLI fetches every source. */
+export function checkResourcesNow() {
+  return tauriBridge.checkResourcesNow().then(publish);
 }
 
 /** Newer CLI/app versions (`null` = none known) and per-kind resources with updates found by the last check. */

@@ -24,7 +24,7 @@ The app's long-running watchers and checks: auto-sync, update checks, the operat
   - `check` stores the result in `UpdateState` and emits `updates-available`. It notifies only if `notify` is set, `notify_update` is on, and the window is unfocused.
   - `unannounced` announces each app or CLI version once (`notified_*_version`), and announces a combined resource summary when a name is new to its per-kind `notified_*_updates` list.
   - `refresh_skills` re-runs all resource checks and emits only on change. `forget_cleared` drops resolved names per kind and never adds any.
-  - `check_updates_now` calls `check(app, false)`, so it never notifies.
+  - `check_versions` (command `check_versions_now`) checks only the app and CLI versions: it skips the resource checks, never notifies and leaves `last_update_check` alone. `check_resources_now` runs `refresh_skills`. `refresh_skills` writes back only the resource lists, so it never undoes a version check that finished meanwhile.
 - `update_all.rs` updates skills/repositories with `update --all --json`, agents with `update agents --all --json`, and each plugin with `plugin update <name> --json` (noninteractive). It holds `SYNC_LOCK`, uses 120s timeouts and `exec`'s `kill_on_drop`, then syncs skills and any updated agents, emits `sync-completed`, and refreshes resources. It never forces an update or changes extras/MCP/hooks. Notifications respect `notify_sync`; skipped updates or failed final checks report incomplete rather than success. App/CLI upgrades remain in settings.
 - `source_health.rs`
   - `spawn_background` runs `refresh(app, true)` at launch, then every 15 min. `CHECK_LOCK` serializes runs; only a change emits `source-health` and updates tray status lines/actions in place.

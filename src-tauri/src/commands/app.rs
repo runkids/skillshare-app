@@ -106,10 +106,20 @@ pub async fn get_available_updates(
 }
 
 #[tauri::command]
-pub async fn check_updates_now(
+pub async fn check_versions_now(
     app: tauri::AppHandle,
 ) -> Result<update_watch::AvailableUpdates, String> {
-    Ok(update_watch::check(&app, false).await)
+    Ok(update_watch::check_versions(&app).await)
+}
+
+/// Re-run the skill, agent and plugin checks; slow, since each fetches its sources.
+#[tauri::command]
+pub async fn check_resources_now(
+    app: tauri::AppHandle,
+    state: State<'_, update_watch::UpdateState>,
+) -> Result<update_watch::AvailableUpdates, String> {
+    update_watch::refresh_skills(&app).await;
+    Ok(state.0.lock().await.clone())
 }
 
 #[tauri::command]

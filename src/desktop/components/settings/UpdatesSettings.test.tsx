@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
   runCli: vi.fn(),
   refresh: vi.fn(() => Promise.resolve()),
   reloadView: vi.fn(),
+  checkVersionsNow: vi.fn(() => Promise.resolve()),
+  checkResourcesNow: vi.fn(() => Promise.resolve()),
   handlers: new Map<string, (e: { payload: unknown }) => void>(),
   updates: {
     cli: null as string | null,
@@ -51,7 +53,8 @@ vi.mock('../../context/ProjectContext', () => ({
 }));
 vi.mock('../../hooks/useUpdates', () => ({
   useUpdates: () => mocks.updates,
-  checkUpdatesNow: () => Promise.resolve(),
+  checkVersionsNow: mocks.checkVersionsNow,
+  checkResourcesNow: mocks.checkResourcesNow,
 }));
 
 function appUpdate(body = '') {
@@ -156,5 +159,30 @@ describe('UpdatesSettings app', () => {
     expect(mocks.upgradeCli.mock.invocationCallOrder[0]).toBeLessThan(
       update.downloadAndInstall.mock.invocationCallOrder[0]
     );
+  });
+});
+
+describe('UpdatesSettings checks', () => {
+  it('checks the app and CLI versions on entry', async () => {
+    renderUpdates();
+    await waitFor(() =>
+      expect([
+        mocks.checkVersionsNow.mock.calls.length,
+        vi.mocked(check).mock.calls.length,
+      ]).toEqual([1, 1])
+    );
+  });
+
+  it('leaves skills, agents and plugins out of Check now', async () => {
+    renderUpdates();
+    fireEvent.click(await screen.findByRole('button', { name: 'Check now' }));
+    await waitFor(() => expect(mocks.checkVersionsNow).toHaveBeenCalledTimes(2));
+    expect(mocks.checkResourcesNow).not.toHaveBeenCalled();
+  });
+
+  it('checks skills, agents and plugins from their own section', () => {
+    renderUpdates();
+    fireEvent.click(screen.getByRole('button', { name: 'Check' }));
+    expect(mocks.checkResourcesNow).toHaveBeenCalledTimes(1);
   });
 });

@@ -316,11 +316,39 @@ pub async fn refresh_skills(app: &AppHandle) -> bool {
         }
     }
     let mut state = updates.0.lock().await;
-    if *state != found {
-        *state = found.clone();
-        publish(app, &found);
+    // A version check may have finished meanwhile; keep its result.
+    let next = with_versions_of(found, &state);
+    if *state != next {
+        *state = next.clone();
+        publish(app, &next);
     }
     complete
+}
+
+fn with_versions_of(resources: AvailableUpdates, current: &AvailableUpdates) -> AvailableUpdates {
+    AvailableUpdates {
+        cli: current.cli.clone(),
+        app: current.app.clone(),
+        ..resources
+    }
+}
+
+/// Check only the app and CLI versions. It takes seconds, unlike the resource checks,
+/// which fetch every source repository, so it leaves the resource lists and the 24h
+/// schedule alone and never notifies.
+pub async fn check_versions(app: &AppHandle) -> AvailableUpdates {
+    let mut meta = cli_manager::load_meta();
+    if let Err(e) = cli_manager::refresh_cached_version(&mut meta).await {
+        log::warn!("Could not refresh cached CLI version: {e}");
+    }
+    let (cli, latest) = tokio::join!(latest_cli(meta.version.as_deref()), latest_app(app));
+    let updates = app.state::<UpdateState>();
+    let mut state = updates.0.lock().await;
+    state.cli = cli;
+    state.app = latest;
+    let found = state.clone();
+    publish(app, &found);
+    found
 }
 
 /// Drop announced resources that no longer have an update, so a later update to one of
@@ -395,6 +423,24 @@ pub fn spawn_background(app: AppHandle) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn resource_refresh_keeps_versions_found_meanwhile() {
+        let current = AvailableUpdates {
+            cli: Some("v0.30.0".into()),
+            app: Some("0.8.0".into()),
+            ..Default::default()
+        };
+        let next = with_versions_of(skills(&["pdf"]), &current);
+        assert_eq!(
+            (next.cli, next.app, next.skills),
+            (
+                Some("v0.30.0".into()),
+                Some("0.8.0".into()),
+                vec!["pdf".into()]
+            )
+        );
+    }
 
     #[test]
     fn refresh_forgets_skills_that_were_updated() {

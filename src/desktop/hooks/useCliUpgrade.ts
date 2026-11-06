@@ -2,7 +2,7 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { CLI_UPGRADE_STEP_EVENT, tauriBridge } from '../api/tauri-bridge';
-import { checkUpdatesNow } from './useUpdates';
+import { checkVersionsNow } from './useUpdates';
 
 export type CliUpgradeStatus = 'idle' | 'upgrading' | 'done' | 'up-to-date' | 'error';
 
@@ -54,7 +54,7 @@ export async function upgradeCli({ oldVersion, refresh, reloadView }: UpgradeHoo
     const version = await tauriBridge.upgradeCli();
     await refresh();
     reloadView();
-    void checkUpdatesNow().catch(() => {});
+    void checkVersionsNow().catch(() => {});
     const changed = Boolean(version) && version !== oldVersion;
     setState({ status: changed ? 'done' : 'up-to-date', newVersion: changed ? version : null });
     return true;
