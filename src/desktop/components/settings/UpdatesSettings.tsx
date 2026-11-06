@@ -10,7 +10,7 @@ import { useTauri } from '../../context/TauriContext';
 import { useProjects } from '../../context/ProjectContext';
 import { useAppUpdate } from '../../hooks/useAppUpdate';
 import { upgradeCli, useCliUpgrade } from '../../hooks/useCliUpgrade';
-import { checkUpdatesNow, useUpdates } from '../../hooks/useUpdates';
+import { checkResourcesNow, checkVersionsNow, useUpdates } from '../../hooks/useUpdates';
 import { releaseNoteItems } from '../../utils/release-notes';
 import {
   ProgressBar,
@@ -113,6 +113,7 @@ export default function UpdatesSettings() {
   const cli = useCliUpgrade();
   const [appVersion, setAppVersion] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
+  const [checkingResources, setCheckingResources] = useState(false);
   const [notifyUpdate, setNotifyUpdate] = useState(true);
   const [notifyError, setNotifyError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -125,6 +126,8 @@ export default function UpdatesSettings() {
       .getNotifyUpdate()
       .then(setNotifyUpdate)
       .catch(() => {});
+    void checkNow();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- check the versions once on entry
   }, []);
 
   const cliRunning = cli.status === 'upgrading';
@@ -158,8 +161,13 @@ export default function UpdatesSettings() {
   };
   const checkNow = async () => {
     setChecking(true);
-    await Promise.allSettled([app.recheck(), checkUpdatesNow()]);
+    await Promise.allSettled([app.recheck(), checkVersionsNow()]);
     setChecking(false);
+  };
+  const checkResources = async () => {
+    setCheckingResources(true);
+    await checkResourcesNow().catch(() => {});
+    setCheckingResources(false);
   };
   const toggleNotify = async (enabled: boolean) => {
     setNotifyUpdate(enabled);
@@ -446,7 +454,20 @@ export default function UpdatesSettings() {
         </SettingsList>
       </SettingsSection>
 
-      <SettingsSection title="Skills, agents and plugins" heading="h2">
+      <SettingsSection
+        title="Skills, agents and plugins"
+        heading="h2"
+        action={
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={checkResources}
+            loading={checkingResources}
+          >
+            Check
+          </Button>
+        }
+      >
         <SettingsList>
           {resources.length === 0 ? (
             <SettingsRow

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { useAppUpdate } from '../hooks/useAppUpdate';
-import { checkUpdatesNow, useUpdates } from '../hooks/useUpdates';
+import { checkVersionsNow, useUpdates } from '../hooks/useUpdates';
 
 /** Handles "Check for Updates…" from the app and tray menus: open Updates and check right away. */
 export default function UpdateCheckListener() {
@@ -16,7 +16,7 @@ export default function UpdateCheckListener() {
     const unlisten = listen('check-for-updates', () => {
       navigate('/settings?tab=updates');
       void recheck();
-      void checkUpdatesNow().catch(() => {});
+      void checkVersionsNow().catch(() => {});
     });
     return () => {
       void unlisten.then((off) => off());
