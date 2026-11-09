@@ -292,3 +292,37 @@ describe('UpdatesSettings checks', () => {
     expect(screen.queryByText('CLI updated')).not.toBeInTheDocument();
   });
 });
+
+describe('UpdatesSettings on leaving', () => {
+  it('clears a finished CLI update', async () => {
+    mocks.updates.cli = 'v0.24.0';
+    mocks.upgradeCli.mockResolvedValue('v0.24.0');
+    const { unmount } = renderUpdates();
+    fireEvent.click(await screen.findByRole('button', { name: 'Update CLI' }));
+    await screen.findByText('CLI updated');
+    unmount();
+    renderUpdates();
+    expect(screen.queryByText('CLI updated')).not.toBeInTheDocument();
+  });
+
+  it('clears an app update that waits for a manual restart', async () => {
+    appUpdate();
+    mocks.relaunch.mockRejectedValue(new Error('denied'));
+    const { unmount } = renderUpdates();
+    fireEvent.click(await screen.findByRole('button', { name: 'Update and restart' }));
+    await screen.findByRole('button', { name: 'Restart now' });
+    unmount();
+    renderUpdates();
+    expect(screen.queryByRole('button', { name: 'Restart now' })).not.toBeInTheDocument();
+  });
+
+  it('keeps an app update that is still downloading', async () => {
+    appUpdate('', () => new Promise(() => {}));
+    const { unmount } = renderUpdates();
+    fireEvent.click(await screen.findByRole('button', { name: 'Update and restart' }));
+    await screen.findByText('Download skillshare App v0.7.7');
+    unmount();
+    renderUpdates();
+    expect(screen.getByText('Download skillshare App v0.7.7')).toBeInTheDocument();
+  });
+});
