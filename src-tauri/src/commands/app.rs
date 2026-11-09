@@ -216,38 +216,37 @@ pub async fn reset_all_data(
 }
 
 /// Restart into the installed update. On macOS, Tauri's restart spawns the binary
-/// directly, and macOS keeps a process started that way behind the app in front. Like
-/// Sparkle, open the bundle through Launch Services so the new instance comes up in
-/// front, and quit a moment later. Outside a bundle, or if `open` fails, use Tauri's.
+/// directly, and macOS keeps a process started that way behind the app in front.
+/// Launch Services brings an app it opens to the front, but `open -n` from this
+/// process would start a second instance, which the Dock shows as an extra icon
+/// beside the pinned one. So, like Sparkle's separate relauncher, a helper waits for
+/// this process to quit and then opens the bundle as a normal launch. Outside a
+/// bundle, or if the helper cannot start, use Tauri's restart.
 #[tauri::command]
-pub async fn relaunch_app(
-    app: tauri::AppHandle,
-    server: State<'_, ServerManager>,
-) -> Result<(), String> {
-    #[cfg(not(target_os = "macos"))]
-    let _ = server;
+pub async fn relaunch_app(app: tauri::AppHandle) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     if let Some(bundle) = std::env::current_exe()
         .ok()
         .and_then(|exe| app_bundle_of(&exe).map(std::path::Path::to_path_buf))
     {
-        crate::APP_QUITTING.store(true, std::sync::atomic::Ordering::SeqCst);
-        // Free the port first, so the new instance starts its server where this one was.
-        let _ = server.stop().await;
-        match crate::utils::process::command("/usr/bin/open")
-            .arg("-n")
+        // Wait up to 10s for this process to exit; the exit handler stops the CLI
+        // server, so the new instance gets its port back.
+        const WAIT_THEN_OPEN: &str = "i=0; while kill -0 \"$1\" 2>/dev/null && [ $i -lt 100 ]; \
+             do sleep 0.1; i=$((i+1)); done; exec /usr/bin/open \"$2\"";
+        let helper = crate::utils::process::command("/bin/sh")
+            .args(["-c", WAIT_THEN_OPEN, "sh", &std::process::id().to_string()])
             .arg(&bundle)
-            .status()
-            .await
-        {
-            Ok(status) if status.success() => {
-                // Sparkle waits 0.3s: quitting the front app right before the new one
-                // launches can leave the new one in the back.
-                tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn();
+        match helper {
+            Ok(_) => {
+                crate::APP_QUITTING.store(true, std::sync::atomic::Ordering::SeqCst);
                 app.exit(0);
                 return Ok(());
             }
-            result => log::warn!("Could not open {}: {result:?}", bundle.display()),
+            Err(e) => log::warn!("Could not start the relaunch helper: {e}"),
         }
     }
     app.restart()
