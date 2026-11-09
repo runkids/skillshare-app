@@ -15,6 +15,7 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "test:release": "node --test scripts/tests/*.mjs",
+    "test:homebrew": "HOMEBREW_CASK_SMOKE=1 node --test scripts/tests/update-homebrew.mjs",
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
     "prepare": "husky"

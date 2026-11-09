@@ -2,9 +2,10 @@
 name: skillshare-app-pr
 description: >-
   Take a change to the skillshare desktop app (runkids/skillshare-app) from request to
-  merged PR: worktree branch, implementation, the full CI checks, a screenshot of the
-  running app in the dev container, a Conventional Commit, a PR, and a merge only on
-  green CI. Use for any code, UI, icon or doc change the user wants landed in
+  reviewed PR: worktree branch, implementation, the full CI checks, a screenshot of the
+  running app when visible, a Conventional Commit, and a two-axis review before the PR.
+  Merge only when authorized by the user and CI is green. Use for any code, UI, icon
+  or doc change the user wants landed in
   skillshare-app — "改", "加", "拔掉", "修", "fix this", "add a button", "open a PR",
   "merge it", "上 main" — even when they don't mention PRs. Shipping a version
   afterwards is the separate skillshare-app-release skill.
@@ -44,17 +45,26 @@ are changing (`frontend`, `architecture`, `background-services`).
 3. If the user sends a screenshot, read it first. Convert it with `sips` when it is not
    a real PNG.
 
-### 4. Pull request
+### 4. Review
 
-1. Commit, push and run `gh pr create` with the What/Verification body.
-2. The user has delegated merging, so run `scripts/merge-pr.sh <pr>` in the background
-   and keep working.
-3. On a real failure, read `gh run view <id> --log-failed`, fix it, push a new commit,
-   and run the script again.
+Follow the "Pre-PR review" gate in the development topic: simplify, commit when
+authorized, then run `code-review` against the pinned base and HEAD. Resolve its
+findings and record both axis results for the final reviewed HEAD before proceeding.
 
-### 5. Finish
+### 5. Pull request
 
-1. Pull `main` into the main checkout and remove the worktree.
+1. When the user authorized a PR, push the reviewed commit and run `gh pr create` with
+   the What/Verification body, including the reviewed HEAD and both review results.
+2. Stop at the PR unless the current request also authorizes merging. With that
+   authorization, run `scripts/merge-pr.sh <pr>` and confirm the merged state.
+3. On a real failure, read `gh run view <id> --log-failed`, fix it, rerun affected
+   checks and review the new HEAD before pushing. Retry merging only within the same
+   authorization.
+
+### 6. Finish
+
+1. If merged, pull `main` into the main checkout and remove the worktree if it is still
+   registered. Otherwise leave the branch and worktree available for review.
 2. Tell the user, in their language:
    - what changed and the PR link
    - what was verified, and how: tests or screenshots

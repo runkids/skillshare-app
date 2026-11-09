@@ -54,6 +54,27 @@ jobs:
       - name: Build
         run: pnpm build
 
+  homebrew:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install mise-managed tools
+        uses: jdx/mise-action@v4
+        with:
+          version: 2026.9.11
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Update Homebrew
+        run: brew update
+
+      - name: Load generated cask with Homebrew
+        run: pnpm test:homebrew
+
   rust:
     runs-on: ubuntu-latest
     timeout-minutes: 30
