@@ -132,6 +132,11 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app, event| {
+            // The updater's relaunch spawns the new process directly, and macOS keeps
+            // such a process behind the app in front; bring the window up on start.
+            if let tauri::RunEvent::Ready = &event {
+                show_main_window(app);
+            }
             #[cfg(target_os = "macos")]
             if let tauri::RunEvent::Reopen { .. } = &event {
                 show_main_window(app);
