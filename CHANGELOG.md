@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.8.0](https://github.com/runkids/skillshare-app/compare/v0.7.10...v0.8.0) (2026-11-09)
+
+
+### Features
+
+* **updates:** redesign the Updates tab around one progress card ([#112](https://github.com/runkids/skillshare-app/issues/112)) ([dce7a0c](https://github.com/runkids/skillshare-app/commit/dce7a0c1a52d21f698ac43d1804f7762ea1939d8))
+
+
+### Bug Fixes
+
+* **macos:** bring the app to the front after the update restart ([#115](https://github.com/runkids/skillshare-app/issues/115)) ([45248bb](https://github.com/runkids/skillshare-app/commit/45248bb5298d0b88e597e7704b8e3345a8b0b546))
+* **updates:** keep the Restart to finish card whole when checking ([#114](https://github.com/runkids/skillshare-app/issues/114)) ([f21955b](https://github.com/runkids/skillshare-app/commit/f21955bf7aef0e4fdd55192fbdc7217a112fee74))
+
 ## [0.7.10](https://github.com/runkids/skillshare-app/compare/v0.7.9...v0.7.10) (2026-11-06)
 
 
