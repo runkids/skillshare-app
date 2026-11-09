@@ -7,7 +7,6 @@ import { resetAppUpdateForTests, useAppUpdate } from './useAppUpdate';
 
 vi.mock('@tauri-apps/api/core', () => ({ isTauri: () => true }));
 vi.mock('@tauri-apps/plugin-updater', () => ({ check: vi.fn() }));
-vi.mock('@tauri-apps/plugin-process', () => ({ relaunch: vi.fn() }));
 
 const updates = vi.hoisted(() => ({
   cli: null as string | null,

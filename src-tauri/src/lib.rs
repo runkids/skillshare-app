@@ -35,7 +35,6 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
-        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(ServerManager::new())
         .manage(services::update_watch::UpdateState::default())
@@ -81,6 +80,7 @@ pub fn run() {
             commands::app::export_diagnostics,
             commands::app::check_versions_now,
             commands::app::check_resources_now,
+            commands::app::relaunch_app,
             commands::app::get_notify_update,
             commands::app::set_notify_update,
             commands::app::reset_all_data,
@@ -132,8 +132,8 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app, event| {
-            // The updater's relaunch spawns the new process directly, and macOS keeps
-            // such a process behind the app in front; bring the window up on start.
+            // `relaunch_app` can fall back to Tauri's restart, which macOS starts behind
+            // the app in front; bring the window up on start either way.
             if let tauri::RunEvent::Ready = &event {
                 show_main_window(app);
             }

@@ -155,6 +155,7 @@ export const tauriBridge = {
   openLogsFolder: () => invoke<void>('open_logs_folder'),
   exportDiagnostics: () => invoke<string>('export_diagnostics'),
   checkVersionsNow: () => invoke<AvailableUpdates>('check_versions_now'),
+  relaunchApp: () => invoke<void>('relaunch_app'),
   checkResourcesNow: () => invoke<AvailableUpdates>('check_resources_now'),
   getNotifyUpdate: () => invoke<boolean>('get_notify_update'),
   setNotifyUpdate: (enabled: boolean) => invoke<void>('set_notify_update', { enabled }),

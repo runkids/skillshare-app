@@ -1,7 +1,7 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
 import { check, type Update } from '@tauri-apps/plugin-updater';
-import { relaunch } from '@tauri-apps/plugin-process';
+import { tauriBridge } from '../api/tauri-bridge';
 
 export type UpdateCheckStatus = 'idle' | 'checking' | 'available' | 'up-to-date' | 'error';
 /** Where installing the available update is: download, install, then the automatic restart. */
@@ -130,7 +130,7 @@ async function install() {
   }
   setState({ phase: 'restarting' });
   try {
-    await relaunch();
+    await tauriBridge.relaunchApp();
   } catch {
     setState({ phase: 'restart-failed' });
   }
@@ -160,7 +160,7 @@ export function useAppUpdate() {
     phaseAt: s.phaseAt,
     failedPhase: s.failedPhase,
     install,
-    restart: () => relaunch().catch(() => setState({ phase: 'restart-failed' })),
+    restart: () => tauriBridge.relaunchApp().catch(() => setState({ phase: 'restart-failed' })),
   };
 }
 

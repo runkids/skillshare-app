@@ -34,7 +34,6 @@
     "@tauri-apps/plugin-dialog": "~2",
     "@tauri-apps/plugin-notification": "^2",
     "@tauri-apps/plugin-opener": "^2",
-    "@tauri-apps/plugin-process": "~2",
     "@tauri-apps/plugin-shell": "^2",
     "@tauri-apps/plugin-updater": "^2.9.0",
     "@uiw/react-codemirror": "^4.25.4",
