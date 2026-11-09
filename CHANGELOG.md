@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.1](https://github.com/runkids/skillshare-app/compare/v0.8.0...v0.8.1) (2026-11-09)
+
+
+### Bug Fixes
+
+* **updates:** clear the progress card when leaving the Updates tab ([#119](https://github.com/runkids/skillshare-app/issues/119)) ([cdfebe8](https://github.com/runkids/skillshare-app/commit/cdfebe87c237ea3358454b86455b993533c5ed09))
+* **updates:** keep Update both from flashing between the CLI and the app ([#117](https://github.com/runkids/skillshare-app/issues/117)) ([df8ab83](https://github.com/runkids/skillshare-app/commit/df8ab833cb5d8bcbb3503bf6917b8210c9382d78))
+
 ## [0.8.0](https://github.com/runkids/skillshare-app/compare/v0.7.10...v0.8.0) (2026-11-09)
 
 
