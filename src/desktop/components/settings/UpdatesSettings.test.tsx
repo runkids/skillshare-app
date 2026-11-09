@@ -249,6 +249,18 @@ describe('UpdatesSettings checks', () => {
     expect(screen.getByRole('button', { name: 'Check versions' })).toBeEnabled();
   });
 
+  it('keeps every step of the run when checking while the app waits for a restart', async () => {
+    appUpdate();
+    mocks.updates.cli = 'v0.24.0';
+    mocks.upgradeCli.mockResolvedValue('v0.24.0');
+    vi.mocked(relaunch).mockRejectedValue(new Error('denied'));
+    renderUpdates();
+    fireEvent.click(await screen.findByRole('button', { name: 'Update both' }));
+    await screen.findByRole('button', { name: 'Restart now' });
+    fireEvent.click(screen.getByRole('button', { name: 'Check versions' }));
+    expect(screen.getAllByRole('listitem')).toHaveLength(4);
+  });
+
   it('clears a finished CLI update when checking again', async () => {
     mocks.updates.cli = 'v0.24.0';
     mocks.upgradeCli.mockResolvedValue('v0.24.0');
