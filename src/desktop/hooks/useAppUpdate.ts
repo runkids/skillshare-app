@@ -4,14 +4,27 @@ import { check, type Update } from '@tauri-apps/plugin-updater';
 import { tauriBridge } from '../api/tauri-bridge';
 
 export type UpdateCheckStatus = 'idle' | 'checking' | 'available' | 'up-to-date' | 'error';
-/** Where installing the available update is: download, install, then the automatic restart. */
-export type InstallPhase =
-  | 'idle'
-  | 'downloading'
-  | 'installing'
-  | 'restarting'
-  | 'restart-failed'
-  | 'error';
+/** The steps of an install, in order: download, install, then the automatic restart. */
+export const INSTALL_STEPS = ['downloading', 'installing', 'restarting'] as const;
+export type InstallStep = (typeof INSTALL_STEPS)[number];
+/** The steps an install can fail in; a failed restart is its own phase. */
+export type FailableStep = Exclude<InstallStep, 'restarting'>;
+/** Where installing the available update is: one of the steps, or not running. */
+export type InstallPhase = 'idle' | InstallStep | 'restart-failed' | 'error';
+
+/** Position of the phase among the install steps, or -1 when no step is running. */
+export function installStepIndex(phase: InstallPhase) {
+  return (INSTALL_STEPS as readonly InstallPhase[]).indexOf(phase);
+}
+
+export function isInstallStep(phase: InstallPhase) {
+  return installStepIndex(phase) >= 0;
+}
+
+/** The install failed, or the app could not restart itself. */
+export function isInstallStopped(phase: InstallPhase) {
+  return phase === 'error' || phase === 'restart-failed';
+}
 
 interface UpdateState {
   status: UpdateCheckStatus;
@@ -25,7 +38,7 @@ interface UpdateState {
   /** When the current phase started, for the elapsed time of steps without a percentage. */
   phaseAt: number;
   /** The step that was running when the install failed. */
-  failedPhase: 'downloading' | 'installing' | null;
+  failedPhase: FailableStep | null;
 }
 
 const INITIAL: UpdateState = {
@@ -109,7 +122,7 @@ async function install() {
     installError: null,
     failedPhase: null,
   });
-  let at: 'downloading' | 'installing' = 'downloading';
+  let at: FailableStep = 'downloading';
   try {
     await update.downloadAndInstall((event) => {
       if (event.event === 'Started') setState({ total: event.data.contentLength ?? 0 });
