@@ -16,6 +16,14 @@ How a version goes from `main` to users, and how to recover when a step fails. T
 - `release.yml` builds macOS (aarch64), Windows and Linux. When all three pass,
   `release-ready` publishes the release as Latest and the `update-homebrew` job
   updates `runkids/homebrew-tap`. A failed build leaves only a draft.
+- Windows and Linux packaging needs tools that tauri-bundler would download
+  anonymously from GitHub Releases (NSIS, WiX, linuxdeploy, AppRun). `release.yml`
+  caches them per Tauri CLI version and fills a miss with `gh release download`
+  and the token, because anonymous downloads can time out (v0.8.0 failed on
+  `http status: 504` during a GitHub incident). The URLs and hashes are written
+  for one CLI version. After a CLI bump the prefetch step is skipped, so the
+  bundler downloads the tools itself. Copy the new values from that version's
+  `crates/tauri-bundler` source.
 - A tag, once created, uses up its version number even if the build fails. That is
   why v0.0.6 and v0.0.8 were never published. Don't try to reuse a version.
 
@@ -35,6 +43,9 @@ Release Please honours a `Release-As: X.Y.Z` line in the body of a commit on `ma
      Example: v0.0.17's Linux upload failed with `other side closed`, and one
      rerun fixed it. The `could not find Cargo.toml` line in the same log is
      harmless and also appears in good runs.
+     A rerun runs the workflow file from the failed run's commit. To use a fix to
+     `release.yml`, start a new run from `main` with
+     `gh workflow run release.yml -f tag_name=vX.Y.Z`. It uploads to the same draft.
   3. A real code problem needs a fix PR, then a new release. The failed version
      stays a draft. Tell the user it was skipped and why. Don't move or delete the
      tag.

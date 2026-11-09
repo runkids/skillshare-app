@@ -164,6 +164,49 @@ jobs:
       - name: Run frontend regression tests
         run: pnpm test
 
+      # tauri-bundler downloads its packaging tools anonymously from GitHub Releases,
+      # which can time out (v0.8.0 failed twice on `http status: 504`). Cache them, and
+      # fill a cache miss with the token; the bundler skips tools that are already there.
+      # Names and hashes match @tauri-apps/cli 2.12.0 (crates/tauri-bundler); after a
+      # CLI bump, update them from that version's source.
+      - name: Read Tauri CLI version
+        id: tauri-cli
+        shell: bash
+        run: echo "version=$(node -p "require('./node_modules/@tauri-apps/cli/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Tauri bundler tools
+        uses: actions/cache@v4
+        with:
+          path: ~/AppData/Local/tauri
+          key: tauri-tools-${{ runner.os }}-${{ steps.tauri-cli.outputs.version }}
+
+      - name: Prefetch Tauri bundler tools
+        if: steps.tauri-cli.outputs.version == '2.12.0'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dir="$(cygpath -u "$LOCALAPPDATA")/tauri"
+          tmp="$(cygpath -u "$RUNNER_TEMP")"
+          nsis="$dir/NSIS"
+          utils="$nsis/Plugins/x86-unicode/additional"
+          mkdir -p "$dir"
+          if [ ! -e "$utils/nsis_tauri_utils.dll" ]; then
+            rm -rf "$nsis" "$dir/nsis-3.11"
+            gh release download nsis-3.11 -R tauri-apps/binary-releases -p nsis-3.11.zip -D "$tmp"
+            echo "ef7ff767e5cbd9edd22add3a32c9b8f4500bb10d  $tmp/nsis-3.11.zip" | sha1sum -c
+            unzip -q "$tmp/nsis-3.11.zip" -d "$dir"
+            mv "$dir/nsis-3.11" "$nsis"
+            mkdir -p "$utils"
+            gh release download nsis_tauri_utils-v0.5.3 -R tauri-apps/nsis-tauri-utils -p nsis_tauri_utils.dll -D "$utils"
+            echo "75197fee3c6a814fe035788d1c34ead39349b860  $utils/nsis_tauri_utils.dll" | sha1sum -c
+          fi
+          if [ ! -e "$dir/WixTools314/light.exe" ]; then
+            gh release download wix3141rtm -R wixtoolset/wix3 -p wix314-binaries.zip -D "$tmp"
+            echo "6ac824e1642d6f7277d0ed7ea09411a508f6116ba6fae0aa5f2c7daa2ff43d31  $tmp/wix314-binaries.zip" | sha256sum -c
+            unzip -q "$tmp/wix314-binaries.zip" -d "$dir/WixTools314"
+          fi
+
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
@@ -205,6 +248,39 @@ jobs:
 
       - name: Run frontend regression tests
         run: pnpm test
+
+      # tauri-bundler downloads its packaging tools anonymously from GitHub Releases,
+      # which can time out (v0.8.0 failed twice on `http status: 504`). Cache them, and
+      # fill a cache miss with the token; the bundler skips tools that are already there.
+      # Names and hashes match @tauri-apps/cli 2.12.0 (crates/tauri-bundler); after a
+      # CLI bump, update them from that version's source.
+      - name: Read Tauri CLI version
+        id: tauri-cli
+        shell: bash
+        run: echo "version=$(node -p "require('./node_modules/@tauri-apps/cli/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Tauri bundler tools
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/tauri
+          key: tauri-tools-${{ runner.os }}-${{ steps.tauri-cli.outputs.version }}
+
+      - name: Prefetch Tauri bundler tools
+        if: steps.tauri-cli.outputs.version == '2.12.0'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dir=~/.cache/tauri
+          mkdir -p "$dir"
+          get() {
+            [ -e "$dir/$4" ] && return
+            gh release download "$2" -R "$1" -p "$3" -O "$dir/$4" && chmod +x "$dir/$4"
+          }
+          get tauri-apps/binary-releases apprun-old AppRun-x86_64 AppRun-x86_64
+          get tauri-apps/binary-releases linuxdeploy-07333c6 linuxdeploy-x86_64.AppImage linuxdeploy-07333c6-x86_64.AppImage
+          # Optional, as in the bundler: linuxdeploy falls back to its built-in plugin.
+          get linuxdeploy/linuxdeploy-plugin-appimage continuous linuxdeploy-plugin-appimage-x86_64.AppImage linuxdeploy-plugin-appimage.AppImage || true
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
