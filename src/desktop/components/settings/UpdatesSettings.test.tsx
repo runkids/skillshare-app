@@ -255,6 +255,13 @@ describe('UpdatesSettings checks', () => {
     expect(screen.getByText('Checking every source... 0:08')).toBeInTheDocument();
   });
 
+  it('says the skills check failed instead of no updates', async () => {
+    mocks.checkResourcesNow.mockRejectedValueOnce('Some sources could not be checked');
+    renderUpdates();
+    fireEvent.click(screen.getByRole('button', { name: 'Check skills, agents and plugins' }));
+    expect(await screen.findByText('Couldn’t check every source')).toBeInTheDocument();
+  });
+
   it('says the app version could not be checked instead of up to date', async () => {
     vi.mocked(check).mockRejectedValue(new Error('network down'));
     renderUpdates();

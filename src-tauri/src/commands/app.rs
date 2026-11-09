@@ -113,12 +113,16 @@ pub async fn check_versions_now(
 }
 
 /// Re-run the skill, agent and plugin checks; slow, since each fetches its sources.
+/// Errs when a check failed: the kinds that answered are already published, and the
+/// failed kinds keep their last lists.
 #[tauri::command]
 pub async fn check_resources_now(
     app: tauri::AppHandle,
     state: State<'_, update_watch::UpdateState>,
 ) -> Result<update_watch::AvailableUpdates, String> {
-    update_watch::refresh_skills(&app).await;
+    if !update_watch::refresh_skills(&app).await {
+        return Err("Some skills, agents or plugins could not be checked".into());
+    }
     Ok(state.0.lock().await.clone())
 }
 
