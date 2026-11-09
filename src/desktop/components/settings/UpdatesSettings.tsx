@@ -504,7 +504,8 @@ export default function UpdatesSettings() {
             checking={versionsChecking}
             disabled={busy}
             onClick={() => {
-              clearCliUpgrade();
+              // "Restart to finish" keeps its card, CLI step included; only a finished run clears.
+              if (app.phase !== 'restart-failed') clearCliUpgrade();
               void checkNow();
             }}
           />
