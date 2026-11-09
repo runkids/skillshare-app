@@ -162,6 +162,27 @@ describe('UpdatesSettings app', () => {
     );
   });
 
+  it('never brings the row buttons back between the CLI and the app in Update both', async () => {
+    const update = appUpdate('', () => new Promise(() => {}));
+    mocks.updates.cli = 'v0.24.0';
+    mocks.upgradeCli.mockResolvedValue('v0.24.0');
+    renderUpdates();
+    const start = await screen.findByRole('button', { name: 'Update both' });
+    const shown: string[] = [];
+    const observer = new MutationObserver((records) =>
+      records.forEach((r) =>
+        r.addedNodes.forEach((n) => {
+          if (/Update and restart|Update CLI/.test(n.textContent ?? '')) shown.push('row button');
+        })
+      )
+    );
+    observer.observe(document.body, { childList: true, subtree: true });
+    fireEvent.click(start);
+    await waitFor(() => expect(update.downloadAndInstall).toHaveBeenCalled());
+    observer.disconnect();
+    expect(shown).toEqual([]);
+  });
+
   it('lists every step of Update both while the CLI still runs', async () => {
     appUpdate();
     mocks.updates.cli = 'v0.24.0';
