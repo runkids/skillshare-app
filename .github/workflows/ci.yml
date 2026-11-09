@@ -48,6 +48,9 @@ jobs:
       - name: Run tests
         run: pnpm test
 
+      - name: Test release scripts
+        run: pnpm test:release
+
       - name: Build
         run: pnpm build
 
