@@ -238,16 +238,14 @@ export default function UpdatesSettings() {
   const idle = !busy && !appStopped && cli.status !== 'error' && !rowsChecking;
   const both = idle && Boolean(appNew && cliNew);
 
-  const runCli = (withApp = false) =>
+  const runCli = (then?: () => unknown) =>
     upgradeCli({
       oldVersion: appInfo?.cliVersion,
       refresh,
       reloadView: () => reloadView(),
-      withApp,
+      then,
     });
-  const updateBoth = async () => {
-    if (await runCli(true)) await app.install();
-  };
+  const updateBoth = () => runCli(app.install);
   const updateApp = () => {
     clearCliUpgrade();
     void app.install();

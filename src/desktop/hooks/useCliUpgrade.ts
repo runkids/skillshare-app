@@ -47,17 +47,15 @@ interface UpgradeHooks {
   refresh: () => Promise<unknown>;
   /** Reload the web view, which now talks to the restarted server. */
   reloadView: () => void;
-  withApp?: boolean;
+  /** The app update of "Update both". It starts in the same tick the CLI step finishes, so
+   * no render shows the CLI done with the app not yet started. */
+  then?: () => unknown;
 }
 
 /** Upgrade the CLI through the app: it stops the server, upgrades, and restarts it. Resolves to success. */
-export async function upgradeCli({
-  oldVersion,
-  refresh,
-  reloadView,
-  withApp = false,
-}: UpgradeHooks) {
+export async function upgradeCli({ oldVersion, refresh, reloadView, then }: UpgradeHooks) {
   if (state.status === 'upgrading') return false;
+  const withApp = Boolean(then);
   setState({ status: 'upgrading', step: null, startedAt: Date.now(), error: null, withApp });
   try {
     const version = await tauriBridge.upgradeCli();
@@ -66,11 +64,13 @@ export async function upgradeCli({
     void checkVersionsNow().catch(() => {});
     const changed = Boolean(version) && version !== oldVersion;
     setState({ status: changed ? 'done' : 'up-to-date', newVersion: changed ? version : null });
+    then?.();
     return true;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (/already|up to date/i.test(msg)) {
       setState({ status: 'up-to-date' });
+      then?.();
       return true;
     }
     setState({ status: 'error', error: msg });
