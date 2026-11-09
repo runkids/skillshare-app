@@ -134,8 +134,6 @@ jobs:
             desc "Desktop GUI for Skillshare CLI"
             homepage "https://github.com/${GH_REPO}"
 
-            depends_on macos: ">= :catalina"
-
             app "skillshare.app"
 
             zap trash: [
