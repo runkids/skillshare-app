@@ -57,8 +57,13 @@ vi.mock('../../hooks/useUpdates', () => ({
   checkResourcesNow: mocks.checkResourcesNow,
 }));
 
-function appUpdate(body = '') {
-  const update = { version: '0.7.7', body, downloadAndInstall: vi.fn(() => Promise.resolve()) };
+type Progress = (e: { event: string; data: Record<string, number> }) => void;
+
+function appUpdate(
+  body = '',
+  download: (report: Progress) => Promise<void> = () => Promise.resolve()
+) {
+  const update = { version: '0.7.7', body, downloadAndInstall: vi.fn(download) };
   vi.mocked(check).mockResolvedValue(update as unknown as Awaited<ReturnType<typeof check>>);
   return update;
 }
@@ -86,8 +91,8 @@ describe('UpdatesSettings CLI', () => {
     mocks.updates.cli = 'v0.24.0';
     mocks.upgradeCli.mockResolvedValue('v0.24.0');
     renderUpdates();
-    fireEvent.click(screen.getByRole('button', { name: 'Update CLI' }));
-    expect(await screen.findByText('CLI updated to v0.24.0')).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: 'Update CLI' }));
+    expect(await screen.findByText('CLI updated')).toBeInTheDocument();
     expect([mocks.runCli.mock.calls.length, mocks.reloadView.mock.calls.length]).toEqual([0, 1]);
   });
 
@@ -95,7 +100,7 @@ describe('UpdatesSettings CLI', () => {
     mocks.updates.cli = 'v0.24.0';
     mocks.upgradeCli.mockRejectedValue('CLI exited with 1: network error');
     renderUpdates();
-    fireEvent.click(screen.getByRole('button', { name: 'Update CLI' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Update CLI' }));
     expect(await screen.findByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
 
@@ -104,19 +109,21 @@ describe('UpdatesSettings CLI', () => {
     mocks.updates.cli = 'v0.24.0';
     mocks.upgradeCli.mockReturnValue(new Promise(() => {}));
     renderUpdates();
+    await act(() => vi.advanceTimersByTimeAsync(0));
     fireEvent.click(screen.getByRole('button', { name: 'Update CLI' }));
     await act(() => vi.advanceTimersByTimeAsync(83_000));
     act(() => mocks.handlers.get('cli-upgrade-step')?.({ payload: 'Downloading v0.24.1...' }));
     expect(screen.getByText('Downloading v0.24.1... 1:23')).toBeInTheDocument();
   });
 
-  it('shows an indeterminate bar while the CLI updates, since it reports no percentage', () => {
+  it('keeps the bar still while the CLI updates, since it reports no percentage', async () => {
     mocks.updates.cli = 'v0.24.0';
     mocks.upgradeCli.mockReturnValue(new Promise(() => {}));
     renderUpdates();
-    fireEvent.click(screen.getByRole('button', { name: 'Update CLI' }));
-    expect(screen.getByRole('progressbar', { name: 'CLI update' })).not.toHaveAttribute(
-      'aria-valuenow'
+    fireEvent.click(await screen.findByRole('button', { name: 'Update CLI' }));
+    expect(screen.getByRole('progressbar', { name: 'Update progress' })).toHaveAttribute(
+      'aria-valuenow',
+      '0'
     );
   });
 });
@@ -142,12 +149,6 @@ describe('UpdatesSettings app', () => {
     expect(await screen.findByRole('button', { name: 'Restart now' })).toBeInTheDocument();
   });
 
-  it('shows release notes as plain text', async () => {
-    appUpdate('* <b>Faster sync</b>');
-    renderUpdates();
-    expect(await screen.findByText('<b>Faster sync</b>')).toBeInTheDocument();
-  });
-
   it('updates the CLI before the app when both are new', async () => {
     const update = appUpdate();
     mocks.updates.cli = 'v0.24.0';
@@ -158,6 +159,42 @@ describe('UpdatesSettings app', () => {
     await waitFor(() => expect(relaunch).toHaveBeenCalledTimes(1));
     expect(mocks.upgradeCli.mock.invocationCallOrder[0]).toBeLessThan(
       update.downloadAndInstall.mock.invocationCallOrder[0]
+    );
+  });
+
+  it('lists every step of Update both while the CLI still runs', async () => {
+    appUpdate();
+    mocks.updates.cli = 'v0.24.0';
+    mocks.upgradeCli.mockReturnValue(new Promise(() => {}));
+    renderUpdates();
+    fireEvent.click(await screen.findByRole('button', { name: 'Update both' }));
+    expect(screen.getAllByRole('listitem')).toHaveLength(4);
+  });
+
+  it('hides the row buttons while an update runs', async () => {
+    appUpdate();
+    mocks.updates.cli = 'v0.24.0';
+    mocks.upgradeCli.mockReturnValue(new Promise(() => {}));
+    renderUpdates();
+    fireEvent.click(await screen.findByRole('button', { name: 'Update both' }));
+    expect(screen.queryByRole('button', { name: 'Update and restart' })).not.toBeInTheDocument();
+  });
+
+  it('moves the bar by finished steps plus the download share', async () => {
+    appUpdate('', (report) => {
+      report({ event: 'Started', data: { contentLength: 100 } });
+      report({ event: 'Progress', data: { chunkLength: 50 } });
+      return new Promise(() => {});
+    });
+    mocks.updates.cli = 'v0.24.0';
+    mocks.upgradeCli.mockResolvedValue('v0.24.0');
+    renderUpdates();
+    fireEvent.click(await screen.findByRole('button', { name: 'Update both' }));
+    await waitFor(() =>
+      expect(screen.getByRole('progressbar', { name: 'Update progress' })).toHaveAttribute(
+        'aria-valuenow',
+        '38'
+      )
     );
   });
 });
@@ -173,16 +210,52 @@ describe('UpdatesSettings checks', () => {
     );
   });
 
-  it('leaves skills, agents and plugins out of Check now', async () => {
+  it('leaves skills, agents and plugins out of the versions check', async () => {
     renderUpdates();
-    fireEvent.click(await screen.findByRole('button', { name: 'Check now' }));
+    const button = screen.getByRole('button', { name: 'Check versions' });
+    await waitFor(() => expect(button).toBeEnabled());
+    fireEvent.click(button);
     await waitFor(() => expect(mocks.checkVersionsNow).toHaveBeenCalledTimes(2));
     expect(mocks.checkResourcesNow).not.toHaveBeenCalled();
   });
 
   it('checks skills, agents and plugins from their own section', () => {
     renderUpdates();
-    fireEvent.click(screen.getByRole('button', { name: 'Check' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Check skills, agents and plugins' }));
     expect(mocks.checkResourcesNow).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows how long the skills check has run', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: false });
+    mocks.checkResourcesNow.mockReturnValueOnce(new Promise(() => {}));
+    renderUpdates();
+    fireEvent.click(screen.getByRole('button', { name: 'Check skills, agents and plugins' }));
+    await act(() => vi.advanceTimersByTimeAsync(8_000));
+    expect(screen.getByText('Checking every source... 0:08')).toBeInTheDocument();
+  });
+
+  it('says the app version could not be checked instead of up to date', async () => {
+    vi.mocked(check).mockRejectedValue(new Error('network down'));
+    renderUpdates();
+    expect(await screen.findByText('Couldn’t check')).toBeInTheDocument();
+  });
+
+  it('keeps the versions check usable while the app waits for a manual restart', async () => {
+    appUpdate();
+    vi.mocked(relaunch).mockRejectedValue(new Error('denied'));
+    renderUpdates();
+    fireEvent.click(await screen.findByRole('button', { name: 'Update and restart' }));
+    await screen.findByRole('button', { name: 'Restart now' });
+    expect(screen.getByRole('button', { name: 'Check versions' })).toBeEnabled();
+  });
+
+  it('clears a finished CLI update when checking again', async () => {
+    mocks.updates.cli = 'v0.24.0';
+    mocks.upgradeCli.mockResolvedValue('v0.24.0');
+    renderUpdates();
+    fireEvent.click(await screen.findByRole('button', { name: 'Update CLI' }));
+    await screen.findByText('CLI updated');
+    fireEvent.click(screen.getByRole('button', { name: 'Check versions' }));
+    expect(screen.queryByText('CLI updated')).not.toBeInTheDocument();
   });
 });

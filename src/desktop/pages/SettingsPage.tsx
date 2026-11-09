@@ -16,8 +16,6 @@ import AboutSettings from '../components/settings/AboutSettings';
 import UpdatesSettings from '../components/settings/UpdatesSettings';
 import { isMacOS } from '../utils/platform';
 import { useEffect } from 'react';
-import { useAppUpdate } from '../hooks/useAppUpdate';
-import { useUpdates } from '../hooks/useUpdates';
 import { useTauri } from '../context/TauriContext';
 
 const TABS = [
@@ -32,16 +30,6 @@ const TABS = [
 export default function SettingsPage() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
-  const { available: appUpdateAvailable } = useAppUpdate();
-  const updates = useUpdates();
-  const pending =
-    Number(appUpdateAvailable || Boolean(updates.app)) +
-    Number(Boolean(updates.cli)) +
-    updates.skills.length +
-    updates.agents.length +
-    updates.plugins.length +
-    updates.repositories.length;
-  const badge = (tab: string) => (tab === 'updates' ? pending : 0);
   const { refresh: refreshAppInfo } = useTauri();
   // The CLI can be upgraded from its web UI or a terminal; re-read versions on open.
   useEffect(() => {
@@ -98,7 +86,6 @@ export default function SettingsPage() {
               type="button"
               onClick={() => setParams({ tab: id })}
               aria-current={activeTab === id ? 'page' : undefined}
-              aria-label={badge(id) > 0 ? `${label}, ${badge(id)} available` : undefined}
               className={`w-full flex items-center gap-2.5 h-9 px-3 text-sm rounded-[var(--r-ctl)] transition-colors ${
                 activeTab === id
                   ? 'bg-[var(--sel)] text-[var(--sel-ink)] font-semibold'
@@ -107,11 +94,6 @@ export default function SettingsPage() {
             >
               <Icon size={18} />
               <span className="flex-1 text-left">{label}</span>
-              {badge(id) > 0 && (
-                <span className="min-w-5 h-5 px-1.5 flex items-center justify-center text-[11px] font-bold rounded-full bg-[var(--ink)] text-[var(--surface)]">
-                  {badge(id)}
-                </span>
-              )}
             </button>
           ))}
         </nav>
