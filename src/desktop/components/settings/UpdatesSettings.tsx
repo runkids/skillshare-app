@@ -202,6 +202,8 @@ export default function UpdatesSettings() {
   const [cliCheckFailed, setCliCheckFailed] = useState(false);
   const [resourcesSince, setResourcesSince] = useState<number | null>(null);
   const [resourcesChecked, setResourcesChecked] = useState(0);
+  /** Why the last skills check missed some sources; `null` after a full check. */
+  const [resourcesError, setResourcesError] = useState<string | null>(null);
   const [notifyUpdate, setNotifyUpdate] = useState(true);
   const [notifyError, setNotifyError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -272,12 +274,13 @@ export default function UpdatesSettings() {
   };
   const checkResources = async () => {
     setResourcesSince(Date.now());
-    const ok = await checkResourcesNow().then(
-      () => true,
-      () => false
+    const error = await checkResourcesNow().then(
+      () => null,
+      (err: unknown) => (err instanceof Error ? err.message : String(err))
     );
     setResourcesSince(null);
-    if (ok) setResourcesChecked((n) => n + 1);
+    setResourcesError(error);
+    if (!error) setResourcesChecked((n) => n + 1);
   };
   const toggleNotify = async (enabled: boolean) => {
     setNotifyUpdate(enabled);
@@ -438,6 +441,18 @@ export default function UpdatesSettings() {
   ) : !cliNew ? (
     <StatusDot tone="ok">Up to date</StatusDot>
   ) : null;
+
+  const resourceRows = resources.map((r) => (
+    <SettingsRow
+      key={r.one}
+      label={`${r.names.length} ${r.names.length === 1 ? r.one : r.many}`}
+      hint={<span className="font-mono">{r.names.join(', ')}</span>}
+    >
+      <Button size="sm" variant="secondary" onClick={() => navigate(r.path)}>
+        Review
+      </Button>
+    </SettingsRow>
+  ));
 
   return (
     <div className="flex flex-col gap-7">
@@ -629,23 +644,25 @@ export default function UpdatesSettings() {
                   </span>
                 </div>
               </div>
+            ) : resourcesError !== null ? (
+              <>
+                <SettingsRow
+                  label="Couldn’t check every source"
+                  hint={
+                    <span title={resourcesError}>
+                      Some sources didn’t answer. Check your connection and try again.
+                    </span>
+                  }
+                />
+                {resourceRows}
+              </>
             ) : resources.length === 0 ? (
               <SettingsRow
                 label="No updates"
                 hint="Installed skills, agents and plugins match their sources."
               />
             ) : (
-              resources.map((r) => (
-                <SettingsRow
-                  key={r.one}
-                  label={`${r.names.length} ${r.names.length === 1 ? r.one : r.many}`}
-                  hint={<span className="font-mono">{r.names.join(', ')}</span>}
-                >
-                  <Button size="sm" variant="secondary" onClick={() => navigate(r.path)}>
-                    Review
-                  </Button>
-                </SettingsRow>
-              ))
+              resourceRows
             )}
             {resourcesChecked > 0 && resourcesSince === null && (
               <span
