@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.8.2](https://github.com/runkids/skillshare-app/compare/v0.8.1...v0.8.2) (2026-11-09)
+
+
+### Bug Fixes
+
+* **homebrew:** remove unsupported Catalina dependency ([#122](https://github.com/runkids/skillshare-app/issues/122)) ([3906486](https://github.com/runkids/skillshare-app/commit/3906486a358e35c75a7fa0c4a981b0ff8afab3b8))
+* **macos:** relaunch into the pinned Dock icon after an update ([#124](https://github.com/runkids/skillshare-app/issues/124)) ([fb45c69](https://github.com/runkids/skillshare-app/commit/fb45c69b6304c9809544d80f2db3ff9048b5f65d))
+* **updates:** say when the skills check could not reach every source ([#120](https://github.com/runkids/skillshare-app/issues/120)) ([ab7dfee](https://github.com/runkids/skillshare-app/commit/ab7dfeed801e47a9e4e6b7979e9fc4365c9e9eff))
+
 ## [0.8.1](https://github.com/runkids/skillshare-app/compare/v0.8.0...v0.8.1) (2026-11-09)
 
 
