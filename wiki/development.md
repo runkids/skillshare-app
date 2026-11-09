@@ -19,6 +19,7 @@ Run the same checks as CI (`.github/workflows/ci.yml`), either on the host or wi
 | Rust (in `src-tauri/`) | `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test` |
 | Docs | `python3 scripts/ai-context.py check` |
 | Release scripts | `pnpm test:release` |
+| Homebrew generator (macOS with Homebrew) | `pnpm test:homebrew` |
 
 `cargo clippy` in `src-tauri/` needs `../dist` to exist (`pnpm build` creates it; CI runs `mkdir -p ../dist`).
 
@@ -28,18 +29,37 @@ For UI changes, unit tests are not enough. Look at the running app:
 - `xdotool` is installed in the container, e.g. `docker compose exec dev xdotool search --name skillshare`. If a click moves the window off-screen, bring it back with `xdotool windowmove <id> 0 0`.
 - The container has no native file portal, so "reveal in folder" and similar shell integrations fail there. Check those on macOS.
 
+`pnpm test:homebrew` runs the generated cask through the installed Homebrew loader,
+without installing the app or downloading its DMG. The macOS CI job updates Homebrew
+first so deprecated DSL is checked against the current release.
+
+## Pre-PR review
+
+After verification, run `simplify` (or an equivalent simplification pass), then make
+an authorized local commit. Before pushing or opening a PR, run `code-review` with
+fresh Standards and Spec reviewers against a pinned base and HEAD. Give each reviewer
+the complete three-dot diff artifact and commit list; a clean working tree is not an
+empty committed diff. Use the user's agreed requirements as the Spec source when
+there is no separate issue or spec file.
+
+Resolve actionable findings, rerun affected checks, and review any changed hunks and
+their affected usages at the new HEAD. The gate is complete when both axis reports
+cover the final HEAD and no actionable findings remain. Include that SHA, the two
+review results and any verification limits in the PR's Verification section.
+
 ## Shipping a change
 
 The `skillshare-app-pr` skill walks through these steps.
 
 - Work in a worktree on a new branch from `origin/main`: `git worktree add -b <type>/<name> ../skillshare-app-<name> origin/main`. The main checkout is what the dev container runs, so keep it on a clean `main`. Run `pnpm install --frozen-lockfile` in a new worktree.
 - To see a change in the dev container, apply the branch diff to the main checkout temporarily: `git -C <worktree> diff --binary origin/main | git apply --binary`, then `touch src-tauri/src/lib.rs` so `tauri dev` rebuilds. Wait for a new `skillshare-app` PID (`pgrep -x skillshare-app`) before taking screenshots. Afterwards run `git checkout -- . && git clean -fd src src-tauri/src` in the main checkout. The app looks the same as `main` again, so tell the user that before they look at noVNC.
-- Commit with Conventional Commits; the body says why. The pre-commit hook runs lint-staged.
+- The current request determines authorization: changing files, committing/pushing, opening a PR, merging, and releasing are distinct actions. Stop at the authorized boundary; a request to open a PR does not authorize merging it.
+- Commit with Conventional Commits; the body says why. The pre-commit hook runs lint-staged. Complete "Pre-PR review" before pushing or opening the PR.
 - The PR body has two sections: **What** (the behavior change) and **Verification** (the commands run, with counts, and what was seen on screen).
-- `scripts/merge-pr.sh <pr>` waits for the checks and reruns a check that failed only because the runner's apt mirror timed out (`Install Linux dependencies … timed out`), up to 3 times. It squash-merges with `--admin` only when every check passes, and otherwise exits without merging. It takes minutes, so run it in the background.
+- Only when merging is authorized, `scripts/merge-pr.sh <pr>` waits for the checks and reruns a check that failed only because the runner's apt mirror timed out (`Install Linux dependencies … timed out`), up to 3 times. It squash-merges with `--admin` only when every check passes, and otherwise exits without merging. It takes minutes, so run it in the background.
 - To update an open PR with `main`, merge `origin/main` into the branch. Never rebase and force-push a pushed branch.
 - Two PRs that touch the same files: merge the first, merge `origin/main` into the second, then merge it.
-- After the merge, run `git pull --ff-only` in the main checkout and `git worktree remove` the worktree. Merging does not release; wait for the user to ask (`skillshare-app-release`).
+- After the merge, run `git pull --ff-only` in the main checkout and remove the worktree if `git worktree list` still lists it (the merge command may already have removed it). Merging does not release; wait for the user to ask (`skillshare-app-release`).
 
 ## Logs and state
 

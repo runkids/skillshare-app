@@ -35,6 +35,26 @@ test('generates a cask without an unsupported macOS dependency', () => {
       )
     );
     assert.match(cask, /app "skillshare\.app"/);
+    if (process.env.HOMEBREW_CASK_SMOKE === '1') {
+      const loaded = spawnSync(
+        'brew',
+        [
+          'ruby',
+          '-e',
+          'require "cask/cask_loader"; Cask::CaskLoader.load(ARGV.fetch(0))',
+          join(dir, 'homebrew-tap/Casks/skillshare-app.rb'),
+        ],
+        {
+          env: {
+            ...process.env,
+            HOMEBREW_DEVELOPER: '1',
+            HOMEBREW_NO_AUTO_UPDATE: '1',
+          },
+          encoding: 'utf8',
+        }
+      );
+      assert.equal(loaded.status, 0, loaded.error?.message ?? loaded.stderr);
+    }
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
