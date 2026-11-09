@@ -1,5 +1,6 @@
 import {
   INSTALL_STEPS,
+  installStepIndex,
   isInstallStopped,
   type FailableStep,
   type InstallPhase,
@@ -94,7 +95,7 @@ function listSteps({ cli, app, now }: UpdateRun, { cliLine, appLabel, downloadPe
       ? INSTALL_STEPS.indexOf('restarting')
       : app.phase === 'error'
         ? INSTALL_STEPS.indexOf(app.failedPhase ?? 'downloading')
-        : (INSTALL_STEPS as readonly InstallPhase[]).indexOf(app.phase);
+        : installStepIndex(app.phase);
   const installStepState = (step: InstallStep): StepState => {
     const at = INSTALL_STEPS.indexOf(step);
     if (at < currentInstallStep) return 'done';

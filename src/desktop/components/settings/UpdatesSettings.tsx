@@ -268,8 +268,8 @@ export default function UpdatesSettings() {
   const [appVersion, setAppVersion] = useState<string | null>(null);
   const [checkRunning, setCheckRunning] = useState(false);
   const [cliCheckFailed, setCliCheckFailed] = useState(false);
-  const [resourcesCheckStartedAt, setResourcesSince] = useState<number | null>(null);
-  const [resourcesCheckCount, setResourcesChecked] = useState(0);
+  const [resourcesCheckStartedAt, setResourcesCheckStartedAt] = useState<number | null>(null);
+  const [resourcesCheckCount, setResourcesCheckCount] = useState(0);
   /** Why the last skills check missed some sources; `null` after a full check. */
   const [resourcesError, setResourcesError] = useState<string | null>(null);
   const [notifyUpdate, setNotifyUpdate] = useState(true);
@@ -344,14 +344,14 @@ export default function UpdatesSettings() {
     setCheckRunning(false);
   };
   const checkResources = async () => {
-    setResourcesSince(Date.now());
+    setResourcesCheckStartedAt(Date.now());
     const error = await checkResourcesNow().then(
       () => null,
       (err: unknown) => (err instanceof Error ? err.message : String(err))
     );
-    setResourcesSince(null);
+    setResourcesCheckStartedAt(null);
     setResourcesError(error);
-    if (!error) setResourcesChecked((n) => n + 1);
+    if (!error) setResourcesCheckCount((n) => n + 1);
   };
   const toggleNotify = async (enabled: boolean) => {
     setNotifyUpdate(enabled);
