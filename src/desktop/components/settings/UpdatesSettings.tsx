@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getVersion } from '@tauri-apps/api/app';
 import { openUrl } from '@tauri-apps/plugin-opener';
@@ -16,7 +16,7 @@ import Switch from '../../../components/Switch';
 import { tauriBridge } from '../../api/tauri-bridge';
 import { useTauri } from '../../context/TauriContext';
 import { useProjects } from '../../context/ProjectContext';
-import { useAppUpdate } from '../../hooks/useAppUpdate';
+import { clearAppUpdateResult, useAppUpdate } from '../../hooks/useAppUpdate';
 import { clearCliUpgrade, upgradeCli, useCliUpgrade } from '../../hooks/useCliUpgrade';
 import { checkResourcesNow, checkVersionsNow, useUpdates } from '../../hooks/useUpdates';
 import {
@@ -217,6 +217,20 @@ export default function UpdatesSettings() {
     void checkNow();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- check the versions once on entry
   }, []);
+
+  // The progress card is cleared when the user leaves, unless an update is still running.
+  const appPhase = useRef(app.phase);
+  useEffect(() => {
+    appPhase.current = app.phase;
+  });
+  useEffect(
+    () => () => {
+      if ((APP_PHASES as readonly string[]).includes(appPhase.current)) return;
+      clearAppUpdateResult();
+      clearCliUpgrade();
+    },
+    []
+  );
 
   const cliRunning = cli.status === 'upgrading';
   const appRunning = (APP_PHASES as readonly string[]).includes(app.phase);

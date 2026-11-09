@@ -92,6 +92,12 @@ function runCheck(): Promise<void> {
   return inflight;
 }
 
+/** Forget a failed install or a restart that did not happen, so the row offers the update again. */
+export function clearAppUpdateResult() {
+  if (state.phase === 'error' || state.phase === 'restart-failed')
+    setState({ phase: 'idle', downloaded: 0, total: 0, installError: null, failedPhase: null });
+}
+
 /** Download and install the available update, then restart into it. */
 async function install() {
   const update = state.update;
