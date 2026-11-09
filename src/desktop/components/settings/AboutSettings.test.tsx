@@ -10,7 +10,6 @@ import { tauriBridge } from '../../api/tauri-bridge';
 vi.mock('@tauri-apps/api/core', () => ({ isTauri: () => true }));
 vi.mock('@tauri-apps/api/app', () => ({ getVersion: () => Promise.resolve('0.0.12') }));
 vi.mock('@tauri-apps/plugin-updater', () => ({ check: vi.fn() }));
-vi.mock('@tauri-apps/plugin-process', () => ({ relaunch: vi.fn() }));
 vi.mock('@tauri-apps/plugin-opener', () => ({ openUrl: vi.fn() }));
 vi.mock('../../context/TauriContext', () => ({ useTauri: () => ({ appInfo: null }) }));
 vi.mock('../../hooks/useUpdates', () => ({ useUpdates: () => ({ cli: null, app: null }) }));

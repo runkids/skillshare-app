@@ -6,7 +6,6 @@ import { JUST_UPDATED_KEY } from '../hooks/useAppUpdate';
 vi.mock('@tauri-apps/api/app', () => ({ getVersion: () => Promise.resolve('0.7.7') }));
 vi.mock('@tauri-apps/plugin-opener', () => ({ openUrl: vi.fn() }));
 vi.mock('@tauri-apps/plugin-updater', () => ({ check: vi.fn() }));
-vi.mock('@tauri-apps/plugin-process', () => ({ relaunch: vi.fn() }));
 
 beforeEach(() => localStorage.clear());
 

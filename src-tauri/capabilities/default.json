@@ -22,7 +22,6 @@
     },
     "dialog:default",
     "notification:default",
-    "updater:default",
-    "process:allow-restart"
+    "updater:default"
   ]
 }

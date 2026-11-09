@@ -211,6 +211,52 @@ pub async fn reset_all_data(
     Ok(())
 }
 
+/// Restart into the installed update. On macOS, Tauri's restart spawns the binary
+/// directly, and macOS keeps a process started that way behind the app in front. Like
+/// Sparkle, open the bundle through Launch Services so the new instance comes up in
+/// front, and quit a moment later. Outside a bundle, or if `open` fails, use Tauri's.
+#[tauri::command]
+pub async fn relaunch_app(
+    app: tauri::AppHandle,
+    server: State<'_, ServerManager>,
+) -> Result<(), String> {
+    #[cfg(not(target_os = "macos"))]
+    let _ = server;
+    #[cfg(target_os = "macos")]
+    if let Some(bundle) = std::env::current_exe()
+        .ok()
+        .and_then(|exe| app_bundle_of(&exe).map(std::path::Path::to_path_buf))
+    {
+        crate::APP_QUITTING.store(true, std::sync::atomic::Ordering::SeqCst);
+        // Free the port first, so the new instance starts its server where this one was.
+        let _ = server.stop().await;
+        match crate::utils::process::command("/usr/bin/open")
+            .arg("-n")
+            .arg(&bundle)
+            .status()
+            .await
+        {
+            Ok(status) if status.success() => {
+                // Sparkle waits 0.3s: quitting the front app right before the new one
+                // launches can leave the new one in the back.
+                tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+                app.exit(0);
+                return Ok(());
+            }
+            result => log::warn!("Could not open {}: {result:?}", bundle.display()),
+        }
+    }
+    app.restart()
+}
+
+/// The `.app` bundle that holds `exe` (`Name.app/Contents/MacOS/<binary>`), if any.
+#[cfg(target_os = "macos")]
+fn app_bundle_of(exe: &std::path::Path) -> Option<&std::path::Path> {
+    let macos = exe.parent()?;
+    let bundle = macos.parent()?.parent()?;
+    (macos.ends_with("Contents/MacOS") && bundle.extension()? == "app").then_some(bundle)
+}
+
 #[cfg(test)]
 mod tests {
     use super::global_config_exists;
@@ -243,5 +289,23 @@ mod tests {
         assert!(!global_config_exists(&store, &config));
         assert!(!global_config_exists(&ProjectStore::default(), &config));
         std::fs::remove_dir_all(root).ok();
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn finds_the_app_bundle_of_a_bundled_binary() {
+        let exe =
+            std::path::Path::new("/Applications/Skillshare.app/Contents/MacOS/skillshare-app");
+        assert_eq!(
+            super::app_bundle_of(exe),
+            Some(std::path::Path::new("/Applications/Skillshare.app"))
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn finds_no_app_bundle_for_a_dev_binary() {
+        let exe = std::path::Path::new("/repo/src-tauri/target/debug/skillshare-app");
+        assert_eq!(super::app_bundle_of(exe), None);
     }
 }

@@ -2,13 +2,13 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { check } from '@tauri-apps/plugin-updater';
-import { relaunch } from '@tauri-apps/plugin-process';
 import UpdatesSettings from './UpdatesSettings';
 import { JUST_UPDATED_KEY, resetAppUpdateForTests } from '../../hooks/useAppUpdate';
 import { resetCliUpgradeForTests } from '../../hooks/useCliUpgrade';
 
 const mocks = vi.hoisted(() => ({
   upgradeCli: vi.fn(),
+  relaunch: vi.fn(),
   runCli: vi.fn(),
   refresh: vi.fn(() => Promise.resolve()),
   reloadView: vi.fn(),
@@ -34,12 +34,12 @@ vi.mock('@tauri-apps/api/event', () => ({
   },
 }));
 vi.mock('@tauri-apps/plugin-updater', () => ({ check: vi.fn() }));
-vi.mock('@tauri-apps/plugin-process', () => ({ relaunch: vi.fn() }));
 vi.mock('@tauri-apps/plugin-opener', () => ({ openUrl: vi.fn() }));
 vi.mock('../../api/tauri-bridge', () => ({
   CLI_UPGRADE_STEP_EVENT: 'cli-upgrade-step',
   tauriBridge: {
     upgradeCli: mocks.upgradeCli,
+    relaunchApp: mocks.relaunch,
     runCli: mocks.runCli,
     getNotifyUpdate: () => Promise.resolve(true),
     setNotifyUpdate: () => Promise.resolve(),
@@ -131,10 +131,10 @@ describe('UpdatesSettings CLI', () => {
 describe('UpdatesSettings app', () => {
   it('restarts on its own after installing and remembers what changed', async () => {
     appUpdate('* faster sync');
-    vi.mocked(relaunch).mockResolvedValue(undefined);
+    mocks.relaunch.mockResolvedValue(undefined);
     renderUpdates();
     fireEvent.click(await screen.findByRole('button', { name: 'Update and restart' }));
-    await waitFor(() => expect(relaunch).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mocks.relaunch).toHaveBeenCalledTimes(1));
     expect(JSON.parse(localStorage.getItem(JUST_UPDATED_KEY) ?? '{}')).toEqual({
       version: '0.7.7',
       notes: '* faster sync',
@@ -143,7 +143,7 @@ describe('UpdatesSettings app', () => {
 
   it('offers a manual restart when the automatic one fails', async () => {
     appUpdate();
-    vi.mocked(relaunch).mockRejectedValue(new Error('denied'));
+    mocks.relaunch.mockRejectedValue(new Error('denied'));
     renderUpdates();
     fireEvent.click(await screen.findByRole('button', { name: 'Update and restart' }));
     expect(await screen.findByRole('button', { name: 'Restart now' })).toBeInTheDocument();
@@ -153,10 +153,10 @@ describe('UpdatesSettings app', () => {
     const update = appUpdate();
     mocks.updates.cli = 'v0.24.0';
     mocks.upgradeCli.mockResolvedValue('v0.24.0');
-    vi.mocked(relaunch).mockResolvedValue(undefined);
+    mocks.relaunch.mockResolvedValue(undefined);
     renderUpdates();
     fireEvent.click(await screen.findByRole('button', { name: 'Update both' }));
-    await waitFor(() => expect(relaunch).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mocks.relaunch).toHaveBeenCalledTimes(1));
     expect(mocks.upgradeCli.mock.invocationCallOrder[0]).toBeLessThan(
       update.downloadAndInstall.mock.invocationCallOrder[0]
     );
@@ -242,7 +242,7 @@ describe('UpdatesSettings checks', () => {
 
   it('keeps the versions check usable while the app waits for a manual restart', async () => {
     appUpdate();
-    vi.mocked(relaunch).mockRejectedValue(new Error('denied'));
+    mocks.relaunch.mockRejectedValue(new Error('denied'));
     renderUpdates();
     fireEvent.click(await screen.findByRole('button', { name: 'Update and restart' }));
     await screen.findByRole('button', { name: 'Restart now' });
@@ -253,7 +253,7 @@ describe('UpdatesSettings checks', () => {
     appUpdate();
     mocks.updates.cli = 'v0.24.0';
     mocks.upgradeCli.mockResolvedValue('v0.24.0');
-    vi.mocked(relaunch).mockRejectedValue(new Error('denied'));
+    mocks.relaunch.mockRejectedValue(new Error('denied'));
     renderUpdates();
     fireEvent.click(await screen.findByRole('button', { name: 'Update both' }));
     await screen.findByRole('button', { name: 'Restart now' });
