@@ -15,26 +15,6 @@ export function SettingsHeader({ title, action }: { title: string; action?: Reac
   );
 }
 
-/** Update progress. With `value` (0-100) it fills to that point; without, a band sweeps the track. */
-export function ProgressBar({ label, value }: { label: string; value?: number }) {
-  const known = value !== undefined;
-  return (
-    <div
-      role="progressbar"
-      aria-label={label}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuenow={known ? value : undefined}
-      className="relative h-2 rounded-full bg-[var(--sunken)] overflow-hidden"
-    >
-      <div
-        className={`progress-fill absolute inset-y-0 left-0 rounded-full ${known ? 'transition-[width] duration-300' : 'progress-sweep'}`}
-        style={{ width: known ? `${value}%` : '35%' }}
-      />
-    </div>
-  );
-}
-
 /** A titled group of settings. `heading` "h2" uses the theme's h2 token; "label" is a small caption. */
 export function SettingsSection({
   title,

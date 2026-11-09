@@ -2,18 +2,24 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getVersion } from '@tauri-apps/api/app';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import { AppWindow, ArrowDown, Check, Download, Terminal } from 'lucide-react';
+import {
+  AppWindow,
+  Check,
+  CircleAlert,
+  Download,
+  LoaderCircle,
+  RefreshCw,
+  Terminal,
+} from 'lucide-react';
 import Button from '../../../components/Button';
 import Switch from '../../../components/Switch';
 import { tauriBridge } from '../../api/tauri-bridge';
 import { useTauri } from '../../context/TauriContext';
 import { useProjects } from '../../context/ProjectContext';
 import { useAppUpdate } from '../../hooks/useAppUpdate';
-import { upgradeCli, useCliUpgrade } from '../../hooks/useCliUpgrade';
+import { clearCliUpgrade, upgradeCli, useCliUpgrade } from '../../hooks/useCliUpgrade';
 import { checkResourcesNow, checkVersionsNow, useUpdates } from '../../hooks/useUpdates';
-import { releaseNoteItems } from '../../utils/release-notes';
 import {
-  ProgressBar,
   SettingsHeader,
   SettingsList,
   SettingsRow,
@@ -23,8 +29,14 @@ import {
 
 const APP_REPO = 'https://github.com/runkids/skillshare-app';
 const CLI_REPO = 'https://github.com/runkids/skillshare';
+const COULD_NOT_CHECK = 'Couldn’t reach github.com. Check your connection and try again.';
 const v = (version: string) => `v${version.replace(/^v/, '')}`;
 const mb = (bytes: number) => (bytes / 1048576).toFixed(1);
+
+function elapsed(since: number, now: number) {
+  const s = Math.max(0, Math.floor((now - since) / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
 
 /** The webview ignores target=_blank, so hand external links to the system browser. */
 function ExternalLink({ href, children }: { href: string; children: ReactNode }) {
@@ -35,7 +47,7 @@ function ExternalLink({ href, children }: { href: string; children: ReactNode })
         e.preventDefault();
         void openUrl(href);
       }}
-      className="text-[13px] text-[var(--accent)] hover:underline"
+      className="ml-2 font-sans text-[13px] text-[var(--accent)] hover:underline"
     >
       {children}
     </a>
@@ -53,56 +65,130 @@ function Tile({ children }: { children: ReactNode }) {
   );
 }
 
-type StepState = 'done' | 'running' | 'pending' | 'failed';
+/** The 40px icon that leads the banner and the progress card. */
+function HeroIcon({ tone }: { tone: 'busy' | 'ok' | 'warn' }) {
+  const look = {
+    busy: 'bg-[var(--sunken)] text-[var(--ink)]',
+    ok: 'ss-pop bg-[var(--ok-bg)] text-[var(--ok)]',
+    warn: 'bg-[var(--warn-bg)] text-[var(--warn)]',
+  }[tone];
+  return (
+    <span
+      className={`w-10 h-10 shrink-0 flex items-center justify-center rounded-[11px] ${look}`}
+      aria-hidden="true"
+    >
+      {tone === 'busy' && <Download size={20} strokeWidth={1.75} />}
+      {tone === 'ok' && <Check size={20} strokeWidth={2.6} />}
+      {tone === 'warn' && <CircleAlert size={20} strokeWidth={1.75} />}
+    </span>
+  );
+}
 
-function Step({
-  state,
-  title,
-  children,
+/** A quiet Check in a section heading; the icon spins while the check runs. */
+function CheckButton({
+  label,
+  checking,
+  disabled,
+  onClick,
 }: {
-  state: StepState;
-  title: ReactNode;
-  children?: ReactNode;
+  label: string;
+  checking: boolean;
+  disabled?: boolean;
+  onClick: () => void;
 }) {
-  const marker = {
-    done: (
-      <span className="w-6 h-6 rounded-full bg-[var(--ok-bg)] text-[var(--ok)] flex items-center justify-center">
-        <Check size={14} strokeWidth={2.5} />
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      aria-busy={checking}
+      onClick={onClick}
+      disabled={disabled || checking}
+      className={`inline-flex items-center gap-1.5 h-7 px-2.5 -mr-2.5 rounded-[var(--r-ctl)] text-[13px] font-medium whitespace-nowrap text-[var(--ink-2)] enabled:hover:text-[var(--ink)] enabled:cursor-pointer ${disabled && !checking ? 'opacity-50' : ''}`}
+    >
+      <RefreshCw
+        size={14}
+        strokeWidth={1.75}
+        className={checking ? 'ss-spin' : undefined}
+        aria-hidden="true"
+      />
+      {checking ? 'Checking…' : 'Check'}
+    </button>
+  );
+}
+
+type StepState = 'done' | 'running' | 'pending' | 'failed';
+interface StepView {
+  key: string;
+  state: StepState;
+  title: string;
+  sub?: string;
+  /** Right-aligned value, e.g. the download percentage. */
+  right?: string;
+  /** Width (0-100) of the thin line under a running step that reports progress. */
+  line?: number;
+}
+
+function StepMarker({ state }: { state: StepState }) {
+  if (state === 'done')
+    return (
+      <span className="ss-pop w-6 h-6 shrink-0 rounded-full flex items-center justify-center bg-[var(--ok-bg)] text-[var(--ok)]">
+        <Check size={14} strokeWidth={2.6} />
       </span>
-    ),
-    running: (
-      <span className="w-6 h-6 rounded-full bg-[var(--accent-bg)] text-[var(--accent)] flex items-center justify-center">
-        <ArrowDown size={14} strokeWidth={2.5} />
+    );
+  if (state === 'running')
+    return (
+      <span className="w-6 h-6 shrink-0 flex items-center justify-center text-[var(--ink)]">
+        <LoaderCircle size={20} strokeWidth={2.25} className="ss-spin" />
       </span>
-    ),
-    pending: <span className="w-6 h-6 rounded-full border-2 border-[var(--line-2)]" />,
-    failed: (
-      <span className="w-6 h-6 rounded-full bg-[var(--bad-bg)] text-[var(--bad)] flex items-center justify-center font-bold text-sm">
+    );
+  if (state === 'failed')
+    return (
+      <span className="w-6 h-6 shrink-0 rounded-full flex items-center justify-center bg-[var(--warn-bg)] text-[var(--warn)] text-sm font-bold">
         !
       </span>
-    ),
-  }[state];
+    );
   return (
-    <li className="flex items-start gap-3.5 py-3.5">
-      <span className="shrink-0" aria-hidden="true">
-        {marker}
-      </span>
-      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+    <span className="w-6 h-6 shrink-0 box-border rounded-full border-2 border-[var(--line-2)]" />
+  );
+}
+
+function Step({ step }: { step: StepView }) {
+  return (
+    <li className="relative isolate flex items-start gap-3.5 py-3.5">
+      {step.state === 'done' && (
         <span
-          className={`text-sm font-semibold ${state === 'pending' ? 'text-[var(--ink-2)]' : 'text-[var(--ink)]'}`}
+          aria-hidden="true"
+          className="ss-flash absolute inset-y-0 -inset-x-5 -z-10 pointer-events-none"
+        />
+      )}
+      <span aria-hidden="true" className="flex shrink-0">
+        <StepMarker state={step.state} />
+      </span>
+      <div className="flex-1 min-w-0 flex flex-col gap-1">
+        <span
+          className={`text-sm font-semibold ${step.state === 'pending' ? 'text-[var(--ink-2)]' : 'text-[var(--ink)]'}`}
         >
-          {title}
+          {step.title}
         </span>
-        {children}
+        {step.sub && <span className="text-[13px] text-[var(--ink-2)]">{step.sub}</span>}
       </div>
+      {step.right && (
+        <span className="font-mono text-[13px] text-[var(--ink-2)] whitespace-nowrap">
+          {step.right}
+        </span>
+      )}
+      {step.line !== undefined && (
+        <span
+          aria-hidden="true"
+          className="absolute left-0 -bottom-px h-0.5 bg-[var(--ink)] transition-[width] duration-[450ms] ease-[cubic-bezier(.3,.7,.3,1)]"
+          style={{ width: `${step.line}%` }}
+        />
+      )}
     </li>
   );
 }
 
-function elapsedLabel(startedAt: number, now: number) {
-  const s = Math.max(0, Math.floor((now - startedAt) / 1000));
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-}
+const APP_PHASES = ['downloading', 'installing', 'restarting'] as const;
 
 export default function UpdatesSettings() {
   const navigate = useNavigate();
@@ -113,7 +199,9 @@ export default function UpdatesSettings() {
   const cli = useCliUpgrade();
   const [appVersion, setAppVersion] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
-  const [checkingResources, setCheckingResources] = useState(false);
+  const [cliCheckFailed, setCliCheckFailed] = useState(false);
+  const [resourcesSince, setResourcesSince] = useState<number | null>(null);
+  const [resourcesChecked, setResourcesChecked] = useState(0);
   const [notifyUpdate, setNotifyUpdate] = useState(true);
   const [notifyError, setNotifyError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -131,43 +219,53 @@ export default function UpdatesSettings() {
   }, []);
 
   const cliRunning = cli.status === 'upgrading';
+  const appRunning = (APP_PHASES as readonly string[]).includes(app.phase);
+  const busy = cliRunning || appRunning;
+  const ticking =
+    cliRunning || app.phase === 'installing' || app.phase === 'restarting' || !!resourcesSince;
   useEffect(() => {
-    if (!cliRunning) return;
+    if (!ticking) return;
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
-  }, [cliRunning]);
+  }, [ticking]);
 
   const appNew = app.version;
   const cliNew = cli.status === 'done' || cli.status === 'up-to-date' ? null : updates.cli;
-  const appBusy = app.phase !== 'idle' && app.phase !== 'error';
-  const busy = appBusy || cliRunning;
-  const both = Boolean(appNew && cliNew) && !busy;
-  const resources = [
-    { names: updates.skills, one: 'skill', many: 'skills', path: '/skills?tab=updates' },
-    { names: updates.agents, one: 'agent', many: 'agents', path: '/agents?tab=updates' },
-    { names: updates.plugins, one: 'plugin', many: 'plugins', path: '/plugins' },
-    {
-      names: updates.repositories,
-      one: 'tracked repository',
-      many: 'tracked repositories',
-      path: '/skills?tab=updates',
-    },
-  ].filter((r) => r.names.length > 0);
+  const appStopped = app.phase === 'error' || app.phase === 'restart-failed';
+  const versionsChecking = checking || app.status === 'checking';
+  // While the app waits for a manual restart, a check only spins its button.
+  const rowsChecking = versionsChecking && !busy && app.phase !== 'restart-failed';
+  const idle = !busy && !appStopped && cli.status !== 'error' && !rowsChecking;
+  const both = idle && Boolean(appNew && cliNew);
 
-  const runCli = () =>
-    upgradeCli({ oldVersion: appInfo?.cliVersion, refresh, reloadView: () => reloadView() });
+  const runCli = (withApp = false) =>
+    upgradeCli({
+      oldVersion: appInfo?.cliVersion,
+      refresh,
+      reloadView: () => reloadView(),
+      withApp,
+    });
   const updateBoth = async () => {
-    if (await runCli()) await app.install();
+    if (await runCli(true)) await app.install();
+  };
+  const updateApp = () => {
+    clearCliUpgrade();
+    void app.install();
   };
   const checkNow = async () => {
     setChecking(true);
-    await Promise.allSettled([app.recheck(), checkVersionsNow()]);
+    const [, versions] = await Promise.allSettled([app.recheck(), checkVersionsNow()]);
+    setCliCheckFailed(versions.status === 'rejected');
     setChecking(false);
   };
   const checkResources = async () => {
-    setCheckingResources(true);
-    await checkResourcesNow().catch(() => {});
-    setCheckingResources(false);
+    setResourcesSince(Date.now());
+    const ok = await checkResourcesNow().then(
+      () => true,
+      () => false
+    );
+    setResourcesSince(null);
+    if (ok) setResourcesChecked((n) => n + 1);
   };
   const toggleNotify = async (enabled: boolean) => {
     setNotifyUpdate(enabled);
@@ -180,102 +278,167 @@ export default function UpdatesSettings() {
     }
   };
 
-  const showProgress = cli.status !== 'idle' || app.phase !== 'idle';
-  const appNotes = releaseNoteItems(app.update?.body).slice(0, 5);
-  const appPct = app.total > 0 ? Math.min(100, Math.round((app.downloaded / app.total) * 100)) : 0;
+  const resources = [
+    { names: updates.skills, one: 'skill', many: 'skills', path: '/skills?tab=updates' },
+    { names: updates.agents, one: 'agent', many: 'agents', path: '/agents?tab=updates' },
+    { names: updates.plugins, one: 'plugin', many: 'plugins', path: '/plugins' },
+    {
+      names: updates.repositories,
+      one: 'tracked repository',
+      many: 'tracked repositories',
+      path: '/skills?tab=updates',
+    },
+  ].filter((r) => r.names.length > 0);
 
-  const appSteps = (): ReactNode => {
-    if (app.phase === 'idle') return null;
-    const downloadState: StepState =
-      app.phase === 'downloading' ? 'running' : app.phase === 'error' ? 'failed' : 'done';
-    return (
-      <>
-        <Step
-          state={downloadState}
-          title={
-            app.phase === 'error'
-              ? `skillshare App ${appNew ? v(appNew) : ''} did not install`
-              : `Download skillshare App ${appNew ? v(appNew) : ''}`
-          }
-        >
-          {app.phase === 'downloading' && (
-            <>
-              <ProgressBar label="Download" value={app.total > 0 ? appPct : undefined} />
-              <span className="text-[13px] text-[var(--ink-2)]">
-                {app.total > 0
-                  ? `${mb(app.downloaded)} of ${mb(app.total)} MB`
-                  : `${mb(app.downloaded)} MB`}
-              </span>
-            </>
-          )}
-          {app.phase === 'error' && (
-            <span className="text-[13px] text-[var(--bad)]">{app.installError}</span>
-          )}
-        </Step>
-        {app.phase !== 'error' && (
-          <Step
-            state={
-              app.phase === 'installing'
-                ? 'running'
-                : app.phase === 'downloading'
-                  ? 'pending'
-                  : 'done'
-            }
-            title="Install"
-          >
-            {app.phase === 'installing' && <ProgressBar label="Install" />}
-          </Step>
-        )}
-        {app.phase !== 'error' && (
-          <Step
-            state={
-              app.phase === 'restart-failed'
-                ? 'failed'
-                : app.phase === 'restarting'
-                  ? 'running'
-                  : 'pending'
-            }
-            title={app.phase === 'restart-failed' ? 'Restart to finish' : 'Restart'}
-          >
-            {app.phase === 'restarting' && <ProgressBar label="Restart" />}
-            <span className="text-[13px] text-[var(--ink-2)]">
-              {app.phase === 'restart-failed'
-                ? 'The update is installed but the app could not restart itself.'
-                : 'The app restarts by itself and reopens. You can keep working until then.'}
-            </span>
-          </Step>
-        )}
-      </>
+  // Every step of the update that runs shows from the start: the CLI, then the app.
+  const appPct = app.total > 0 ? Math.min(100, Math.round((app.downloaded / app.total) * 100)) : 0;
+  const cliLine = `${cli.step ?? 'Starting…'} ${elapsed(cli.startedAt, now)}`;
+  const cliTarget = cli.newVersion ?? cliNew ?? updates.cli;
+  const appLabel = appNew ? `skillshare App ${v(appNew)}` : 'skillshare App';
+  const cliLabel = cliTarget ? `skillshare CLI ${v(cliTarget)}` : 'skillshare CLI';
+  const cliInPlan = cli.status !== 'idle';
+  const appInPlan = app.phase !== 'idle' || (cli.withApp && (cliRunning || cli.status === 'error'));
+  const appAt =
+    app.phase === 'restart-failed'
+      ? 2
+      : app.phase === 'error'
+        ? APP_PHASES.indexOf(app.failedPhase ?? 'downloading')
+        : (APP_PHASES as readonly string[]).indexOf(app.phase);
+  const appStep = (i: number): StepState =>
+    i < appAt ? 'done' : i === appAt ? (appStopped ? 'failed' : 'running') : 'pending';
+
+  const steps: StepView[] = [];
+  if (cliInPlan) {
+    const state: StepState = cliRunning ? 'running' : cli.status === 'error' ? 'failed' : 'done';
+    steps.push({
+      key: 'cli',
+      state,
+      title:
+        state === 'running'
+          ? 'Updating the CLI'
+          : state === 'failed'
+            ? 'CLI update failed'
+            : cli.status === 'up-to-date'
+              ? 'The CLI is already on the latest version'
+              : `CLI updated to ${cli.newVersion ? v(cli.newVersion) : 'the latest version'}`,
+      sub:
+        state === 'running'
+          ? cliLine
+          : cli.status === 'done'
+            ? 'The server restarted on the new version.'
+            : undefined,
+    });
+  }
+  if (appInPlan) {
+    const download = appStep(0);
+    const install = appStep(1);
+    const restart = appStep(2);
+    steps.push(
+      {
+        key: 'download',
+        state: download,
+        title: `Download ${appLabel}`,
+        sub:
+          download === 'running'
+            ? app.total > 0
+              ? `${mb(app.downloaded)} of ${mb(app.total)} MB`
+              : `${mb(app.downloaded)} MB`
+            : undefined,
+        right: download === 'running' && app.total > 0 ? `${appPct}%` : undefined,
+        line: download === 'running' ? appPct : undefined,
+      },
+      {
+        key: 'install',
+        state: install,
+        title: 'Install',
+        sub: install === 'running' ? `Installing... ${elapsed(app.phaseAt, now)}` : undefined,
+      },
+      {
+        key: 'restart',
+        state: restart,
+        title: restart === 'failed' ? 'Restart to finish' : 'Restart',
+        sub: restart === 'running' ? `Restarting... ${elapsed(app.phaseAt, now)}` : undefined,
+      }
     );
-  };
+  }
+  const total = steps.length;
+  const running = steps.findIndex((s) => s.state === 'running');
+  const done = steps.filter((s) => s.state === 'done').length;
+  // The bar moves only on real progress: finished steps plus the download's share.
+  const overall = total
+    ? Math.round(((done + (app.phase === 'downloading' ? appPct / 100 : 0)) / total) * 100)
+    : 0;
+
+  let hero: { icon: 'busy' | 'ok' | 'warn'; title: string; label?: string; sub?: string };
+  let heroAction: ReactNode = null;
+  if (app.phase === 'restart-failed') {
+    hero = {
+      icon: 'warn',
+      title: 'Restart to finish',
+      sub: 'The update is installed but the app could not restart itself.',
+    };
+    heroAction = <Button onClick={app.restart}>Restart now</Button>;
+  } else if (app.phase === 'error') {
+    hero = {
+      icon: 'warn',
+      title: 'App update failed',
+      label: appLabel,
+      sub: app.installError ?? '',
+    };
+    heroAction = <Button onClick={app.install}>Retry</Button>;
+  } else if (cli.status === 'error') {
+    hero = { icon: 'warn', title: 'CLI update failed', label: cliLabel, sub: cli.error ?? '' };
+    heroAction = (
+      <Button onClick={() => void (cli.withApp ? updateBoth() : runCli())}>Retry</Button>
+    );
+  } else if (running >= 0) {
+    const onCli = steps[running].key === 'cli';
+    hero = {
+      icon: 'busy',
+      title: total > 1 ? `Updating ${running + 1} of ${total}` : 'Updating',
+      label: onCli ? cliLabel : appLabel,
+      sub: !onCli
+        ? 'The app restarts by itself and reopens. You can keep working until then.'
+        : total > 1
+          ? 'The CLI updates first. Then the app installs its update and restarts.'
+          : cliLine,
+    };
+  } else {
+    hero =
+      cli.status === 'done'
+        ? {
+            icon: 'ok',
+            title: 'CLI updated',
+            label: cli.newVersion ? `skillshare CLI ${v(cli.newVersion)}` : undefined,
+            sub: 'The server restarted on the new version.',
+          }
+        : { icon: 'ok', title: 'The CLI is already on the latest version' };
+  }
+
+  const appCheckFailed = app.status === 'error';
+  const appStatus = rowsChecking ? null : appCheckFailed ? (
+    <StatusDot tone="warn">Couldn’t check</StatusDot>
+  ) : !appNew ? (
+    <StatusDot tone="ok">Up to date</StatusDot>
+  ) : null;
+  const cliStatus = rowsChecking ? null : cliCheckFailed ? (
+    <StatusDot tone="warn">Couldn’t check</StatusDot>
+  ) : !cliNew ? (
+    <StatusDot tone="ok">Up to date</StatusDot>
+  ) : null;
 
   return (
     <div className="flex flex-col gap-7">
-      <SettingsHeader
-        title="Updates"
-        action={
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={checkNow}
-            loading={checking}
-            disabled={busy}
-          >
-            Check now
-          </Button>
-        }
-      />
+      <SettingsHeader title="Updates" />
 
       {both && (
         <section
           aria-label="Update the app and the CLI"
-          className="flex items-center gap-4 px-5 py-[18px] rounded-[var(--r-box)] bg-[var(--surface)] shadow-[var(--sh-box)]"
+          className="flex flex-wrap items-center gap-4 px-5 py-[18px] rounded-[var(--r-box)] bg-[var(--surface)] shadow-[var(--sh-box)]"
           style={{ border: 'var(--frame)' }}
         >
-          <span className="w-10 h-10 shrink-0 flex items-center justify-center rounded-[var(--r-ctl)] bg-[var(--accent-bg)] text-[var(--accent)]">
-            <Download size={20} />
-          </span>
-          <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+          <HeroIcon tone="busy" />
+          <div className="flex-1 basis-60 min-w-0 flex flex-col gap-0.5">
             <span style={{ font: 'var(--h2)', letterSpacing: 'var(--h2-track)' }}>
               New versions of the app and the CLI
             </span>
@@ -283,172 +446,141 @@ export default function UpdatesSettings() {
               The CLI updates first. Then the app installs its update and restarts.
             </span>
           </div>
-          <Button size="lg" onClick={updateBoth}>
-            Update both
-          </Button>
+          <Button onClick={updateBoth}>Update both</Button>
         </section>
       )}
 
-      {showProgress && (
-        <section aria-label="Update progress" aria-live="polite">
-          <ol
-            className="m-0 list-none px-5 py-1.5 rounded-[var(--r-box)] bg-[var(--surface)] shadow-[var(--sh-box)] [&>*+*]:[border-top:var(--sep)]"
-            style={{ border: 'var(--frame)' }}
-          >
-            {cli.status !== 'idle' && (
-              <Step
-                state={
-                  cli.status === 'upgrading'
-                    ? 'running'
-                    : cli.status === 'error'
-                      ? 'failed'
-                      : 'done'
-                }
-                title={
-                  cli.status === 'upgrading'
-                    ? 'Updating the CLI'
-                    : cli.status === 'done'
-                      ? `CLI updated to ${cli.newVersion ? v(cli.newVersion) : 'the latest version'}`
-                      : cli.status === 'up-to-date'
-                        ? 'The CLI is already on the latest version'
-                        : 'The CLI update failed'
-                }
-              >
-                {cli.status === 'upgrading' && <ProgressBar label="CLI update" />}
-                <span
-                  className={`text-[13px] ${cli.status === 'error' ? 'text-[var(--bad)]' : 'text-[var(--ink-2)]'}`}
-                >
-                  {cli.status === 'upgrading' &&
-                    `${cli.step ?? 'Starting…'} ${elapsedLabel(cli.startedAt, now)}`}
-                  {cli.status === 'done' && 'The server restarted on the new version.'}
-                  {cli.status === 'error' && cli.error}
-                </span>
-              </Step>
-            )}
-            {appSteps()}
-          </ol>
-        </section>
-      )}
-
-      <SettingsSection title="Versions" heading="h2">
-        <SettingsList>
-          <div>
-            <div className="flex items-center gap-3.5 px-4 py-4">
-              <Tile>
-                <AppWindow size={16} />
-              </Tile>
-              <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                <span className="text-sm font-semibold">skillshare App</span>
-                <span className="font-mono text-[13px] text-[var(--ink-2)]">
-                  {appVersion ? v(appVersion) : '…'}
-                  {appNew && (
-                    <>
-                      {' '}
-                      <span className="text-[var(--ink-3)]">→</span>{' '}
-                      <b className="text-[var(--ink)]">{v(appNew)}</b>
-                    </>
-                  )}
-                </span>
-              </div>
-              {appNew && app.phase === 'idle' && (
-                <Button
-                  size="sm"
-                  variant={both || cliNew ? 'secondary' : 'primary'}
-                  onClick={app.install}
-                >
-                  Update and restart
-                </Button>
-              )}
-              {app.phase === 'error' && (
-                <Button size="sm" onClick={app.install}>
-                  Retry
-                </Button>
-              )}
-              {app.phase === 'restart-failed' && (
-                <Button size="sm" onClick={app.restart}>
-                  Restart now
-                </Button>
-              )}
-              {!appNew && app.status !== 'checking' && <StatusDot tone="ok">Up to date</StatusDot>}
-            </div>
-            {appNew && (
-              <div
-                className="flex flex-col gap-1.5 px-4 pt-3.5 pb-4"
-                style={{ borderTop: 'var(--sep)' }}
-              >
-                <span className="text-[13px] font-semibold">What’s new</span>
-                {appNotes.length > 0 && (
-                  <ul className="m-0 pl-[18px] text-[13px] text-[var(--ink-2)] flex flex-col gap-[3px]">
-                    {appNotes.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
+      {total > 0 && (
+        <section
+          aria-label="Update progress"
+          aria-live="polite"
+          className="flex flex-col gap-4 px-5 py-[18px] overflow-hidden rounded-[var(--r-box)] bg-[var(--surface)] shadow-[var(--sh-box)]"
+          style={{ border: 'var(--frame)' }}
+        >
+          <div className="flex flex-wrap items-center gap-4">
+            <HeroIcon tone={hero.icon} />
+            <div className="flex-1 basis-60 min-w-0 flex flex-col gap-0.5">
+              <div className="text-base font-semibold text-[var(--ink)]">
+                {hero.title}
+                {hero.label && (
+                  <span className="ml-3 font-mono text-sm font-medium text-[var(--ink-2)]">
+                    {hero.label}
+                  </span>
                 )}
-                <span>
-                  <ExternalLink href={`${APP_REPO}/releases/tag/${v(appNew)}`}>
-                    Full release notes
-                  </ExternalLink>
-                </span>
               </div>
+              {hero.sub && <div className="text-[13px] text-[var(--ink-2)]">{hero.sub}</div>}
+            </div>
+            {heroAction}
+          </div>
+          <div
+            role="progressbar"
+            aria-label="Update progress"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={overall}
+            className="relative h-1.5 rounded-full bg-[var(--sunken)] overflow-hidden"
+          >
+            <span
+              className="block h-full rounded-[inherit] bg-[var(--ink)] transition-[width] duration-[450ms] ease-[cubic-bezier(.3,.7,.3,1)]"
+              style={{ width: `${overall}%` }}
+            />
+          </div>
+          {total > 1 && (
+            <ol className="m-0 p-0 list-none [border-top:var(--sep)] [&>*+*]:[border-top:var(--sep)]">
+              {steps.map((step) => (
+                <Step key={step.key} step={step} />
+              ))}
+            </ol>
+          )}
+        </section>
+      )}
+
+      <SettingsSection
+        title="Versions"
+        heading="h2"
+        action={
+          <CheckButton
+            label="Check versions"
+            checking={versionsChecking}
+            disabled={busy}
+            onClick={() => {
+              clearCliUpgrade();
+              void checkNow();
+            }}
+          />
+        }
+      >
+        <SettingsList>
+          <div className="flex flex-wrap items-center gap-3.5 p-4">
+            <Tile>
+              <AppWindow size={16} />
+            </Tile>
+            <div className="flex-1 basis-[200px] min-w-0 flex flex-col gap-0.5">
+              <span className="text-sm font-semibold">skillshare App</span>
+              <span className="font-mono text-[13px] text-[var(--ink-2)]">
+                {appVersion ? v(appVersion) : '…'}
+                {appNew && !rowsChecking && (
+                  <>
+                    {` → ${v(appNew)} `}
+                    <ExternalLink href={`${APP_REPO}/releases/tag/${v(appNew)}`}>
+                      Release notes
+                    </ExternalLink>
+                  </>
+                )}
+              </span>
+              {appCheckFailed && !rowsChecking && (
+                <span className="text-[13px] text-[var(--ink-2)]" title={app.error ?? undefined}>
+                  {COULD_NOT_CHECK}
+                </span>
+              )}
+            </div>
+            {idle && appNew ? (
+              <Button size="sm" variant={both ? 'secondary' : 'primary'} onClick={updateApp}>
+                Update and restart
+              </Button>
+            ) : (
+              appStatus
             )}
           </div>
 
-          <div>
-            <div className="flex items-center gap-3.5 px-4 py-4">
-              <Tile>
-                <Terminal size={16} />
-              </Tile>
-              <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                <span className="flex items-center gap-2 text-sm font-semibold">
-                  skillshare CLI
-                  {appInfo?.cliSource && (
-                    <span className="font-mono text-[11px] font-medium px-1.5 py-0.5 rounded-[var(--r-tag)] bg-[var(--sunken)] text-[var(--ink-2)]">
-                      {appInfo.cliSource}
-                    </span>
-                  )}
-                </span>
-                <span className="font-mono text-[13px] text-[var(--ink-2)]">
-                  {appInfo?.cliVersion ? v(appInfo.cliVersion) : 'Unknown'}
-                  {cliNew && (
-                    <>
-                      {' '}
-                      <span className="text-[var(--ink-3)]">→</span>{' '}
-                      <b className="text-[var(--ink)]">{v(cliNew)}</b>
-                    </>
-                  )}
-                </span>
-              </div>
-              {cliNew && !cliRunning && cli.status !== 'error' && (
-                <Button
-                  size="sm"
-                  variant={both || appNew ? 'secondary' : 'primary'}
-                  onClick={runCli}
-                >
-                  Update CLI
-                </Button>
-              )}
-              {cli.status === 'error' && (
-                <Button size="sm" onClick={runCli}>
-                  Retry
-                </Button>
-              )}
-              {cliRunning && <StatusDot tone="accent">Updating</StatusDot>}
-              {!cliNew && !cliRunning && cli.status !== 'error' && (
-                <StatusDot tone="ok">Up to date</StatusDot>
+          <div className="flex flex-wrap items-center gap-3.5 p-4">
+            <Tile>
+              <Terminal size={16} />
+            </Tile>
+            <div className="flex-1 basis-[200px] min-w-0 flex flex-col gap-0.5">
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                skillshare CLI
+                {appInfo?.cliSource && (
+                  <span className="font-mono text-[11px] font-medium px-1.5 py-0.5 rounded-[var(--r-tag)] bg-[var(--sunken)] text-[var(--ink-2)]">
+                    {appInfo.cliSource}
+                  </span>
+                )}
+              </span>
+              <span className="font-mono text-[13px] text-[var(--ink-2)]">
+                {appInfo?.cliVersion ? v(appInfo.cliVersion) : 'Unknown'}
+                {cliNew && !rowsChecking && (
+                  <>
+                    {` → ${v(cliNew)} `}
+                    <ExternalLink href={`${CLI_REPO}/releases/tag/${v(cliNew)}`}>
+                      Release notes
+                    </ExternalLink>
+                  </>
+                )}
+              </span>
+              {cliCheckFailed && !rowsChecking && (
+                <span className="text-[13px] text-[var(--ink-2)]">{COULD_NOT_CHECK}</span>
               )}
             </div>
-            {cliNew && (
-              <div
-                className="flex items-center gap-3 px-4 py-3"
-                style={{ borderTop: 'var(--sep)' }}
+            {idle && cliNew ? (
+              <Button
+                size="sm"
+                variant={both ? 'secondary' : 'primary'}
+                onClick={() => void runCli()}
               >
-                <span className="flex-1 text-[13px] text-[var(--ink-2)]">
-                  The dashboard reloads when the CLI update finishes.
-                </span>
-                <ExternalLink href={`${CLI_REPO}/releases/tag/${v(cliNew)}`}>
-                  Release notes
-                </ExternalLink>
-              </div>
+                Update CLI
+              </Button>
+            ) : (
+              cliStatus
             )}
           </div>
         </SettingsList>
@@ -458,36 +590,60 @@ export default function UpdatesSettings() {
         title="Skills, agents and plugins"
         heading="h2"
         action={
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={checkResources}
-            loading={checkingResources}
-          >
-            Check
-          </Button>
+          <CheckButton
+            label="Check skills, agents and plugins"
+            checking={resourcesSince !== null}
+            onClick={() => void checkResources()}
+          />
         }
       >
-        <SettingsList>
-          {resources.length === 0 ? (
-            <SettingsRow
-              label="No updates"
-              hint="Installed skills, agents and plugins match their sources."
-            />
-          ) : (
-            resources.map((r) => (
+        <div aria-live="polite">
+          <SettingsList className="relative isolate overflow-hidden">
+            {resourcesSince !== null ? (
+              <div className="flex items-center gap-3.5 min-h-14 px-4 py-3">
+                <span
+                  aria-hidden="true"
+                  className="w-6 h-6 shrink-0 flex items-center justify-center text-[var(--ink)]"
+                >
+                  <LoaderCircle size={20} strokeWidth={2.25} className="ss-spin" />
+                </span>
+                <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                  <span className="text-sm font-semibold text-[var(--ink)]">
+                    Checking skills, agents and plugins
+                  </span>
+                  <span className="text-[13px] text-[var(--ink-2)]">
+                    {`Checking every source... ${elapsed(resourcesSince, now)}`}
+                  </span>
+                </div>
+              </div>
+            ) : resources.length === 0 ? (
               <SettingsRow
-                key={r.one}
-                label={`${r.names.length} ${r.names.length === 1 ? r.one : r.many}`}
-                hint={<span className="font-mono">{r.names.join(', ')}</span>}
-              >
-                <Button size="sm" variant="secondary" onClick={() => navigate(r.path)}>
-                  Review
-                </Button>
-              </SettingsRow>
-            ))
-          )}
-        </SettingsList>
+                label="No updates"
+                hint="Installed skills, agents and plugins match their sources."
+              />
+            ) : (
+              resources.map((r) => (
+                <SettingsRow
+                  key={r.one}
+                  label={`${r.names.length} ${r.names.length === 1 ? r.one : r.many}`}
+                  hint={<span className="font-mono">{r.names.join(', ')}</span>}
+                >
+                  <Button size="sm" variant="secondary" onClick={() => navigate(r.path)}>
+                    Review
+                  </Button>
+                </SettingsRow>
+              ))
+            )}
+            {resourcesChecked > 0 && resourcesSince === null && (
+              <span
+                key={resourcesChecked}
+                aria-hidden="true"
+                className="ss-flash absolute inset-0 -z-10 pointer-events-none"
+                style={{ borderTop: 0 }}
+              />
+            )}
+          </SettingsList>
+        </div>
       </SettingsSection>
 
       <SettingsList>

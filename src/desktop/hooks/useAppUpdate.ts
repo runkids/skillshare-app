@@ -22,6 +22,10 @@ interface UpdateState {
   /** Download size in bytes; 0 when the server did not send one. */
   total: number;
   installError: string | null;
+  /** When the current phase started, for the elapsed time of steps without a percentage. */
+  phaseAt: number;
+  /** The step that was running when the install failed. */
+  failedPhase: 'downloading' | 'installing' | null;
 }
 
 const INITIAL: UpdateState = {
@@ -32,6 +36,8 @@ const INITIAL: UpdateState = {
   downloaded: 0,
   total: 0,
   installError: null,
+  phaseAt: 0,
+  failedPhase: null,
 };
 
 /** localStorage key for the update being applied, read after the restart to say what changed. */
@@ -49,7 +55,8 @@ let autoChecked = false;
 const listeners = new Set<() => void>();
 
 function setState(next: Partial<UpdateState>) {
-  state = { ...state, ...next };
+  const phaseAt = next.phase && next.phase !== state.phase ? Date.now() : state.phaseAt;
+  state = { ...state, phaseAt, ...next };
   listeners.forEach((l) => l());
 }
 
@@ -89,16 +96,30 @@ function runCheck(): Promise<void> {
 async function install() {
   const update = state.update;
   if (!update || (state.phase !== 'idle' && state.phase !== 'error')) return;
-  setState({ phase: 'downloading', downloaded: 0, total: 0, installError: null });
+  setState({
+    phase: 'downloading',
+    downloaded: 0,
+    total: 0,
+    installError: null,
+    failedPhase: null,
+  });
+  let at: 'downloading' | 'installing' = 'downloading';
   try {
     await update.downloadAndInstall((event) => {
       if (event.event === 'Started') setState({ total: event.data.contentLength ?? 0 });
       if (event.event === 'Progress')
         setState({ downloaded: state.downloaded + event.data.chunkLength });
-      if (event.event === 'Finished') setState({ phase: 'installing' });
+      if (event.event === 'Finished') {
+        at = 'installing';
+        setState({ phase: 'installing' });
+      }
     });
   } catch (err) {
-    setState({ phase: 'error', installError: err instanceof Error ? err.message : String(err) });
+    setState({
+      phase: 'error',
+      failedPhase: at,
+      installError: err instanceof Error ? err.message : String(err),
+    });
     return;
   }
   try {
@@ -136,6 +157,8 @@ export function useAppUpdate() {
     downloaded: s.downloaded,
     total: s.total,
     installError: s.installError,
+    phaseAt: s.phaseAt,
+    failedPhase: s.failedPhase,
     install,
     restart: () => relaunch().catch(() => setState({ phase: 'restart-failed' })),
   };

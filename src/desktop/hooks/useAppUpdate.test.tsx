@@ -1,9 +1,9 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, renderHook, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { check } from '@tauri-apps/plugin-updater';
 import SettingsPage from '../pages/SettingsPage';
-import { resetAppUpdateForTests } from './useAppUpdate';
+import { resetAppUpdateForTests, useAppUpdate } from './useAppUpdate';
 
 vi.mock('@tauri-apps/api/core', () => ({ isTauri: () => true }));
 vi.mock('@tauri-apps/plugin-updater', () => ({ check: vi.fn() }));
@@ -36,41 +36,20 @@ beforeEach(() => {
   updates.skills = [];
 });
 
-describe('settings nav update badge', () => {
-  it('stays hidden when no update is available', async () => {
+describe('app update check', () => {
+  it('checks only once per session across remounts', async () => {
     mockCheck.mockResolvedValue(null);
-    renderSettings();
+    renderHook(() => useAppUpdate()).unmount();
+    renderHook(() => useAppUpdate());
     await waitFor(() => expect(mockCheck).toHaveBeenCalledTimes(1));
-    expect(screen.getByRole('button', { name: 'Updates' })).toBeInTheDocument();
   });
+});
 
-  it('appears with an accessible name when an update is available', async () => {
-    mockCheck.mockResolvedValue({ version: '9.9.9' } as Awaited<ReturnType<typeof check>>);
-    renderSettings();
-    expect(await screen.findByRole('button', { name: 'Updates, 1 available' })).toHaveTextContent(
-      '1'
-    );
-  });
-
-  it('stays hidden when the update check fails', async () => {
-    mockCheck.mockRejectedValue(new Error('offline'));
-    renderSettings();
-    await waitFor(() => expect(mockCheck).toHaveBeenCalledTimes(1));
-    expect(screen.getByRole('button', { name: 'Updates' })).toBeInTheDocument();
-  });
-
-  it('counts a newer CLI and resource updates on the Updates tab', async () => {
-    mockCheck.mockResolvedValue(null);
+describe('settings nav', () => {
+  it('shows no update count on the Updates tab', () => {
     updates.cli = 'v0.24.0';
     updates.skills = ['pdf', 'docx'];
     renderSettings();
-    expect(await screen.findByRole('button', { name: 'Updates, 3 available' })).toBeInTheDocument();
-  });
-
-  it('checks only once per session across remounts', async () => {
-    mockCheck.mockResolvedValue(null);
-    renderSettings().unmount();
-    renderSettings();
-    await waitFor(() => expect(mockCheck).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole('button', { name: 'Updates' })).toHaveTextContent(/^Updates$/);
   });
 });

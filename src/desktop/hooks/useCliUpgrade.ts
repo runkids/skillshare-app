@@ -13,6 +13,8 @@ interface CliUpgradeState {
   startedAt: number;
   newVersion: string | null;
   error: string | null;
+  /** The app update runs after this one ("Update both"), so its steps show from the start. */
+  withApp: boolean;
 }
 
 const INITIAL: CliUpgradeState = {
@@ -21,6 +23,7 @@ const INITIAL: CliUpgradeState = {
   startedAt: 0,
   newVersion: null,
   error: null,
+  withApp: false,
 };
 
 // Module-level store so the upgrade keeps its progress when the user leaves the Updates page.
@@ -44,12 +47,18 @@ interface UpgradeHooks {
   refresh: () => Promise<unknown>;
   /** Reload the web view, which now talks to the restarted server. */
   reloadView: () => void;
+  withApp?: boolean;
 }
 
 /** Upgrade the CLI through the app: it stops the server, upgrades, and restarts it. Resolves to success. */
-export async function upgradeCli({ oldVersion, refresh, reloadView }: UpgradeHooks) {
+export async function upgradeCli({
+  oldVersion,
+  refresh,
+  reloadView,
+  withApp = false,
+}: UpgradeHooks) {
   if (state.status === 'upgrading') return false;
-  setState({ status: 'upgrading', step: null, startedAt: Date.now(), error: null });
+  setState({ status: 'upgrading', step: null, startedAt: Date.now(), error: null, withApp });
   try {
     const version = await tauriBridge.upgradeCli();
     await refresh();
@@ -67,6 +76,11 @@ export async function upgradeCli({ oldVersion, refresh, reloadView }: UpgradeHoo
     setState({ status: 'error', error: msg });
     return false;
   }
+}
+
+/** Forget a finished upgrade, so a new check starts from the versions alone. */
+export function clearCliUpgrade() {
+  if (state.status !== 'upgrading') setState(INITIAL);
 }
 
 export function useCliUpgrade() {
