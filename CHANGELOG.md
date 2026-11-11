@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/runkids/skillshare-app/compare/v0.8.2...v0.9.0) (2026-11-11)
+
+
+### Features
+
+* **updates:** honor the shared automatic check preference ([#126](https://github.com/runkids/skillshare-app/issues/126)) ([e6232e1](https://github.com/runkids/skillshare-app/commit/e6232e168d43765062aefdf7f6d6af71faa70e04))
+
 ## [0.8.2](https://github.com/runkids/skillshare-app/compare/v0.8.1...v0.8.2) (2026-11-09)
 
 
