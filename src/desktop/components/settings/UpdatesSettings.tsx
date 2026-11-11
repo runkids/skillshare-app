@@ -23,7 +23,8 @@ import {
   useAppUpdate,
 } from '../../hooks/useAppUpdate';
 import { clearCliUpgrade, upgradeCli, useCliUpgrade } from '../../hooks/useCliUpgrade';
-import { checkResourcesNow, checkVersionsNow, useUpdates } from '../../hooks/useUpdates';
+import { checkResourcesNow, checkVersionsNow, useVersionResults } from '../../hooks/useUpdates';
+import { setUpdatePolicy, useUpdatePolicy } from '../../hooks/useUpdatePolicy';
 import {
   SettingsHeader,
   SettingsList,
@@ -262,7 +263,10 @@ export default function UpdatesSettings() {
   const navigate = useNavigate();
   const { appInfo, refresh } = useTauri();
   const { reloadView } = useProjects();
-  const updates = useUpdates();
+  const updates = useVersionResults();
+  const policy = useUpdatePolicy();
+  const [policyError, setPolicyError] = useState<string | null>(null);
+  const [policySaving, setPolicySaving] = useState(false);
   const app = useAppUpdate();
   const cli = useCliUpgrade();
   const [appVersion, setAppVersion] = useState<string | null>(null);
@@ -284,8 +288,6 @@ export default function UpdatesSettings() {
       .getNotifyUpdate()
       .then(setNotifyUpdate)
       .catch(() => {});
-    void checkVersions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- check the versions once on entry
   }, []);
 
   // The progress card is cleared when the user leaves, unless an update is still running.
@@ -319,7 +321,7 @@ export default function UpdatesSettings() {
   const appAvailable = app.version;
   const cliAvailable = cli.status === 'done' || cli.status === 'up-to-date' ? null : updates.cli;
   const appStopped = isInstallStopped(app.phase);
-  const versionsChecking = checkRunning || app.status === 'checking';
+  const versionsChecking = !policy || checkRunning || app.status === 'checking';
   // While the app waits for a manual restart, a check only spins its button.
   const rowsStale = versionsChecking && !busy && app.phase !== 'restart-failed';
   const canStartUpdate = !busy && !appStopped && cli.status !== 'error' && !rowsStale;
@@ -343,6 +345,19 @@ export default function UpdatesSettings() {
     setCliCheckFailed(versions.status === 'rejected');
     setCheckRunning(false);
   };
+  const checkedOnEntry = useRef(false);
+  useEffect(() => {
+    if (checkedOnEntry.current || !policy?.enabled) return;
+    checkedOnEntry.current = true;
+    let cancelled = false;
+    void checkVersionsNow(true).catch(() => {
+      if (!cancelled) setCliCheckFailed(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [policy?.enabled]);
+
   const checkResources = async () => {
     setResourcesCheckStartedAt(Date.now());
     const error = await checkResourcesNow().then(
@@ -598,6 +613,37 @@ export default function UpdatesSettings() {
       </SettingsSection>
 
       <SettingsList>
+        <SettingsRow
+          id="auto-update-check"
+          label="Automatically check for updates"
+          hint={
+            policyError ??
+            policy?.error ??
+            (policy?.envOverride
+              ? 'Controlled by SKILLSHARE_AUTO_UPDATE_CHECK.'
+              : policy?.supported === false
+                ? 'Upgrade the CLI to manage this shared preference.'
+                : 'Shared with the CLI and web UI in config.yaml. Turning this off also hides version notifications and badges. Manual checks and upgrades remain available.')
+          }
+        >
+          <Switch
+            checked={policy?.enabled ?? false}
+            disabled={!policy || !policy.supported || policy.envOverride || policySaving}
+            labelledBy="auto-update-check"
+            describedBy="auto-update-check-hint"
+            onChange={async (enabled) => {
+              setPolicySaving(true);
+              setPolicyError(null);
+              try {
+                await setUpdatePolicy(enabled);
+              } catch (err) {
+                setPolicyError(err instanceof Error ? err.message : String(err));
+              } finally {
+                setPolicySaving(false);
+              }
+            }}
+          />
+        </SettingsRow>
         <SettingsRow
           id="notify-update"
           label="Tell me about new versions"

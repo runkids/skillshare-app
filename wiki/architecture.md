@@ -31,6 +31,7 @@ How the Rust backend in `src-tauri/` fits together.
 - `services/server_manager.rs`: the server supervisor.
 - `services/auto_sync.rs`: the source watcher and auto-sync.
 - `services/oplog_watch.rs`: the CLI operation log watcher that keeps the badges live.
+- `services/update_policy.rs`: CLI-owned automatic-version-check preference, environment override and policy events.
 - `services/update_watch.rs`: app, CLI and per-kind resource update checks; `services/update_all.rs`: tray resource updates and sync.
 - `services/source_health.rs`: target drift and the source's git remote state; tray push/pull.
 - `commands/source_health.rs`: `get_source_health`.
@@ -96,6 +97,7 @@ Auto-sync, update checks, the operation log watcher, source health and the audit
 | `server-restarted` | `server_manager.rs:SERVER_RESTARTED_EVENT` | port |
 | `server-stopped` | `server_manager.rs:SERVER_STOPPED_EVENT` | none |
 | `updates-available` | `update_watch.rs:UPDATES_EVENT` | `AvailableUpdates` |
+| `update-policy-changed` | `update_policy.rs:POLICY_EVENT` | effective/saved preference, override and CLI support |
 | `source-health` | `source_health.rs:SOURCE_HEALTH_EVENT` | `SourceHealth` |
 | `audit-report` | `audit.rs:AUDIT_EVENT` | `AuditFinding[]` |
 | `check-for-updates` | `update_watch.rs:CHECK_REQUESTED_EVENT` (emitted in `lib.rs`) | none |

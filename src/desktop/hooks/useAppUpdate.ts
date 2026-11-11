@@ -2,6 +2,7 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
 import { check, type Update } from '@tauri-apps/plugin-updater';
 import { tauriBridge } from '../api/tauri-bridge';
+import { currentUpdatePolicy, useUpdatePolicy } from './useUpdatePolicy';
 
 export type UpdateCheckStatus = 'idle' | 'checking' | 'available' | 'up-to-date' | 'error';
 /** The steps of an install, in order: download, install, then the automatic restart. */
@@ -64,7 +65,9 @@ export interface JustUpdated {
 // resulting Update object is shared by the settings nav badge and AboutSettings.
 let state = INITIAL;
 let inflight: Promise<void> | null = null;
+let inflightManual = false;
 let autoChecked = false;
+let manualResult = false;
 const listeners = new Set<() => void>();
 
 function setState(next: Partial<UpdateState>) {
@@ -78,12 +81,21 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener);
 }
 
-function runCheck(): Promise<void> {
-  if (inflight) return inflight;
+function runCheck(manual = true): Promise<void> {
+  if (inflight) {
+    inflightManual ||= manual;
+    return inflight;
+  }
+  inflightManual = manual;
   setState({ status: 'checking', error: null });
   inflight = (async () => {
     try {
       const update = await check();
+      if (!inflightManual && !currentUpdatePolicy()?.enabled) {
+        setState({ status: 'idle', update: null });
+        return;
+      }
+      manualResult = inflightManual;
       if (update) {
         setState({ status: 'available', update });
       } else {
@@ -157,17 +169,18 @@ async function install() {
 
 export function useAppUpdate() {
   const s = useSyncExternalStore(subscribe, () => state);
+  const policy = useUpdatePolicy();
 
   useEffect(() => {
     // The browser preview has no updater backend; leave it idle until asked.
-    if (autoChecked || !isTauri()) return;
+    if (autoChecked || !isTauri() || !policy?.enabled) return;
     autoChecked = true;
-    void runCheck();
-  }, []);
+    void runCheck(false);
+  }, [policy?.enabled]);
 
   return {
-    available: s.status === 'available',
-    version: s.update?.version ?? null,
+    available: policy?.enabled === true && s.status === 'available',
+    version: policy?.enabled || manualResult ? (s.update?.version ?? null) : null,
     update: s.update,
     status: s.status,
     error: s.error,
@@ -187,4 +200,5 @@ export function resetAppUpdateForTests() {
   state = INITIAL;
   inflight = null;
   autoChecked = false;
+  manualResult = false;
 }

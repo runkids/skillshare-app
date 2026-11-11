@@ -112,6 +112,14 @@ export interface AppInfo {
   onboarding: OnboardingStatus;
 }
 
+export interface UpdatePolicy {
+  error?: string;
+  enabled: boolean;
+  configured: boolean;
+  envOverride: boolean;
+  supported: boolean;
+}
+
 export const tauriBridge = {
   // CLI commands
   detectCli: () => invoke<string | null>('detect_cli'),
@@ -154,9 +162,12 @@ export const tauriBridge = {
   getAvailableUpdates: () => invoke<AvailableUpdates>('get_available_updates'),
   openLogsFolder: () => invoke<void>('open_logs_folder'),
   exportDiagnostics: () => invoke<string>('export_diagnostics'),
-  checkVersionsNow: () => invoke<AvailableUpdates>('check_versions_now'),
+  checkVersionsNow: (automatic = false) =>
+    invoke<AvailableUpdates>('check_versions_now', { automatic }),
   relaunchApp: () => invoke<void>('relaunch_app'),
   checkResourcesNow: () => invoke<AvailableUpdates>('check_resources_now'),
+  getUpdatePolicy: () => invoke<UpdatePolicy>('get_update_policy'),
+  setUpdatePolicy: (enabled: boolean) => invoke<UpdatePolicy>('set_update_policy', { enabled }),
   getNotifyUpdate: () => invoke<boolean>('get_notify_update'),
   setNotifyUpdate: (enabled: boolean) => invoke<void>('set_notify_update', { enabled }),
   resetAllData: () => invoke<void>('reset_all_data'),

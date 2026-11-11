@@ -81,6 +81,8 @@ pub fn run() {
             commands::app::check_versions_now,
             commands::app::check_resources_now,
             commands::app::relaunch_app,
+            commands::app::get_update_policy,
+            commands::app::set_update_policy,
             commands::app::get_notify_update,
             commands::app::set_notify_update,
             commands::app::reset_all_data,

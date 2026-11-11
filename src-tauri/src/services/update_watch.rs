@@ -13,8 +13,8 @@ pub const UPDATES_EVENT: &str = "updates-available";
 pub const CHECK_REQUESTED_EVENT: &str = "check-for-updates";
 
 const CHECK_EVERY_HOURS: i64 = 24;
-/// Wake up hourly so a sleeping laptop still checks soon after the 24h mark.
-const WAKE_INTERVAL: Duration = Duration::from_secs(60 * 60);
+/// Refresh the shared preference each minute; release checks still run at most daily.
+const WAKE_INTERVAL: Duration = Duration::from_secs(60);
 /// `skillshare check` fetches every source repo; give up rather than hang on a slow remote.
 const RESOURCE_CHECK_TIMEOUT: Duration = Duration::from_secs(60);
 
@@ -336,14 +336,19 @@ fn with_versions_of(resources: AvailableUpdates, current: &AvailableUpdates) -> 
 /// Check only the app and CLI versions. It takes seconds, unlike the resource checks,
 /// which fetch every source repository, so it leaves the resource lists and the 24h
 /// schedule alone and never notifies.
-pub async fn check_versions(app: &AppHandle) -> AvailableUpdates {
+pub async fn check_versions(app: &AppHandle, automatic: bool) -> AvailableUpdates {
+    if automatic && !super::update_policy::enabled().await {
+        return app.state::<UpdateState>().0.lock().await.clone();
+    }
     let mut meta = cli_manager::load_meta();
     if let Err(e) = cli_manager::refresh_cached_version(&mut meta).await {
         log::warn!("Could not refresh cached CLI version: {e}");
     }
     let (cli, latest) = tokio::join!(latest_cli(meta.version.as_deref()), latest_app(app));
+    let allowed = !automatic || super::update_policy::enabled().await;
     let updates = app.state::<UpdateState>();
     let mut state = updates.0.lock().await;
+    let (cli, latest) = if allowed { (cli, latest) } else { (None, None) };
     state.cli = cli;
     state.app = latest;
     let found = state.clone();
@@ -369,8 +374,16 @@ pub async fn check(app: &AppHandle, notify: bool) -> AvailableUpdates {
     let state = app.state::<UpdateState>();
     let mut found = state.0.lock().await.clone();
     resource_updates(&mut found).await;
-    found.cli = latest_cli(meta.version.as_deref()).await;
-    found.app = latest_app(app).await;
+    if super::update_policy::enabled().await {
+        let (cli, latest) = tokio::join!(latest_cli(meta.version.as_deref()), latest_app(app));
+        found.cli = cli;
+        found.app = latest;
+    }
+    // A preference changed while a check was in flight must not restore a notification.
+    if !super::update_policy::enabled().await {
+        found.cli = None;
+        found.app = None;
+    }
 
     // In the foreground the title bar badge is enough.
     let background = notify && !main_window_focused(app);
@@ -407,6 +420,9 @@ pub fn spawn_background(app: AppHandle) {
     tauri::async_runtime::spawn(async move {
         let mut first = true;
         loop {
+            if let Err(e) = super::update_policy::refresh(&app).await {
+                log::warn!("Could not refresh update settings: {e}");
+            }
             let due = is_due(
                 cli_manager::load_meta().last_update_check.as_deref(),
                 Utc::now(),
