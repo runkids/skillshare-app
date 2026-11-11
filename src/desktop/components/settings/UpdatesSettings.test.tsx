@@ -5,6 +5,7 @@ import { check } from '@tauri-apps/plugin-updater';
 import UpdatesSettings from './UpdatesSettings';
 import { JUST_UPDATED_KEY, resetAppUpdateForTests } from '../../hooks/useAppUpdate';
 import { resetCliUpgradeForTests } from '../../hooks/useCliUpgrade';
+import { resetUpdatePolicyForTests } from '../../hooks/useUpdatePolicy';
 
 const mocks = vi.hoisted(() => ({
   upgradeCli: vi.fn(),
@@ -14,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   reloadView: vi.fn(),
   checkVersionsNow: vi.fn(() => Promise.resolve()),
   checkResourcesNow: vi.fn(() => Promise.resolve()),
+  getUpdatePolicy: vi.fn(),
   handlers: new Map<string, (e: { payload: unknown }) => void>(),
   updates: {
     cli: null as string | null,
@@ -41,6 +43,9 @@ vi.mock('../../api/tauri-bridge', () => ({
     upgradeCli: mocks.upgradeCli,
     relaunchApp: mocks.relaunch,
     runCli: mocks.runCli,
+    getUpdatePolicy: mocks.getUpdatePolicy,
+    setUpdatePolicy: () =>
+      Promise.resolve({ enabled: false, configured: false, envOverride: false, supported: true }),
     getNotifyUpdate: () => Promise.resolve(true),
     setNotifyUpdate: () => Promise.resolve(),
   },
@@ -53,6 +58,7 @@ vi.mock('../../context/ProjectContext', () => ({
 }));
 vi.mock('../../hooks/useUpdates', () => ({
   useUpdates: () => mocks.updates,
+  useVersionResults: () => mocks.updates,
   checkVersionsNow: mocks.checkVersionsNow,
   checkResourcesNow: mocks.checkResourcesNow,
 }));
@@ -79,6 +85,13 @@ function renderUpdates() {
 beforeEach(() => {
   vi.clearAllMocks();
   resetAppUpdateForTests();
+  resetUpdatePolicyForTests();
+  mocks.getUpdatePolicy.mockResolvedValue({
+    enabled: true,
+    configured: true,
+    envOverride: false,
+    supported: true,
+  });
   resetCliUpgradeForTests();
   vi.mocked(check).mockResolvedValue(null);
   mocks.updates.cli = null;
@@ -221,6 +234,16 @@ describe('UpdatesSettings app', () => {
 });
 
 describe('UpdatesSettings checks', () => {
+  it('keeps explicit version checks usable when the shared preference cannot be read', async () => {
+    mocks.getUpdatePolicy.mockRejectedValueOnce(new Error('timed out'));
+    renderUpdates();
+    const button = screen.getByRole('button', { name: 'Check versions' });
+    await waitFor(() => expect(button).toBeEnabled());
+    fireEvent.click(button);
+    await waitFor(() => expect(mocks.checkVersionsNow).toHaveBeenCalledTimes(1));
+    expect(check).toHaveBeenCalledTimes(1);
+  });
+
   it('checks the app and CLI versions on entry', async () => {
     renderUpdates();
     await waitFor(() =>

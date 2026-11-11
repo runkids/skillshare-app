@@ -108,8 +108,9 @@ pub async fn get_available_updates(
 #[tauri::command]
 pub async fn check_versions_now(
     app: tauri::AppHandle,
+    automatic: Option<bool>,
 ) -> Result<update_watch::AvailableUpdates, String> {
-    Ok(update_watch::check_versions(&app).await)
+    Ok(update_watch::check_versions(&app, automatic.unwrap_or(false)).await)
 }
 
 /// Re-run the skill, agent and plugin checks; slow, since each fetches its sources.
@@ -124,6 +125,21 @@ pub async fn check_resources_now(
         return Err("Some skills, agents or plugins could not be checked".into());
     }
     Ok(state.0.lock().await.clone())
+}
+
+#[tauri::command]
+pub async fn get_update_policy(
+    app: tauri::AppHandle,
+) -> Result<crate::services::update_policy::UpdatePolicy, String> {
+    crate::services::update_policy::refresh(&app).await
+}
+
+#[tauri::command]
+pub async fn set_update_policy(
+    app: tauri::AppHandle,
+    enabled: bool,
+) -> Result<crate::services::update_policy::UpdatePolicy, String> {
+    crate::services::update_policy::set(&app, enabled).await
 }
 
 #[tauri::command]

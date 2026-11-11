@@ -5,16 +5,23 @@ import { check } from '@tauri-apps/plugin-updater';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import AboutSettings from './AboutSettings';
 import { resetAppUpdateForTests } from '../../hooks/useAppUpdate';
+import { resetUpdatePolicyForTests } from '../../hooks/useUpdatePolicy';
 import { tauriBridge } from '../../api/tauri-bridge';
 
 vi.mock('@tauri-apps/api/core', () => ({ isTauri: () => true }));
 vi.mock('@tauri-apps/api/app', () => ({ getVersion: () => Promise.resolve('0.0.12') }));
 vi.mock('@tauri-apps/plugin-updater', () => ({ check: vi.fn() }));
+vi.mock('@tauri-apps/api/event', () => ({ listen: () => Promise.resolve(() => {}) }));
 vi.mock('@tauri-apps/plugin-opener', () => ({ openUrl: vi.fn() }));
 vi.mock('../../context/TauriContext', () => ({ useTauri: () => ({ appInfo: null }) }));
 vi.mock('../../hooks/useUpdates', () => ({ useUpdates: () => ({ cli: null, app: null }) }));
 vi.mock('../../api/tauri-bridge', () => ({
-  tauriBridge: { openLogsFolder: vi.fn(), exportDiagnostics: vi.fn() },
+  tauriBridge: {
+    openLogsFolder: vi.fn(),
+    exportDiagnostics: vi.fn(),
+    getUpdatePolicy: () =>
+      Promise.resolve({ enabled: true, configured: true, envOverride: false, supported: true }),
+  },
 }));
 
 function renderAbout() {
@@ -27,6 +34,7 @@ function renderAbout() {
 
 beforeEach(() => {
   resetAppUpdateForTests();
+  resetUpdatePolicyForTests();
   vi.mocked(check).mockResolvedValue(null);
 });
 
