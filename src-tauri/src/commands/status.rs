@@ -9,7 +9,8 @@ use tauri::AppHandle;
 #[tauri::command]
 pub async fn check_status_now(app: AppHandle) -> Result<(), String> {
     tokio::join!(
-        update_watch::check(&app, false),
+        update_watch::refresh_skills(&app),
+        update_watch::check_versions(&app, false),
         source_health::refresh(&app, true),
         audit::run(&app),
     );
