@@ -12,6 +12,9 @@
   <a href="https://github.com/runkids/skillshare-app/releases">
     <img src="https://img.shields.io/github/v/release/runkids/skillshare-app?style=for-the-badge&color=blue" alt="Release">
   </a>
+  <a href="https://github.com/runkids/skillshare-app/releases">
+    <img src="https://img.shields.io/github/downloads/runkids/skillshare-app/total?style=for-the-badge&color=green" alt="Total downloads">
+  </a>
   <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey?style=for-the-badge" alt="Platform">
 </p>
 
