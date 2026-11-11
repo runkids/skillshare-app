@@ -41,6 +41,8 @@ fn parse_override(value: &str) -> Option<bool> {
     }
 }
 
+/// Read the CLI-owned preference, propagating execution and decoding errors.
+/// An absent or unsupported CLI retains the legacy default and environment override.
 pub async fn read() -> Result<UpdatePolicy, String> {
     let Some(path) = cli_manager::detect_cli().await else {
         return Ok(legacy_policy());
@@ -61,10 +63,13 @@ pub async fn read() -> Result<UpdatePolicy, String> {
     }
 }
 
+/// Return whether automatic checks are enabled; read failures disable them.
 pub async fn enabled() -> bool {
     read().await.map(|p| p.enabled).unwrap_or(false)
 }
 
+/// Publish the effective policy before clearing disabled version caches.
+/// Read failures are returned as a disabled policy with an error for the settings UI.
 pub async fn refresh(app: &AppHandle) -> Result<UpdatePolicy, String> {
     let policy = read().await.unwrap_or_else(|e| UpdatePolicy {
         enabled: false,
@@ -85,6 +90,8 @@ pub async fn refresh(app: &AppHandle) -> Result<UpdatePolicy, String> {
     Ok(policy)
 }
 
+/// Save through the CLI, then refresh policy events and disabled version caches.
+/// Reject unsupported CLIs and environment-owned preferences; propagate write errors.
 pub async fn set(app: &AppHandle, enabled: bool) -> Result<UpdatePolicy, String> {
     let policy = read().await?;
     if !policy.supported {
