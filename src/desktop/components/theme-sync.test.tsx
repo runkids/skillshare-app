@@ -7,13 +7,13 @@ import CliWebView from './CliWebView';
 
 const { refresh, project } = vi.hoisted(() => ({
   refresh: vi.fn(),
-  project: { reloadKey: 0 },
+  project: { reloadKey: 0, switching: false },
 }));
 
 vi.mock('@tauri-apps/api/core', () => ({ isTauri: () => true }));
 vi.mock('@tauri-apps/api/event', () => ({ listen: () => Promise.resolve(() => {}) }));
 vi.mock('../context/TauriContext', () => ({
-  useTauri: () => ({ appInfo: { serverPort: 19420 }, refresh }),
+  useTauri: () => ({ appInfo: { serverPort: 19420, cliVersion: 'v0.30.7' }, refresh }),
 }));
 vi.mock('../api/tauri-bridge', () => ({
   tauriBridge: {
@@ -21,7 +21,11 @@ vi.mock('../api/tauri-bridge', () => ({
   },
 }));
 vi.mock('../context/ProjectContext', () => ({
-  useProjects: () => ({ switching: false, activeProject: null, reloadKey: project.reloadKey }),
+  useProjects: () => ({
+    switching: project.switching,
+    activeProject: null,
+    reloadKey: project.reloadKey,
+  }),
 }));
 
 function Controls() {
@@ -70,6 +74,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers({ toFake: ['Date'] });
   project.reloadKey = 0;
+  project.switching = false;
   vi.stubGlobal('matchMedia', () => ({
     matches: false,
     addEventListener: vi.fn(),
@@ -257,5 +262,13 @@ describe('CLI Web UI page', () => {
       'src',
       'http://localhost:19420?theme=clean&mode=light&style=clean'
     );
+  });
+});
+
+describe('starting card', () => {
+  it('shows the CLI version with one v while switching projects', () => {
+    project.switching = true;
+    render(<Tree />);
+    expect(screen.getByText('v0.30.7')).toBeInTheDocument();
   });
 });
