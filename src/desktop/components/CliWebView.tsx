@@ -11,7 +11,8 @@ import { useTheme } from '../../context/useTheme';
 
 const HEALTH_POLL_INTERVAL = 30_000;
 const HEALTH_FAIL_THRESHOLD = 3;
-// How long after an iframe load its theme reports still describe how the CLI UI started.
+// How long after an iframe load (or the CLI UI's `theme-init`) its theme reports still describe
+// how the CLI UI started.
 const STARTUP_REPORT_MS = 2000;
 
 type Status = 'loading' | 'ready' | 'error' | 'server-down';
@@ -81,7 +82,7 @@ export default function CliWebView() {
   const [restarting, setRestarting] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const loadedIframeRef = useRef<HTMLIFrameElement | null>(null);
-  const loadedAtRef = useRef(0);
+  const startedAtRef = useRef(0);
   const failCount = useRef(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const startAttempted = useRef(false);
@@ -107,9 +108,12 @@ export default function CliWebView() {
   // Listen for theme changes from CLI UI (iframe postMessage)
   useEffect(() => {
     const handler = (event: MessageEvent) => {
-      if (event.data?.type !== 'theme-change') return;
       const frame = iframeRef.current;
       if (!frame || event.source !== frame.contentWindow) return;
+      // Newer CLI UIs announce each page start, which also covers a reload inside the iframe
+      // whose first reports arrive before the load event.
+      if (event.data?.type === 'theme-init') startedAtRef.current = Date.now();
+      if (event.data?.type !== 'theme-change') return;
       const theme = event.data.theme;
       const isStyle = theme === 'playful' || theme === 'clean';
       if (!isStyle && theme !== 'dark' && theme !== 'light') return;
@@ -117,7 +121,7 @@ export default function CliWebView() {
       // A CLI UI that has just loaded reports the theme it started with. That is not the
       // user's choice when its storage was lost (WebKitGTK), so push ours instead of saving it.
       const starting =
-        loadedIframeRef.current !== frame || Date.now() - loadedAtRef.current < STARTUP_REPORT_MS;
+        loadedIframeRef.current !== frame || Date.now() - startedAtRef.current < STARTUP_REPORT_MS;
       if (starting) {
         pushTheme();
         return;
@@ -149,9 +153,10 @@ export default function CliWebView() {
     if (loadedIframeRef.current === iframeRef.current) pushTheme();
   }, [pushTheme]);
 
-  // Ref to capture current cliTheme for the initial URL without re-triggering server start
-  const cliThemeRef = useRef(cliTheme);
-  cliThemeRef.current = cliTheme;
+  // Ref to capture the current theme for the initial URL without re-triggering server start.
+  // `theme` is all an older CLI UI reads; `mode` and `style` carry both axes to a newer one.
+  const themeParamsRef = useRef({ theme: cliTheme, mode: resolvedMode, style });
+  themeParamsRef.current = { theme: cliTheme, mode: resolvedMode, style };
 
   // A shell path other than "/" (e.g. /skills?tab=updates) opens that CLI UI page.
   const webPath = location.pathname === '/' ? '' : location.pathname;
@@ -168,7 +173,7 @@ export default function CliWebView() {
     const [path, search = ''] =
       reopen?.mount === mountKey ? reopen.path.split(/\?(.*)/s) : [webPath, webSearch];
     const params = new URLSearchParams(search);
-    params.set('theme', cliThemeRef.current);
+    Object.entries(themeParamsRef.current).forEach(([key, value]) => params.set(key, value));
     return `${iframeUrl}${path === '/' ? '' : path}?${params}`;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- iframeKey and navKey mark a remount
   }, [iframeUrl, iframeKey, navKey, webPath, webSearch, reopen, mountKey]);
@@ -397,7 +402,7 @@ export default function CliWebView() {
       className="flex-1 w-full border-0"
       onLoad={() => {
         loadedIframeRef.current = iframeRef.current;
-        loadedAtRef.current = Date.now();
+        startedAtRef.current = Date.now();
         pushTheme();
       }}
       allow="clipboard-write"
