@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/runkids/skillshare-app/compare/v0.9.0...v0.9.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* **theme:** keep the saved appearance when the CLI UI starts with another one ([#130](https://github.com/runkids/skillshare-app/issues/130)) ([5df14b0](https://github.com/runkids/skillshare-app/commit/5df14b0ae4a84aed64b89c6a7b812a07bcb7fca8)), closes [#128](https://github.com/runkids/skillshare-app/issues/128)
+
 ## [0.9.0](https://github.com/runkids/skillshare-app/compare/v0.8.2...v0.9.0) (2026-11-11)
 
 
