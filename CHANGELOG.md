@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.3](https://github.com/runkids/skillshare-app/compare/v0.9.2...v0.9.3) (2026-11-14)
+
+
+### Bug Fixes
+
+* **ui:** show the CLI version with one v on the starting card ([#134](https://github.com/runkids/skillshare-app/issues/134)) ([7a840e3](https://github.com/runkids/skillshare-app/commit/7a840e34ff0bb4d21eb605ee4db4bff5e5c09abc))
+
 ## [0.9.2](https://github.com/runkids/skillshare-app/compare/v0.9.1...v0.9.2) (2026-11-14)
 
 
