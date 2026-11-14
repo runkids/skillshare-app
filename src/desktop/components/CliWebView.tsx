@@ -8,6 +8,7 @@ import { useProjects } from '../context/ProjectContext';
 import { tauriBridge } from '../api/tauri-bridge';
 import { useTauri } from '../context/TauriContext';
 import { useTheme } from '../../context/useTheme';
+import { formatVersion } from './settings/update-steps';
 
 const HEALTH_POLL_INTERVAL = 30_000;
 const HEALTH_FAIL_THRESHOLD = 3;
@@ -50,7 +51,9 @@ function StartingCard({
           </span>
           <span className="flex-1 font-semibold">Found CLI</span>
           {cliVersion && (
-            <span className="font-mono text-xs text-[var(--ink-3)]">v{cliVersion}</span>
+            <span className="font-mono text-xs text-[var(--ink-3)]">
+              {formatVersion(cliVersion)}
+            </span>
           )}
         </li>
         <li className={STEP_ROW}>
