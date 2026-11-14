@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../../context/ThemeContext';
 import { useTheme } from '../../context/useTheme';
 import CliWebView from './CliWebView';
@@ -46,11 +46,13 @@ function Tree({ path = '/' }: { path?: string }) {
   );
 }
 
-function setup() {
+// By default the CLI UI has finished starting, so its reports are the user's choices.
+function setup({ started = true } = {}) {
   const { rerender } = render(<Tree />);
   const iframe = screen.getByTitle('skillshare UI') as HTMLIFrameElement;
   const post = vi.spyOn(iframe.contentWindow!, 'postMessage');
   fireEvent.load(iframe);
+  if (started) vi.advanceTimersByTime(2000);
   const receive = (theme: string) =>
     act(() => {
       window.dispatchEvent(
@@ -66,12 +68,17 @@ function setup() {
 beforeEach(() => {
   localStorage.clear();
   vi.clearAllMocks();
+  vi.useFakeTimers({ toFake: ['Date'] });
   project.reloadKey = 0;
   vi.stubGlobal('matchMedia', () => ({
     matches: false,
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
   }));
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('desktop and CLI theme synchronization', () => {
@@ -100,6 +107,46 @@ describe('desktop and CLI theme synchronization', () => {
     receive('clean');
     expect(screen.getByText('clean/dark/dark')).toBeInTheDocument();
     receive('light');
+    expect(screen.getByText('clean/light/light')).toBeInTheDocument();
+  });
+
+  it('keeps Dark + Clean when the CLI UI starts in Playful', () => {
+    localStorage.setItem('skillshare-theme-preference', 'dark');
+    const { post, receive } = setup({ started: false });
+    post.mockClear();
+    receive('playful');
+    expect(screen.getByText('clean/dark/dark')).toBeInTheDocument();
+    expect(post).toHaveBeenCalledWith({ type: 'theme-push', mode: 'dark', style: 'clean' }, '*');
+  });
+
+  it('keeps Playful dark when the CLI UI starts in light mode', () => {
+    localStorage.setItem('skillshare-style', 'playful');
+    localStorage.setItem('skillshare-theme-preference', 'dark');
+    const { post, receive } = setup({ started: false });
+    post.mockClear();
+    receive('light');
+    expect(screen.getByText('playful/dark/dark')).toBeInTheDocument();
+    expect(post).toHaveBeenCalledWith({ type: 'theme-push', mode: 'dark', style: 'playful' }, '*');
+  });
+
+  it('keeps the saved style when the CLI UI reports before the iframe load event', () => {
+    render(<Tree />);
+    const iframe = screen.getByTitle('skillshare UI') as HTMLIFrameElement;
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          source: iframe.contentWindow,
+          data: { type: 'theme-change', theme: 'playful' },
+        })
+      );
+    });
+    expect(screen.getByText('clean/light/light')).toBeInTheDocument();
+  });
+
+  it('keeps the saved style when the CLI UI reloads itself and starts in Playful', () => {
+    const { iframe, receive } = setup();
+    fireEvent.load(iframe);
+    receive('playful');
     expect(screen.getByText('clean/light/light')).toBeInTheDocument();
   });
 
