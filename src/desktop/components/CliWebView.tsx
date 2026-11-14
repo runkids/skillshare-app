@@ -11,6 +11,8 @@ import { useTheme } from '../../context/useTheme';
 
 const HEALTH_POLL_INTERVAL = 30_000;
 const HEALTH_FAIL_THRESHOLD = 3;
+// How long after an iframe load its theme reports still describe how the CLI UI started.
+const STARTUP_REPORT_MS = 2000;
 
 type Status = 'loading' | 'ready' | 'error' | 'server-down';
 
@@ -79,6 +81,7 @@ export default function CliWebView() {
   const [restarting, setRestarting] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const loadedIframeRef = useRef<HTMLIFrameElement | null>(null);
+  const loadedAtRef = useRef(0);
   const failCount = useRef(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const startAttempted = useRef(false);
@@ -94,23 +97,38 @@ export default function CliWebView() {
     return resolvedMode === 'dark' ? 'dark' : 'clean';
   }, [style, resolvedMode]);
 
+  const pushTheme = useCallback(() => {
+    iframeRef.current?.contentWindow?.postMessage(
+      { type: 'theme-push', mode: resolvedMode, style },
+      '*'
+    );
+  }, [resolvedMode, style]);
+
   // Listen for theme changes from CLI UI (iframe postMessage)
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.data?.type !== 'theme-change') return;
-      if (event.source !== iframeRef.current?.contentWindow) return;
-      if (loadedIframeRef.current !== iframeRef.current) return;
+      const frame = iframeRef.current;
+      if (!frame || event.source !== frame.contentWindow) return;
       const theme = event.data.theme;
-      // The CLI sends style and mode independently. Preserve the other axis.
-      if (theme === 'playful' || theme === 'clean') {
-        setStyle(theme);
-      } else if ((theme === 'dark' || theme === 'light') && theme !== resolvedMode) {
-        setModePreference(theme);
+      const isStyle = theme === 'playful' || theme === 'clean';
+      if (!isStyle && theme !== 'dark' && theme !== 'light') return;
+      if (theme === (isStyle ? style : resolvedMode)) return;
+      // A CLI UI that has just loaded reports the theme it started with. That is not the
+      // user's choice when its storage was lost (WebKitGTK), so push ours instead of saving it.
+      const starting =
+        loadedIframeRef.current !== frame || Date.now() - loadedAtRef.current < STARTUP_REPORT_MS;
+      if (starting) {
+        pushTheme();
+        return;
       }
+      // The CLI sends style and mode independently. Preserve the other axis.
+      if (isStyle) setStyle(theme);
+      else setModePreference(theme);
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [setStyle, setModePreference, resolvedMode]);
+  }, [setStyle, setModePreference, resolvedMode, style, pushTheme]);
 
   // The CLI UI reports its route, so a reload can reopen the page instead of the shell route.
   useEffect(() => {
@@ -125,13 +143,6 @@ export default function CliWebView() {
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
   }, []);
-
-  const pushTheme = useCallback(() => {
-    iframeRef.current?.contentWindow?.postMessage(
-      { type: 'theme-push', mode: resolvedMode, style },
-      '*'
-    );
-  }, [resolvedMode, style]);
 
   // Push each axis independently, including Playful light/dark changes.
   useEffect(() => {
@@ -386,6 +397,7 @@ export default function CliWebView() {
       className="flex-1 w-full border-0"
       onLoad={() => {
         loadedIframeRef.current = iframeRef.current;
+        loadedAtRef.current = Date.now();
         pushTheme();
       }}
       allow="clipboard-write"
