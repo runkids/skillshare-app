@@ -150,6 +150,26 @@ describe('desktop and CLI theme synchronization', () => {
     expect(screen.getByText('clean/light/light')).toBeInTheDocument();
   });
 
+  it('keeps the saved style when the CLI UI announces a new page and starts in Playful', () => {
+    const { iframe, receive } = setup();
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', { source: iframe.contentWindow, data: { type: 'theme-init' } })
+      );
+    });
+    receive('playful');
+    expect(screen.getByText('clean/light/light')).toBeInTheDocument();
+  });
+
+  it('asks the CLI UI for both axes in the iframe URL', () => {
+    localStorage.setItem('skillshare-theme-preference', 'dark');
+    setup();
+    expect(screen.getByTitle('skillshare UI')).toHaveAttribute(
+      'src',
+      'http://localhost:19420?theme=dark&mode=dark&style=clean'
+    );
+  });
+
   it('follows system appearance changes while preserving System preference', () => {
     let dark = false;
     const listeners = new Set<() => void>();
@@ -183,7 +203,7 @@ describe('desktop and CLI theme synchronization', () => {
     await waitFor(() =>
       expect(screen.getByTitle('skillshare UI')).toHaveAttribute(
         'src',
-        'http://localhost:19420?theme=clean'
+        'http://localhost:19420?theme=clean&mode=light&style=clean'
       )
     );
   });
@@ -202,7 +222,7 @@ describe('CLI Web UI page', () => {
     render(<Tree path="/skills?tab=updates" />);
     expect(screen.getByTitle('skillshare UI')).toHaveAttribute(
       'src',
-      'http://localhost:19420/skills?tab=updates&theme=clean'
+      'http://localhost:19420/skills?tab=updates&theme=clean&mode=light&style=clean'
     );
   });
 
@@ -222,7 +242,7 @@ describe('CLI Web UI page', () => {
     await waitFor(() =>
       expect(screen.getByTitle('skillshare UI')).toHaveAttribute(
         'src',
-        'http://localhost:19420/skills/demo?tab=files&theme=clean'
+        'http://localhost:19420/skills/demo?tab=files&theme=clean&mode=light&style=clean'
       )
     );
   });
@@ -235,7 +255,7 @@ describe('CLI Web UI page', () => {
     await waitFor(() => expect(screen.getByTitle('skillshare UI')).not.toBe(iframe));
     expect(screen.getByTitle('skillshare UI')).toHaveAttribute(
       'src',
-      'http://localhost:19420?theme=clean'
+      'http://localhost:19420?theme=clean&mode=light&style=clean'
     );
   });
 });
