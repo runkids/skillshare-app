@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.2](https://github.com/runkids/skillshare-app/compare/v0.9.1...v0.9.2) (2026-11-14)
+
+
+### Bug Fixes
+
+* **theme:** ask the CLI UI for both theme axes and honor its page-start signal ([#132](https://github.com/runkids/skillshare-app/issues/132)) ([76396b7](https://github.com/runkids/skillshare-app/commit/76396b7e1d9f7c99252ef5d27d39826985dae562))
+
 ## [0.9.1](https://github.com/runkids/skillshare-app/compare/v0.9.0...v0.9.1) (2026-11-14)
 
 
