@@ -840,6 +840,56 @@ pub async fn check_latest_release() -> Result<(String, String), String> {
     Ok((tag, download_url))
 }
 
+/// Fail unless `bytes` hash to the SHA-256 that `checksums` (one
+/// "<hex>  <file>" line per release asset) lists for `asset`. An asset the
+/// file does not list fails too.
+fn verify_sha256(checksums: &str, asset: &str, bytes: &[u8]) -> Result<(), String> {
+    use sha2::{Digest, Sha256};
+    let expected = checksums
+        .lines()
+        .find_map(|line| {
+            let (hash, name) = line.split_once(char::is_whitespace)?;
+            (name.trim() == asset).then_some(hash)
+        })
+        .ok_or_else(|| format!("checksums.txt has no entry for {asset}"))?;
+    let actual = format!("{:x}", Sha256::digest(bytes));
+    if !actual.eq_ignore_ascii_case(expected) {
+        return Err(format!(
+            "Checksum mismatch for {asset}: expected {expected}, got {actual}"
+        ));
+    }
+    Ok(())
+}
+
+/// Check a downloaded release asset against the `checksums.txt` published in
+/// the same release.
+async fn verify_release_download(
+    client: &reqwest::Client,
+    asset_url: &str,
+    bytes: &[u8],
+) -> Result<(), String> {
+    let (release_url, asset) = asset_url
+        .rsplit_once('/')
+        .ok_or_else(|| format!("Cannot find the release checksums for {asset_url}"))?;
+    let resp = client
+        .get(format!("{release_url}/checksums.txt"))
+        .header("User-Agent", "skillshare-app")
+        .send()
+        .await
+        .map_err(|e| format!("Checksum download failed: {e}"))?;
+    if !resp.status().is_success() {
+        return Err(format!(
+            "Checksum download returned status {}",
+            resp.status()
+        ));
+    }
+    let checksums = resp
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read checksums: {e}"))?;
+    verify_sha256(&checksums, asset, bytes)
+}
+
 /// Download the CLI tarball, extract it, and install to the app bin dir.
 /// Returns the path to the installed binary.
 pub async fn download_cli(url: &str) -> Result<String, String> {
@@ -870,6 +920,12 @@ pub async fn download_cli(url: &str) -> Result<String, String> {
         .bytes()
         .await
         .map_err(|e| format!("Failed to read download body: {e}"))?;
+
+    // Nothing from the archive is unpacked or run until it matches the release.
+    if let Err(e) = verify_release_download(&client, url, &bytes).await {
+        std::fs::remove_dir_all(&tmp_dir).ok();
+        return Err(e);
+    }
 
     let archive_name = if cfg!(target_os = "windows") {
         "skillshare.zip"
@@ -965,6 +1021,37 @@ pub async fn download_cli(url: &str) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // SHA-256 of "abc".
+    const CHECKSUMS: &str = "\
+1111111111111111111111111111111111111111111111111111111111111111  skillshare_0.30.8_darwin_arm64.tar.gz
+BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD  skillshare_0.30.8_windows_amd64.zip
+";
+
+    #[test]
+    fn verify_sha256_accepts_the_listed_hash() {
+        assert_eq!(
+            verify_sha256(CHECKSUMS, "skillshare_0.30.8_windows_amd64.zip", b"abc"),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn verify_sha256_rejects_other_bytes() {
+        let result = verify_sha256(CHECKSUMS, "skillshare_0.30.8_windows_amd64.zip", b"abd");
+        assert!(
+            matches!(&result, Err(e) if e.starts_with("Checksum mismatch")),
+            "{result:?}"
+        );
+    }
+
+    #[test]
+    fn verify_sha256_rejects_an_unlisted_asset() {
+        assert_eq!(
+            verify_sha256(CHECKSUMS, "skillshare_0.30.8_linux_amd64.tar.gz", b"abc"),
+            Err("checksums.txt has no entry for skillshare_0.30.8_linux_amd64.tar.gz".to_string())
+        );
+    }
 
     #[cfg(unix)]
     #[tokio::test]
