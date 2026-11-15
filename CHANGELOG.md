@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.9.4](https://github.com/runkids/skillshare-app/compare/v0.9.3...v0.9.4) (2026-11-15)
+
+
+### Bug Fixes
+
+* **cli:** verify the downloaded CLI against the release checksums ([#138](https://github.com/runkids/skillshare-app/issues/138)) ([9cc1794](https://github.com/runkids/skillshare-app/commit/9cc179460e0d43fa715ccbacfae8f81df7ba6adf))
+* **deps:** update zip, openssl, rustls-webpki and react-router past their advisories ([#137](https://github.com/runkids/skillshare-app/issues/137)) ([e3d1327](https://github.com/runkids/skillshare-app/commit/e3d13279b4bc7d2859bf07ab59c573449e028e08))
+* **security:** give the webview a Content Security Policy ([#139](https://github.com/runkids/skillshare-app/issues/139)) ([2513346](https://github.com/runkids/skillshare-app/commit/25133464d9f1b78131dc4bbb39caf37531ac519b))
+
 ## [0.9.3](https://github.com/runkids/skillshare-app/compare/v0.9.2...v0.9.3) (2026-11-14)
 
 
