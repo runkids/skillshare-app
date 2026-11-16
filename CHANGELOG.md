@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.5](https://github.com/runkids/skillshare-app/compare/v0.9.4...v0.9.5) (2026-11-16)
+
+
+### Bug Fixes
+
+* **server:** probe the local server without a proxy ([#142](https://github.com/runkids/skillshare-app/issues/142)) ([416d376](https://github.com/runkids/skillshare-app/commit/416d376c88bc0c55142ea7cff7ab16b16f36ebf2)), closes [#141](https://github.com/runkids/skillshare-app/issues/141)
+
 ## [0.9.4](https://github.com/runkids/skillshare-app/compare/v0.9.3...v0.9.4) (2026-11-15)
 
 
