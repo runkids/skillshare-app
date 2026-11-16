@@ -14,12 +14,21 @@ until [ "$(gh api "repos/$repo/commits/$sha/check-runs" -q .total_count 2>/dev/n
   sleep 10
 done
 
+# `gh pr checks` exits 0 when a check was cancelled (for example a job no runner picked
+# up), so its exit code is not proof of green: require every check to have passed.
+all_passed() {
+  gh pr checks "$pr" --watch >/dev/null 2>&1
+  [ "$(gh pr checks "$pr" --json bucket \
+    -q 'length > 0 and all(.[]; .bucket == "pass" or .bucket == "skipping")')" = true ]
+}
+
 for i in 1 2 3 4; do
-  gh pr checks "$pr" --watch >/dev/null 2>&1 && break
-  run=$(gh pr checks "$pr" --json state,link -q '.[]|select(.state=="FAILURE")|.link' | head -1 |
+  all_passed && break
+  run=$(gh pr checks "$pr" --json bucket,link \
+    -q '.[]|select(.bucket != "pass" and .bucket != "skipping")|.link' | head -1 |
     sed -E 's#.*/runs/([0-9]+)/.*#\1#')
   if ! gh run view "$run" --log-failed 2>&1 | grep -q "Install Linux dependencies.*timed out"; then
-    echo "#$pr: real failure in run $run"
+    echo "#$pr: not green in run $run"
     gh pr checks "$pr"
     exit 1
   fi
