@@ -41,7 +41,7 @@ test('generates a cask without an unsupported macOS dependency', () => {
         [
           'ruby',
           '-e',
-          'require "cask/cask_loader"; Cask::CaskLoader.load(ARGV.fetch(0))',
+          'require "cask/cask_loader"; Cask::CaskLoader.from_path(ARGV.fetch(0))',
           join(dir, 'homebrew-tap/Casks/skillshare-app.rb'),
         ],
         {
