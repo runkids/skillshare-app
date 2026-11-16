@@ -55,7 +55,7 @@ How the Rust backend in `src-tauri/` fits together.
   3. Kill an orphaned server.
   4. Spawn with `build_env_for_child`, sending output to `server.log` (truncated each start).
   5. Write the pidfile.
-  6. Poll the health check every 500 ms, 20 tries. On failure, the error includes the last 20 lines of `server.log`.
+  6. Poll the health check every 500 ms, 120 tries (60s). On failure, the error includes the last 20 lines of `server.log`.
 - `supervise` polls `try_wait` every 1s. After an unexpected exit, it waits `RESTART_DELAYS` (1s, 2s, 5s), counting exits within `RESTART_WINDOW` (60s).
   - When exits outrun the delays, it emits `server-stopped` and gives up.
   - A restart emits `server-restarted` with the port, which may have changed.
