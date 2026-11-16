@@ -2,16 +2,9 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getVersion } from '@tauri-apps/api/app';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import {
-  AppWindow,
-  Check,
-  CircleAlert,
-  Download,
-  LoaderCircle,
-  RefreshCw,
-  Terminal,
-} from 'lucide-react';
+import { AppWindow, Check, CircleAlert, Download, RefreshCw, Terminal } from 'lucide-react';
 import Button from '../../../components/Button';
+import ProgressBar from '../../../components/ProgressBar';
 import Switch from '../../../components/Switch';
 import { tauriBridge } from '../../api/tauri-bridge';
 import { useTauri } from '../../context/TauriContext';
@@ -79,8 +72,23 @@ const HERO_TONES: Record<HeroTone, { look: string; icon: ReactNode }> = {
     icon: <Download size={20} strokeWidth={1.75} />,
   },
   ok: {
-    look: 'ss-pop bg-[var(--ok-bg)] text-[var(--ok)]',
-    icon: <Check size={20} strokeWidth={2.6} />,
+    look: 'bg-[var(--ok-bg)] text-[var(--ok)]',
+    // Drawn once, short arm first; Lucide's path runs the other way.
+    icon: (
+      <svg
+        className="ss-draw"
+        width={20}
+        height={20}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2.6}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M4 12l5 5L20 6" />
+      </svg>
+    ),
   },
   warn: {
     look: 'bg-[var(--warn-bg)] text-[var(--warn)]',
@@ -93,7 +101,7 @@ function HeroIcon({ tone }: { tone: HeroTone }) {
   const { look, icon } = HERO_TONES[tone];
   return (
     <span
-      className={`w-10 h-10 shrink-0 flex items-center justify-center rounded-[11px] ${look}`}
+      className={`w-10 h-10 shrink-0 flex items-center justify-center rounded-[11px] transition-colors duration-300 ${look}`}
       aria-hidden="true"
     >
       {icon}
@@ -142,8 +150,8 @@ function StepMarker({ state }: { state: StepState }) {
     );
   if (state === 'running')
     return (
-      <span className="w-6 h-6 shrink-0 flex items-center justify-center text-[var(--ink)]">
-        <LoaderCircle size={20} strokeWidth={2.25} className="ss-spin" />
+      <span className="w-6 h-6 shrink-0 box-border rounded-full border-2 border-[var(--ink)] flex items-center justify-center">
+        <span className="w-2 h-2 rounded-full bg-[var(--ink)]" />
       </span>
     );
   if (state === 'failed')
@@ -171,7 +179,7 @@ function Step({ step }: { step: StepView }) {
       </span>
       <div className="flex-1 min-w-0 flex flex-col gap-1">
         <span
-          className={`text-sm font-semibold ${step.state === 'pending' ? 'text-[var(--ink-2)]' : 'text-[var(--ink)]'}`}
+          className={`self-start text-sm font-semibold ${step.state === 'pending' ? 'text-[var(--ink-2)]' : step.state === 'running' ? 'ss-shimmer' : 'text-[var(--ink)]'}`}
         >
           {step.title}
         </span>
@@ -465,19 +473,12 @@ export default function UpdatesSettings() {
             </div>
             {progress.hero.action && heroButtons[progress.hero.action]}
           </div>
-          <div
-            role="progressbar"
-            aria-label="Update progress"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={progress.overall}
-            className="relative h-1.5 rounded-full bg-[var(--sunken)] overflow-hidden"
-          >
-            <span
-              className="block h-full rounded-[inherit] bg-[var(--ink)] transition-[width] duration-[450ms] ease-[cubic-bezier(.3,.7,.3,1)]"
-              style={{ width: `${progress.overall}%` }}
-            />
-          </div>
+          <ProgressBar
+            active={progress.hero.tone === 'busy'}
+            value={progress.overall}
+            label="Update progress"
+            className="[--bar-gap:16px]"
+          />
           {progress.steps.length > 1 && (
             <ol className="m-0 p-0 list-none [border-top:var(--sep)] [&>*+*]:[border-top:var(--sep)]">
               {progress.steps.map((step) => (
@@ -565,14 +566,11 @@ export default function UpdatesSettings() {
           <SettingsList className="relative isolate overflow-hidden">
             {resourcesCheckStartedAt !== null ? (
               <div className="flex items-center gap-3.5 min-h-14 px-4 py-3">
-                <span
-                  aria-hidden="true"
-                  className="w-6 h-6 shrink-0 flex items-center justify-center text-[var(--ink)]"
-                >
-                  <LoaderCircle size={20} strokeWidth={2.25} className="ss-spin" />
+                <span aria-hidden="true" className="flex shrink-0">
+                  <StepMarker state="running" />
                 </span>
                 <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                  <span className="text-sm font-semibold text-[var(--ink)]">
+                  <span className="ss-shimmer self-start text-sm font-semibold">
                     Checking skills, agents and plugins
                   </span>
                   <span className="text-[13px] text-[var(--ink-2)]">
