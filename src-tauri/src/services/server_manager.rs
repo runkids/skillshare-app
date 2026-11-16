@@ -519,9 +519,13 @@ pub(crate) fn tail(text: &str, lines: usize) -> &str {
 }
 
 /// Check if the server health endpoint responds on the given port.
+///
+/// The request never goes through a proxy: a system or environment proxy cannot
+/// reach this machine's loopback server, so the probe would time out (issue #141).
 pub async fn health_check(port: u16) -> bool {
     let url = format!("http://localhost:{port}/api/overview");
     let client = reqwest::Client::builder()
+        .no_proxy()
         .timeout(std::time::Duration::from_secs(2))
         .build();
 
@@ -618,8 +622,8 @@ mod tests {
         assert!(!is_own_orphan(RECORDED, 1, ""));
     }
 
-    #[tokio::test]
-    async fn a_server_the_app_did_not_start_is_not_running() -> std::io::Result<()> {
+    /// Serve `200 OK` to every request on a free loopback port.
+    fn stand_in_server() -> std::io::Result<u16> {
         let listener = std::net::TcpListener::bind("127.0.0.1:0")?;
         let port = listener.local_addr()?.port();
         std::thread::spawn(move || {
@@ -629,6 +633,28 @@ mod tests {
                 let _ = stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\n{}");
             }
         });
+        Ok(port)
+    }
+
+    #[tokio::test]
+    async fn health_check_ignores_a_configured_proxy() -> std::io::Result<()> {
+        let port = stand_in_server()?;
+        // A proxy that refuses connections: a probe routed through it fails (issue #141).
+        let closed = std::net::TcpListener::bind("127.0.0.1:0")?
+            .local_addr()?
+            .port();
+        std::env::set_var("HTTP_PROXY", format!("http://127.0.0.1:{closed}"));
+
+        let healthy = health_check(port).await;
+        std::env::remove_var("HTTP_PROXY");
+
+        assert!(healthy);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn a_server_the_app_did_not_start_is_not_running() -> std::io::Result<()> {
+        let port = stand_in_server()?;
         let server = ServerManager::new();
         *server.port.lock().await = port;
         assert!(
