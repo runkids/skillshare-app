@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.6](https://github.com/runkids/skillshare-app/compare/v0.9.5...v0.9.6) (2026-11-16)
+
+
+### Bug Fixes
+
+* **scripts:** do not merge when a check was cancelled ([#146](https://github.com/runkids/skillshare-app/issues/146)) ([b7c8abe](https://github.com/runkids/skillshare-app/commit/b7c8abeb6032fd9da20c02264c185d1ac5653909))
+* **updates:** match the web UI's calmer update progress ([#148](https://github.com/runkids/skillshare-app/issues/148)) ([67403d6](https://github.com/runkids/skillshare-app/commit/67403d64904eeebd363ea766987ffad7ed778fdb))
+
 ## [0.9.5](https://github.com/runkids/skillshare-app/compare/v0.9.4...v0.9.5) (2026-11-16)
 
 
