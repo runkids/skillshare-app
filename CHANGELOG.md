@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.7](https://github.com/runkids/skillshare-app/compare/v0.9.6...v0.9.7) (2026-11-23)
+
+
+### Bug Fixes
+
+* keep the CLI UI language across launches ([#149](https://github.com/runkids/skillshare-app/issues/149)) ([43b98e7](https://github.com/runkids/skillshare-app/commit/43b98e74d84cdba66c3ba53edbafb1b9e3b373bc))
+
 ## [0.9.6](https://github.com/runkids/skillshare-app/compare/v0.9.5...v0.9.6) (2026-11-16)
 
 
