@@ -15,6 +15,17 @@ const HEALTH_FAIL_THRESHOLD = 3;
 // How long after an iframe load (or the CLI UI's `theme-init`) its theme reports still describe
 // how the CLI UI started.
 const STARTUP_REPORT_MS = 2000;
+// The language the user picked in the CLI UI. The iframe's own storage does not survive a relaunch
+// (WebKit keeps no storage for a cross-origin frame), so the shell keeps it and passes `?lang=`.
+const CLI_LOCALE_KEY = 'skillshare-app:cli-locale';
+
+function readCliLocale(): string | null {
+  try {
+    return localStorage.getItem(CLI_LOCALE_KEY);
+  } catch {
+    return null;
+  }
+}
 
 type Status = 'loading' | 'ready' | 'error' | 'server-down';
 
@@ -151,6 +162,25 @@ export default function CliWebView() {
     return () => window.removeEventListener('message', handler);
   }, []);
 
+  // The CLI UI reports the language the user picks, so the next launch can open in it.
+  const cliLocaleRef = useRef(readCliLocale());
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (event.data?.type !== 'locale-change') return;
+      if (event.source !== iframeRef.current?.contentWindow) return;
+      const locale = event.data.locale;
+      if (typeof locale !== 'string' || !/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(locale)) return;
+      cliLocaleRef.current = locale;
+      try {
+        localStorage.setItem(CLI_LOCALE_KEY, locale);
+      } catch {
+        // The choice still applies until the app quits.
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
   // Push each axis independently, including Playful light/dark changes.
   useEffect(() => {
     if (loadedIframeRef.current === iframeRef.current) pushTheme();
@@ -177,6 +207,7 @@ export default function CliWebView() {
       reopen?.mount === mountKey ? reopen.path.split(/\?(.*)/s) : [webPath, webSearch];
     const params = new URLSearchParams(search);
     Object.entries(themeParamsRef.current).forEach(([key, value]) => params.set(key, value));
+    if (cliLocaleRef.current) params.set('lang', cliLocaleRef.current);
     return `${iframeUrl}${path === '/' ? '' : path}?${params}`;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- iframeKey and navKey mark a remount
   }, [iframeUrl, iframeKey, navKey, webPath, webSearch, reopen, mountKey]);
