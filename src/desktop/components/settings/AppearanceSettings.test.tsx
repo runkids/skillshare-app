@@ -28,11 +28,12 @@ beforeEach(() => {
 });
 
 describe('Appearance settings', () => {
-  it('offers only Clean and Playful before a custom theme is made', () => {
+  it('opens the dashboard on Custom before a custom theme is made', () => {
     renderSettings();
     const styles = screen.getByRole('radiogroup', { name: 'Style' });
-    expect(within(styles).getAllByRole('radio')).toHaveLength(2);
-    expect(screen.queryByText('Edit in the dashboard')).not.toBeInTheDocument();
+    fireEvent.click(within(styles).getByRole('radio', { name: /Custom/ }));
+    expect(screen.getByText('Dashboard theme editor')).toBeInTheDocument();
+    expect(localStorage.getItem('skillshare-style')).toBe('custom');
   });
 
   it('switches back to the custom theme made in the dashboard', () => {

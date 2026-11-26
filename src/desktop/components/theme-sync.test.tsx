@@ -32,12 +32,13 @@ vi.mock('../context/ProjectContext', () => ({
 }));
 
 function Controls() {
-  const { style, resolvedMode, modePreference, setModePreference } = useTheme();
+  const { style, setStyle, resolvedMode, modePreference, setModePreference } = useTheme();
   return (
     <>
       <output>{`${style}/${resolvedMode}/${modePreference}`}</output>
       <button onClick={() => setModePreference('dark')}>Dark</button>
       <button onClick={() => setModePreference('system')}>System</button>
+      <button onClick={() => setStyle('custom')}>Custom</button>
     </>
   );
 }
@@ -312,6 +313,13 @@ describe('custom theme', () => {
       vars: { ...pine.vars, light: { ...pine.vars.light, bg: '#fafafa' } },
     });
     expect(rootVar('bg')).toBe('#fafafa');
+  });
+
+  it('keeps the theme the CLI UI starts with when Custom is picked before there is one', () => {
+    const { receive } = setup({ started: false });
+    fireEvent.click(screen.getByText('Custom'));
+    receive('custom', pine);
+    expect(rootVar('bg')).toBe(pine.vars.light.bg);
   });
 
   it('falls back to Clean when the saved theme is missing', () => {
