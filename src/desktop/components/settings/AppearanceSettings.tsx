@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { ArrowRight, Monitor, Moon, Sun } from 'lucide-react';
+import { ArrowRight, Monitor, Moon, Palette, Sun } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme, type Style, type ModePreference } from '../../../context/useTheme';
 import { cssVars } from '../../../context/customTheme';
@@ -60,20 +60,18 @@ export default function AppearanceSettings() {
   const { style, setStyle, customTheme, resolvedMode, modePreference, setModePreference } =
     useTheme();
   // The custom theme is made in the dashboard; here it is one more style to pick, previewed in
-  // its own colours.
-  const styles = customTheme
-    ? [
-        ...STYLES,
-        {
-          id: 'custom' as const,
-          label:
-            typeof customTheme.custom.name === 'string' && customTheme.custom.name
-              ? customTheme.custom.name
-              : 'Custom',
-          description: 'Your theme from the dashboard',
-        },
-      ]
-    : STYLES;
+  // its own colours. Before there is one, the card opens the dashboard's editor on Custom.
+  const styles = [
+    ...STYLES,
+    {
+      id: 'custom' as const,
+      label:
+        typeof customTheme?.custom.name === 'string' && customTheme.custom.name
+          ? customTheme.custom.name
+          : 'Custom',
+      description: customTheme ? 'Your theme from the dashboard' : 'Make your own in the dashboard',
+    },
+  ];
   const customVars = customTheme
     ? (cssVars(customTheme.vars[resolvedMode]) as CSSProperties)
     : undefined;
@@ -81,6 +79,8 @@ export default function AppearanceSettings() {
   const handleStyleChange = (s: Style) => {
     setStyle(s);
     // Style and mode are persisted in localStorage by ThemeContext.
+    // The dashboard opens on Custom and reports its theme, which the app then keeps.
+    if (s === 'custom' && !customTheme) navigate('/appearance');
   };
 
   const handleModeChange = (m: ModePreference) => {
@@ -100,11 +100,7 @@ export default function AppearanceSettings() {
 
       <section className="flex flex-col gap-3">
         <h2 className="text-[15px] font-bold text-[var(--ink)]">Style</h2>
-        <div
-          role="radiogroup"
-          aria-label="Style"
-          className={`grid gap-4 ${customTheme ? 'grid-cols-3' : 'grid-cols-2'}`}
-        >
+        <div role="radiogroup" aria-label="Style" className="grid grid-cols-3 gap-4">
           {styles.map(({ id, label, description }) => {
             const checked = style === id;
             return (
@@ -120,9 +116,13 @@ export default function AppearanceSettings() {
                     : 'border-[var(--line)] hover:border-[var(--line-2)]'
                 }`}
               >
-                {id === 'custom' ? (
+                {id === 'custom' && customTheme ? (
                   <span className="block" style={customVars}>
-                    <StylePreview id={customTheme?.custom.base ?? 'clean'} />
+                    <StylePreview id={customTheme.custom.base} />
+                  </span>
+                ) : id === 'custom' ? (
+                  <span className="h-[132px] flex items-center justify-center bg-[var(--sunken)] border-b border-[var(--line)] text-[var(--ink-2)]">
+                    <Palette size={28} />
                   </span>
                 ) : (
                   <StylePreview id={id} />

@@ -167,7 +167,9 @@ export default function CliWebView() {
       // user's choice when its storage was lost (WebKitGTK), so push ours instead of saving it.
       const starting =
         loadedIframeRef.current !== frame || Date.now() - startedAtRef.current < STARTUP_REPORT_MS;
-      if (starting) {
+      // Custom picked in the app before it has a theme of its own: the CLI UI's is the one to keep.
+      const adopt = reported && style === 'custom' && !custom;
+      if (starting && !adopt) {
         pushTheme();
         return;
       }
