@@ -283,6 +283,14 @@ describe('custom theme', () => {
     });
   });
 
+  it('hands the saved theme back while another style is picked, so the editor still has it', () => {
+    localStorage.setItem('skillshare-style', 'clean');
+    localStorage.setItem('skillshare-custom-theme', JSON.stringify(sunny));
+    setup();
+    const params = new URL(screen.getByTitle('skillshare UI').getAttribute('src')!).searchParams;
+    expect(params.get('custom-theme')).toBe(encodeCustomTheme(sunny as never));
+  });
+
   it('pushes the saved theme when the CLI UI starts with another', () => {
     localStorage.setItem('skillshare-style', 'custom');
     localStorage.setItem('skillshare-custom-theme', JSON.stringify(pine));

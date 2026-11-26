@@ -13,7 +13,7 @@ React 19 + TypeScript + Vite 8 + Tailwind CSS 4, rendered in a Tauri 2 webview. 
 - `src/desktop/hooks/`: `useUpdates`, `useSourceHealth`, `useAudit`, `useServerStopped`, `useAppUpdate` (check, then download, install and restart) and `useCliUpgrade` (module-level stores read with `useSyncExternalStore`, so an update keeps its progress when the page changes), `useCliManager`, `useFullscreen` (macOS full screen hides the traffic lights, so `TitleBar` drops their gap), plus terminal hooks `usePtySpawn`, `useTerminalInstance`.
 - `src/desktop/utils/`: `platform.ts` (`detectPlatform`, `isMacOS` from the user agent), `path.ts` (`shortPath`).
 - `src/components/`: shared primitives `Button`, `Card`, `Input`, `Switch`, `Badge`, `Spinner` (default exports) and `ErrorBoundary` (named export).
-- `src/context/`: `ThemeContext.tsx` (provider) and `useTheme.ts` (context, types, `useTheme`).
+- `src/context/`: `ThemeContext.tsx` (provider), `useTheme.ts` (context, types, `useTheme`) and `customTheme.ts` (checks, stores and hands back the custom theme; see the `theme` topic).
 - `src/lib/queryClient.ts`: the TanStack Query client. No component calls `useQuery` yet.
 - `src/design.ts`: a `shadows` map of `var(--shadow-*)` strings for inline styles; only `Card` uses it.
 - `src/theme-tokens.css`: the CSS custom properties for every theme (see Styling).

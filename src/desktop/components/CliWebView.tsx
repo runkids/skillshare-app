@@ -225,9 +225,15 @@ export default function CliWebView() {
 
   // Ref to capture the current theme for the initial URL without re-triggering server start.
   // `theme` is all an older CLI UI reads; `mode` and `style` carry both axes to a newer one, and
-  // `custom-theme` the custom theme, which the CLI UI's own storage may have lost.
-  const themeParamsRef = useRef({ theme: cliTheme, mode: resolvedMode, style, custom });
-  themeParamsRef.current = { theme: cliTheme, mode: resolvedMode, style, custom };
+  // `custom-theme` the saved custom theme, which the CLI UI's own storage may have lost. It goes
+  // along under any style, so the CLI UI's editor opens on it rather than its default.
+  const themeParamsRef = useRef({
+    theme: cliTheme,
+    mode: resolvedMode,
+    style,
+    custom: customTheme,
+  });
+  themeParamsRef.current = { theme: cliTheme, mode: resolvedMode, style, custom: customTheme };
 
   // A shell path other than "/" (e.g. /skills?tab=updates) opens that CLI UI page.
   const webPath = location.pathname === '/' ? '' : location.pathname;
