@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/runkids/skillshare-app/compare/v0.10.0...v0.10.1) (2026-11-26)
+
+
+### Bug Fixes
+
+* offer Custom in Appearance before a theme is made ([#153](https://github.com/runkids/skillshare-app/issues/153)) ([e72530a](https://github.com/runkids/skillshare-app/commit/e72530a564f48c18b61075f7dac90938f9934bc0))
+
 ## [0.10.0](https://github.com/runkids/skillshare-app/compare/v0.9.7...v0.10.0) (2026-11-26)
 
 
