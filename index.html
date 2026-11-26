@@ -59,10 +59,31 @@
         // Set background color immediately to prevent white flash
         document.documentElement.style.backgroundColor = isDark ? DARK_BG : LIGHT_BG;
 
-        const style = localStorage.getItem('skillshare-style');
+        // Playful backgrounds, as --bg in theme-tokens.css.
+        const PLAYFUL_BG = isDark ? '#1c1b19' : '#f8f5ef';
+        let style;
+        try {
+          style = localStorage.getItem('skillshare-style');
+        } catch (e) {
+          style = null;
+        }
         if (style === 'playful') {
           document.documentElement.setAttribute('data-theme', 'playful');
-          document.documentElement.style.backgroundColor = isDark ? '#1B1916' : '#FFF8E8';
+          document.documentElement.style.backgroundColor = PLAYFUL_BG;
+        }
+        // A custom theme: its base style and the colours the CLI UI reported for this mode.
+        // ThemeContext checks the saved theme again and falls back to Clean without one.
+        if (style === 'custom') {
+          try {
+            const saved = JSON.parse(localStorage.getItem('skillshare-custom-theme'));
+            const vars = saved.vars[isDark ? 'dark' : 'light'];
+            if (saved.custom.base === 'playful') {
+              document.documentElement.setAttribute('data-theme', 'playful');
+            }
+            if (typeof vars.bg === 'string') document.documentElement.style.backgroundColor = vars.bg;
+          } catch (e) {
+            // No usable theme: the Clean background above stays.
+          }
         }
       })();
     </script>

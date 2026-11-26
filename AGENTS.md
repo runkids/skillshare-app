@@ -41,7 +41,8 @@ python3 scripts/ai-context.py check     # validate paths, headings, orphans and 
 |---|---|
 | `architecture` | Changing the Rust backend: commands, server supervisor, state and files |
 | `background-services` | Changing auto-sync, update checks, the operation log watcher, source health or the audit |
-| `frontend` | Changing React code, styling, theme or the Rust bridge; frontend tests |
+| `frontend` | Changing React code or the Rust bridge; frontend tests |
+| `theme` | Changing styling, theme tokens, the Custom style or the theme sync with the CLI UI |
 | `development` | Running the app, verifying a change, logs and debugging |
 | `release` | Shipping a version, choosing a version, recovering a failed release |
 | `ai-context` | Adding, moving or splitting docs and topics; `check` failures |

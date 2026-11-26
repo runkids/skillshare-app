@@ -22,10 +22,18 @@
       ]
     },
     "frontend": {
-      "description": "Changing React code, styling, theme, or how the UI talks to Rust; writing frontend tests.",
+      "description": "Changing React code or how the UI talks to Rust; writing frontend tests.",
       "sources": [
         {
           "path": "wiki/frontend.md"
+        }
+      ]
+    },
+    "theme": {
+      "description": "Changing styling, theme tokens, the Custom style, or the theme sync with the CLI UI iframe.",
+      "sources": [
+        {
+          "path": "wiki/theme.md"
         }
       ]
     },

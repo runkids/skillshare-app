@@ -42,7 +42,7 @@ export default function TitleBar() {
   return (
     <div
       data-tauri-drag-region
-      className="h-11 flex items-center gap-2 pr-3 bg-[var(--side)] border-b border-[var(--line)] select-none shrink-0"
+      className="h-11 flex items-center gap-2 pr-3 bg-[var(--edge)] border-b border-[var(--edge-line)] select-none shrink-0"
       style={{ paddingLeft: mac ? 84 : 12 }}
     >
       {!mac && (

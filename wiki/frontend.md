@@ -13,7 +13,7 @@ React 19 + TypeScript + Vite 8 + Tailwind CSS 4, rendered in a Tauri 2 webview. 
 - `src/desktop/hooks/`: `useUpdates`, `useSourceHealth`, `useAudit`, `useServerStopped`, `useAppUpdate` (check, then download, install and restart) and `useCliUpgrade` (module-level stores read with `useSyncExternalStore`, so an update keeps its progress when the page changes), `useCliManager`, `useFullscreen` (macOS full screen hides the traffic lights, so `TitleBar` drops their gap), plus terminal hooks `usePtySpawn`, `useTerminalInstance`.
 - `src/desktop/utils/`: `platform.ts` (`detectPlatform`, `isMacOS` from the user agent), `path.ts` (`shortPath`).
 - `src/components/`: shared primitives `Button`, `Card`, `Input`, `Switch`, `Badge`, `Spinner` (default exports) and `ErrorBoundary` (named export).
-- `src/context/`: `ThemeContext.tsx` (provider) and `useTheme.ts` (context, types, `useTheme`).
+- `src/context/`: `ThemeContext.tsx` (provider), `useTheme.ts` (context, types, `useTheme`) and `customTheme.ts` (checks, stores and hands back the custom theme; see the `theme` topic).
 - `src/lib/queryClient.ts`: the TanStack Query client. No component calls `useQuery` yet.
 - `src/design.ts`: a `shadows` map of `var(--shadow-*)` strings for inline styles; only `Card` uses it.
 - `src/theme-tokens.css`: the CSS custom properties for every theme (see Styling).
@@ -65,12 +65,7 @@ Browser preview: `pnpm dev` serves Vite on port 1420 (`strictPort`) and proxies 
 
 ## Styling and theme
 
-- Tailwind 4 via `@tailwindcss/vite`; no `tailwind.config`. `src/index.css` imports `tailwindcss` and `theme-tokens.css`, declares `@custom-variant dark` on the `.dark` class, and maps tokens to utilities in `@theme inline` (`bg-bg`, `bg-surface`, `text-ink`, `border-line`, `text-ink-2`, ...). Legacy aliases (`paper`, `pencil`, `muted`, `accent`, `danger`, ...) map onto the same tokens.
-- Components mostly use arbitrary values on raw tokens, e.g. `bg-[var(--surface)]`, `rounded-[var(--r-box)]`, `shadow-[var(--sh-box)]`, `border-[length:var(--bw)]`. Prefer tokens over hex colors.
-- `theme-tokens.css` defines four token sets: Clean light, Clean dark, Playful light, Playful dark. Style is `html[data-theme="playful"]` (absent means Clean); mode is the `dark` class on `html`.
-- `ThemeProvider` keeps two axes: `style` (`clean|playful`, localStorage `skillshare-style`) and `modePreference` (`light|dark|system`, localStorage `skillshare-theme-preference`; migrates the legacy `skillshare-theme` key). `system` follows `prefers-color-scheme`. Changes briefly add `theme-transitioning` to `html`.
-- Iframe sync in `CliWebView`: the initial URL carries `?theme=` (`playful`, `dark` or `clean`, all an older CLI UI reads) plus `mode` and `style`, which a newer CLI UI uses to start with both axes right. After load, and on every change, it posts `{ type: 'theme-push', mode, style }` to the iframe. It accepts `{ type: 'theme-change', theme }` messages only from the current iframe; `playful`/`clean` set style, `dark`/`light` set mode. Reports that arrive before the iframe's `load` event or within 2 s after any load or `{ type: 'theme-init' }` message (`STARTUP_REPORT_MS`; a newer CLI UI posts `theme-init` at each page start) describe how the CLI UI started, not a user choice: a differing one is answered with another `theme-push` and never saved, because `?theme=` cannot carry Dark + Clean or Playful dark and WebKitGTK does not keep the iframe's `localStorage` (issue #128).
-- Language sync in `CliWebView`: the CLI UI posts `{ type: 'locale-change', locale }` when the user picks a language (runkids/skillshare#981). The shell accepts it only from the current iframe and only when `locale` looks like a language tag, saves it as `skillshare-app:cli-locale` in its own localStorage, and sets `?lang=` on every later iframe URL, overriding any `lang` in a reopened route. WebKit drops the cross-origin iframe's storage between launches, so the CLI UI otherwise reopens in the system language (runkids/skillshare#982). An older CLI UI ignores `?lang=`.
+Tokens, the theme axes, the Custom style and the theme sync with the CLI UI iframe are in the `theme` topic (`wiki/theme.md`).
 
 ## Tests
 

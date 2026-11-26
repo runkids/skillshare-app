@@ -60,7 +60,7 @@ export default function SettingsPage() {
     <div className="flex h-screen bg-[var(--bg)]">
       {/* Leave room for the macOS overlay traffic lights; this page has no title bar. */}
       <aside
-        className="w-[248px] shrink-0 bg-[var(--side)] border-r border-[var(--line)] flex flex-col gap-[18px] px-3.5 pb-5"
+        className="w-[248px] shrink-0 bg-[var(--edge)] border-r border-[var(--line)] flex flex-col gap-[18px] px-3.5 pb-5"
         style={{ paddingTop: isMacOS() ? '48px' : '20px' }}
       >
         <button
