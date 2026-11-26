@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/runkids/skillshare-app/compare/v0.9.7...v0.10.0) (2026-11-26)
+
+
+### Features
+
+* follow the dashboard's custom theme and retuned styles ([#151](https://github.com/runkids/skillshare-app/issues/151)) ([7c9a57c](https://github.com/runkids/skillshare-app/commit/7c9a57cfd54f52b5d48065ff22edf414cbf494fa))
+
 ## [0.9.7](https://github.com/runkids/skillshare-app/compare/v0.9.6...v0.9.7) (2026-11-23)
 
 
