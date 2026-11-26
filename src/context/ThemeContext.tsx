@@ -1,9 +1,20 @@
 import { useState, useEffect, useCallback, useMemo, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
 import { ThemeContext, type Style, type ModePreference } from './useTheme';
+import {
+  cssVars,
+  customAttributes,
+  loadCustomTheme,
+  storeCustomTheme,
+  type SavedCustomTheme,
+} from './customTheme';
 
 function getInitialStyle(): Style {
-  return localStorage.getItem('skillshare-style') === 'playful' ? 'playful' : 'clean';
+  const stored = localStorage.getItem('skillshare-style');
+  if (stored === 'playful') return 'playful';
+  // Custom needs a saved theme; without one the app falls back to Clean.
+  if (stored === 'custom' && loadCustomTheme()) return 'custom';
+  return 'clean';
 }
 
 function getInitialModePreference(): ModePreference {
@@ -48,21 +59,31 @@ function applyWithTransition(fn: () => void) {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [style, setStyleState] = useState<Style>(getInitialStyle);
+  const [customTheme, setCustomThemeState] = useState<SavedCustomTheme | null>(loadCustomTheme);
   const [modePreference, setModePreferenceState] =
     useState<ModePreference>(getInitialModePreference);
   const systemMode = useSyncExternalStore(subscribeToSystemMode, getSystemMode);
   const resolvedMode = modePreference === 'system' ? systemMode : modePreference;
 
-  // Apply style to DOM
+  // Apply style to DOM. A custom theme takes its base style's shapes and its own colours.
   useEffect(() => {
     const root = document.documentElement;
-    if (style === 'playful') {
+    const active = style === 'custom' ? customTheme : null;
+    const custom = active && customAttributes(active);
+    if (style === 'playful' || custom?.playful) {
       root.setAttribute('data-theme', 'playful');
     } else {
       root.removeAttribute('data-theme');
     }
+    if (custom?.full) root.setAttribute('data-layout', 'full');
+    else root.removeAttribute('data-layout');
+    const vars = cssVars(active?.vars[resolvedMode] ?? {});
+    for (const [key, value] of Object.entries(vars)) root.style.setProperty(key, value);
     localStorage.setItem('skillshare-style', style);
-  }, [style]);
+    return () => {
+      for (const key of Object.keys(vars)) root.style.removeProperty(key);
+    };
+  }, [style, customTheme, resolvedMode]);
 
   // Apply mode to DOM and handle system listener
   useEffect(() => {
@@ -82,6 +103,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyWithTransition(() => setStyleState(s));
   }, []);
 
+  const setCustomTheme = useCallback((t: SavedCustomTheme) => {
+    storeCustomTheme(t);
+    setCustomThemeState(t);
+    setStyleState('custom');
+  }, []);
+
   const setModePreference = useCallback((m: ModePreference) => {
     applyWithTransition(() => setModePreferenceState(m));
   }, []);
@@ -94,13 +121,24 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     () => ({
       style,
       setStyle,
+      customTheme,
+      setCustomTheme,
       modePreference,
       setModePreference,
       resolvedMode,
       theme: resolvedMode,
       toggleTheme,
     }),
-    [style, setStyle, modePreference, setModePreference, resolvedMode, toggleTheme]
+    [
+      style,
+      setStyle,
+      customTheme,
+      setCustomTheme,
+      modePreference,
+      setModePreference,
+      resolvedMode,
+      toggleTheme,
+    ]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

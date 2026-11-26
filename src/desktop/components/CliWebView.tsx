@@ -8,6 +8,12 @@ import { useProjects } from '../context/ProjectContext';
 import { tauriBridge } from '../api/tauri-bridge';
 import { useTauri } from '../context/TauriContext';
 import { useTheme } from '../../context/useTheme';
+import {
+  encodeCustomTheme,
+  readCustomTheme,
+  sameCustomTheme,
+  type SavedCustomTheme,
+} from '../../context/customTheme';
 import { formatVersion } from './settings/update-steps';
 
 const HEALTH_POLL_INTERVAL = 30_000;
@@ -15,6 +21,10 @@ const HEALTH_FAIL_THRESHOLD = 3;
 // How long after an iframe load (or the CLI UI's `theme-init`) its theme reports still describe
 // how the CLI UI started.
 const STARTUP_REPORT_MS = 2000;
+// Names the theme the CLI UI shows, to tell a report of it from a change.
+function keyOf(style: string, mode: string, custom: SavedCustomTheme | null) {
+  return `${style}/${mode}/${custom ? JSON.stringify(custom.custom) : ''}`;
+}
 // The language the user picked in the CLI UI. The iframe's own storage does not survive a relaunch
 // (WebKit keeps no storage for a cross-origin frame), so the shell keeps it and passes `?lang=`.
 const CLI_LOCALE_KEY = 'skillshare-app:cli-locale';
@@ -88,7 +98,8 @@ export default function CliWebView() {
   const location = useLocation();
   const { appInfo, refresh: refreshAppInfo } = useTauri();
   const { switching, activeProject, reloadKey } = useProjects();
-  const { style, setStyle, resolvedMode, setModePreference } = useTheme();
+  const { style, setStyle, customTheme, setCustomTheme, resolvedMode, setModePreference } =
+    useTheme();
   const [status, setStatus] = useState<Status>('loading');
   const [iframeUrl, setIframeUrl] = useState<string | null>(null);
   const [iframeKey, setIframeKey] = useState(0);
@@ -106,18 +117,27 @@ export default function CliWebView() {
   const [reopen, setReopen] = useState<{ mount: string; path: string } | null>(null);
 
   // Derive CLI theme from shell's style + mode
-  // CLI values: dark, light, playful, clean
+  // CLI values: dark, light, playful, clean. A custom theme maps to its base style, which is what
+  // a CLI UI without custom themes shows.
+  const custom = style === 'custom' ? customTheme : null;
   const cliTheme = useMemo(() => {
-    if (style === 'playful') return 'playful';
+    if (style === 'playful' || custom?.custom.base === 'playful') return 'playful';
     return resolvedMode === 'dark' ? 'dark' : 'clean';
-  }, [style, resolvedMode]);
+  }, [style, custom, resolvedMode]);
+
+  // The theme the CLI UI shows, as far as the shell knows: what it last reported or was pushed.
+  // A change that came from the CLI UI is not pushed back to it: while the user drags a colour
+  // picker, an echo of an earlier report would undo the newer colour.
+  const themeKey = useMemo(() => keyOf(style, resolvedMode, custom), [style, resolvedMode, custom]);
+  const frameThemeRef = useRef<string | null>(null);
 
   const pushTheme = useCallback(() => {
+    frameThemeRef.current = themeKey;
     iframeRef.current?.contentWindow?.postMessage(
-      { type: 'theme-push', mode: resolvedMode, style },
+      { type: 'theme-push', mode: resolvedMode, style, ...(custom && { custom: custom.custom }) },
       '*'
     );
-  }, [resolvedMode, style]);
+  }, [themeKey, resolvedMode, style, custom]);
 
   // Listen for theme changes from CLI UI (iframe postMessage)
   useEffect(() => {
@@ -129,9 +149,20 @@ export default function CliWebView() {
       if (event.data?.type === 'theme-init') startedAtRef.current = Date.now();
       if (event.data?.type !== 'theme-change') return;
       const theme = event.data.theme;
-      const isStyle = theme === 'playful' || theme === 'clean';
+      const isStyle = theme === 'playful' || theme === 'clean' || theme === 'custom';
       if (!isStyle && theme !== 'dark' && theme !== 'light') return;
-      if (theme === (isStyle ? style : resolvedMode)) return;
+      const reported =
+        theme === 'custom' ? readCustomTheme(event.data.custom, event.data.vars) : null;
+      if (theme === 'custom' && !reported) return;
+      if (reported && custom && sameCustomTheme(reported, custom)) {
+        // The same theme, with the colours the running CLI derives for it, which can change with
+        // a CLI upgrade.
+        if (JSON.stringify(reported.vars) !== JSON.stringify(custom.vars)) {
+          setCustomTheme(reported);
+        }
+        return;
+      }
+      if (!reported && theme === (isStyle ? style : resolvedMode)) return;
       // A CLI UI that has just loaded reports the theme it started with. That is not the
       // user's choice when its storage was lost (WebKitGTK), so push ours instead of saving it.
       const starting =
@@ -141,12 +172,16 @@ export default function CliWebView() {
         return;
       }
       // The CLI sends style and mode independently. Preserve the other axis.
-      if (isStyle) setStyle(theme);
+      frameThemeRef.current = isStyle
+        ? keyOf(theme, resolvedMode, reported)
+        : keyOf(style, theme, custom);
+      if (reported) setCustomTheme(reported);
+      else if (isStyle) setStyle(theme);
       else setModePreference(theme);
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [setStyle, setModePreference, resolvedMode, style, pushTheme]);
+  }, [setStyle, setCustomTheme, setModePreference, resolvedMode, style, custom, pushTheme]);
 
   // The CLI UI reports its route, so a reload can reopen the page instead of the shell route.
   useEffect(() => {
@@ -181,15 +216,18 @@ export default function CliWebView() {
     return () => window.removeEventListener('message', handler);
   }, []);
 
-  // Push each axis independently, including Playful light/dark changes.
+  // Push each axis independently, including Playful light/dark changes, unless the CLI UI
+  // already shows the theme.
   useEffect(() => {
-    if (loadedIframeRef.current === iframeRef.current) pushTheme();
-  }, [pushTheme]);
+    if (loadedIframeRef.current !== iframeRef.current) return;
+    if (frameThemeRef.current !== themeKey) pushTheme();
+  }, [themeKey, pushTheme]);
 
   // Ref to capture the current theme for the initial URL without re-triggering server start.
-  // `theme` is all an older CLI UI reads; `mode` and `style` carry both axes to a newer one.
-  const themeParamsRef = useRef({ theme: cliTheme, mode: resolvedMode, style });
-  themeParamsRef.current = { theme: cliTheme, mode: resolvedMode, style };
+  // `theme` is all an older CLI UI reads; `mode` and `style` carry both axes to a newer one, and
+  // `custom-theme` the custom theme, which the CLI UI's own storage may have lost.
+  const themeParamsRef = useRef({ theme: cliTheme, mode: resolvedMode, style, custom });
+  themeParamsRef.current = { theme: cliTheme, mode: resolvedMode, style, custom };
 
   // A shell path other than "/" (e.g. /skills?tab=updates) opens that CLI UI page.
   const webPath = location.pathname === '/' ? '' : location.pathname;
@@ -206,7 +244,9 @@ export default function CliWebView() {
     const [path, search = ''] =
       reopen?.mount === mountKey ? reopen.path.split(/\?(.*)/s) : [webPath, webSearch];
     const params = new URLSearchParams(search);
-    Object.entries(themeParamsRef.current).forEach(([key, value]) => params.set(key, value));
+    const { custom: handed, ...theme } = themeParamsRef.current;
+    Object.entries(theme).forEach(([key, value]) => params.set(key, value));
+    if (handed) params.set('custom-theme', encodeCustomTheme(handed));
     if (cliLocaleRef.current) params.set('lang', cliLocaleRef.current);
     return `${iframeUrl}${path === '/' ? '' : path}?${params}`;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- iframeKey and navKey mark a remount

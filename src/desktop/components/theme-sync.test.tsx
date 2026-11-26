@@ -4,6 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../../context/ThemeContext';
 import { useTheme } from '../../context/useTheme';
 import CliWebView from './CliWebView';
+import { encodeCustomTheme } from '../../context/customTheme';
+// What the CLI UI reports for two presets (its `themeVars`), one on each base style.
+import themes from '../../context/customTheme.fixture.json';
 
 const { refresh, project } = vi.hoisted(() => ({
   refresh: vi.fn(),
@@ -57,20 +60,23 @@ function setup({ started = true } = {}) {
   const post = vi.spyOn(iframe.contentWindow!, 'postMessage');
   fireEvent.load(iframe);
   if (started) vi.advanceTimersByTime(2000);
-  const receive = (theme: string) =>
+  const receive = (theme: string, extra: object = {}) =>
     act(() => {
       window.dispatchEvent(
         new MessageEvent('message', {
           source: iframe.contentWindow,
-          data: { type: 'theme-change', theme },
+          data: { type: 'theme-change', theme, ...extra },
         })
       );
     });
   return { iframe, post, receive, rerender };
 }
 
+const rootVar = (name: string) => document.documentElement.style.getPropertyValue(`--${name}`);
+
 beforeEach(() => {
   localStorage.clear();
+  document.documentElement.removeAttribute('style');
   vi.clearAllMocks();
   vi.useFakeTimers({ toFake: ['Date'] });
   project.reloadKey = 0;
@@ -219,6 +225,91 @@ describe('desktop and CLI theme synchronization', () => {
     receive('light');
     expect(screen.getByText('clean/light/system')).toBeInTheDocument();
     expect(localStorage.getItem('skillshare-theme-preference')).toBe('system');
+  });
+});
+
+describe('custom theme', () => {
+  const { pine, sunny } = themes;
+
+  it('keeps a custom theme the CLI UI reports and paints the window with each mode', () => {
+    const { receive } = setup();
+    receive('custom', pine);
+    expect(screen.getByText('custom/light/light')).toBeInTheDocument();
+    expect(rootVar('bg')).toBe(pine.vars.light.bg);
+    fireEvent.click(screen.getByText('Dark'));
+    expect(rootVar('bg')).toBe(pine.vars.dark.bg);
+  });
+
+  it('takes the shapes of a Playful base', () => {
+    const { receive } = setup();
+    receive('custom', sunny);
+    expect(document.documentElement).toHaveAttribute('data-theme', 'playful');
+  });
+
+  it('does not push a theme the CLI UI reported back to it', () => {
+    const { post, receive } = setup();
+    post.mockClear();
+    receive('custom', pine);
+    receive('custom', { ...pine, custom: { ...pine.custom, accent: '#2563eb' } });
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it('removes the custom colours when the CLI UI switches back to a style', () => {
+    const { receive } = setup();
+    receive('custom', pine);
+    receive('clean');
+    expect(rootVar('bg')).toBe('');
+  });
+
+  it('ignores colours that could load anything', () => {
+    const { receive } = setup();
+    receive('custom', {
+      ...pine,
+      vars: { ...pine.vars, light: { ...pine.vars.light, bg: 'url(https://example.com/x)' } },
+    });
+    expect(screen.getByText('clean/light/light')).toBeInTheDocument();
+  });
+
+  it('hands the saved theme to the CLI UI in the iframe URL', () => {
+    localStorage.setItem('skillshare-style', 'custom');
+    localStorage.setItem('skillshare-custom-theme', JSON.stringify(sunny));
+    setup();
+    const params = new URL(screen.getByTitle('skillshare UI').getAttribute('src')!).searchParams;
+    expect(Object.fromEntries(params)).toEqual({
+      theme: 'playful',
+      mode: 'light',
+      style: 'custom',
+      'custom-theme': encodeCustomTheme(sunny as never),
+    });
+  });
+
+  it('pushes the saved theme when the CLI UI starts with another', () => {
+    localStorage.setItem('skillshare-style', 'custom');
+    localStorage.setItem('skillshare-custom-theme', JSON.stringify(pine));
+    const { post, receive } = setup({ started: false });
+    post.mockClear();
+    receive('custom', sunny);
+    expect(post).toHaveBeenCalledWith(
+      { type: 'theme-push', mode: 'light', style: 'custom', custom: pine.custom },
+      '*'
+    );
+  });
+
+  it('takes the colours the running CLI derives for the same theme', () => {
+    localStorage.setItem('skillshare-style', 'custom');
+    localStorage.setItem('skillshare-custom-theme', JSON.stringify(pine));
+    const { receive } = setup({ started: false });
+    receive('custom', {
+      ...pine,
+      vars: { ...pine.vars, light: { ...pine.vars.light, bg: '#fafafa' } },
+    });
+    expect(rootVar('bg')).toBe('#fafafa');
+  });
+
+  it('falls back to Clean when the saved theme is missing', () => {
+    localStorage.setItem('skillshare-style', 'custom');
+    setup();
+    expect(screen.getByText('clean/light/light')).toBeInTheDocument();
   });
 });
 

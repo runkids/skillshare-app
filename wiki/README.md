@@ -8,7 +8,8 @@ The wiki holds background, procedures and reference for agents and maintainers, 
 |---|---|---|
 | `architecture` | Changing the Rust backend: commands, server supervisor, state and files | `architecture.md` |
 | `background-services` | Changing auto-sync, update checks, the operation log watcher, source health or the audit | `background-services.md` |
-| `frontend` | Changing React code, styling, theme or the Rust bridge; frontend tests | `frontend.md` |
+| `frontend` | Changing React code or the Rust bridge; frontend tests | `frontend.md` |
+| `theme` | Changing styling, theme tokens, the Custom style or the theme sync with the CLI UI | `theme.md` |
 | `development` | Running the app, verifying a change, logs and debugging | `development.md`, `../README.md` (the "Development with Docker" section) |
 | `release` | Shipping a version, choosing a version, recovering a failed release | `release.md`, `../README.md` (the "Releasing" section) |
 | `ai-context` | Maintaining this router: add, move or split docs, fix `check` | `ai-context.md` |

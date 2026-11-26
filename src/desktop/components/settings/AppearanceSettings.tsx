@@ -1,10 +1,13 @@
-import { Monitor, Moon, Sun } from 'lucide-react';
+import type { CSSProperties } from 'react';
+import { ArrowRight, Monitor, Moon, Sun } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useTheme, type Style, type ModePreference } from '../../../context/useTheme';
+import { cssVars } from '../../../context/customTheme';
 import { isMacOS } from '../../utils/platform';
 
 const STYLES: { id: Style; label: string; description: string }[] = [
   { id: 'clean', label: 'Clean', description: 'Quiet, system type, thin lines' },
-  { id: 'playful', label: 'Playful', description: 'Hand-drawn headings, bold outlines' },
+  { id: 'playful', label: 'Playful', description: 'Hand-drawn headings, ink outlines' },
 ];
 
 const MODES: { id: ModePreference; label: string; icon: typeof Sun }[] = [
@@ -15,7 +18,7 @@ const MODES: { id: ModePreference; label: string; icon: typeof Sun }[] = [
 
 // Mini previews are drawn from the active tokens; the shapes (thin lines vs. bold
 // outlines, hard shadow, hand-drawn type) carry the difference between styles.
-function StylePreview({ id }: { id: Style }) {
+function StylePreview({ id }: { id: Exclude<Style, 'custom'> }) {
   if (id === 'clean') {
     return (
       <div className="h-[132px] flex gap-2.5 p-4 bg-[var(--bg)] border-b border-[var(--line)]">
@@ -38,7 +41,7 @@ function StylePreview({ id }: { id: Style }) {
         <span className="text-xs leading-none text-[var(--ink)] font-['Kalam',cursive]">
           skillshare
         </span>
-        <span className="h-3.5 rounded-[5px] bg-[var(--warn-bg)] border-[1.5px] border-[var(--ink)]" />
+        <span className="h-3.5 rounded-[5px] bg-[var(--sel)] border-[1.5px] border-[var(--ink)]" />
         <span className="h-2 rounded bg-[var(--line-2)]" />
         <span className="h-2 rounded bg-[var(--line-2)]" />
       </div>
@@ -53,7 +56,27 @@ function StylePreview({ id }: { id: Style }) {
 }
 
 export default function AppearanceSettings() {
-  const { style, setStyle, modePreference, setModePreference } = useTheme();
+  const navigate = useNavigate();
+  const { style, setStyle, customTheme, resolvedMode, modePreference, setModePreference } =
+    useTheme();
+  // The custom theme is made in the dashboard; here it is one more style to pick, previewed in
+  // its own colours.
+  const styles = customTheme
+    ? [
+        ...STYLES,
+        {
+          id: 'custom' as const,
+          label:
+            typeof customTheme.custom.name === 'string' && customTheme.custom.name
+              ? customTheme.custom.name
+              : 'Custom',
+          description: 'Your theme from the dashboard',
+        },
+      ]
+    : STYLES;
+  const customVars = customTheme
+    ? (cssVars(customTheme.vars[resolvedMode]) as CSSProperties)
+    : undefined;
 
   const handleStyleChange = (s: Style) => {
     setStyle(s);
@@ -77,8 +100,12 @@ export default function AppearanceSettings() {
 
       <section className="flex flex-col gap-3">
         <h2 className="text-[15px] font-bold text-[var(--ink)]">Style</h2>
-        <div role="radiogroup" aria-label="Style" className="grid grid-cols-2 gap-4">
-          {STYLES.map(({ id, label, description }) => {
+        <div
+          role="radiogroup"
+          aria-label="Style"
+          className={`grid gap-4 ${customTheme ? 'grid-cols-3' : 'grid-cols-2'}`}
+        >
+          {styles.map(({ id, label, description }) => {
             const checked = style === id;
             return (
               <button
@@ -93,7 +120,13 @@ export default function AppearanceSettings() {
                     : 'border-[var(--line)] hover:border-[var(--line-2)]'
                 }`}
               >
-                <StylePreview id={id} />
+                {id === 'custom' ? (
+                  <span className="block" style={customVars}>
+                    <StylePreview id={customTheme?.custom.base ?? 'clean'} />
+                  </span>
+                ) : (
+                  <StylePreview id={id} />
+                )}
                 <span className="flex items-center gap-2.5 px-4 py-3.5">
                   <span
                     className={`w-[18px] h-[18px] shrink-0 rounded-full bg-[var(--surface)] ${
@@ -118,6 +151,18 @@ export default function AppearanceSettings() {
             );
           })}
         </div>
+        {/* Only a CLI UI with the theme editor reports a custom theme, so the link shows once
+            there is one. */}
+        {customTheme && (
+          <button
+            type="button"
+            onClick={() => navigate('/appearance')}
+            className="self-start flex items-center gap-1.5 text-[13px] font-semibold text-[var(--accent)] hover:underline"
+          >
+            Edit in the dashboard
+            <ArrowRight size={14} />
+          </button>
+        )}
       </section>
 
       <section className="flex items-center gap-4 pt-6 border-t border-[var(--line)]">
